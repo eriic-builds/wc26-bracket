@@ -16,7 +16,7 @@ import html, json, re
 #  exact dashboard design / UI / format. Do not restyle, re-order, or add to it.
 # ══════════════════════════════════════════════════════════════════════════════
 ENTRANT="Eric Lam"; TIEBREAKER=4
-REFRESHED="July 2, 2026 · 9:00 AM PT"
+REFRESHED="July 2, 2026 · 11:40 AM PT"
 CREDIT="Built with Cowork"  # tiny footer signature (personalise per entrant)
 
 SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa":"2A","Canada":"2B",
@@ -47,8 +47,8 @@ FREEBIE_MATCH="M73"
 
 # LIVE RESULTS (teamA goals, teamB goals, winner, note) — only completed matches
 RES={"M73":(0,1,"Canada",""),
- "M74":(1,1,"Paraguay","4–3 pens"),
- "M75":(1,1,"Morocco","3–2 pens"),
+ "M74":(4,5,"Paraguay",""),
+ "M75":(3,4,"Morocco",""),
  "M76":(2,1,"Brazil",""),
  "M77":(3,0,"France",""),
  "M78":(1,2,"Norway",""),
