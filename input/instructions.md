@@ -1,5 +1,9 @@
 # World Cup 2026 Bracket Dashboard — build kit (v7)
 
+**How to use this:** open **Microsoft Cowork**, paste in this entire file (or upload it) and say
+**"follow this"**, then hand over your filled-in bracket Excel when asked. Cowork does the rest —
+building your own interactive dashboard and (optionally) keeping it updated. No coding required.
+
 Run this in **two steps** to get the exact dashboard, tailored to your own picks — then optionally
 keep it auto-updating through the tournament.
 
@@ -1041,6 +1045,7 @@ f'<div class="src"><b>Status.</b> Round of 32 is {R32_DONE} of {N_R32} games fin
 f'You have <b>{CONF} points</b> confirmed ({ADJ} with the optional upset bonus), <b>{LIVE}</b> live, max attainable <b>{ATTAIN}</b>. '
 f'This is your personal, <b>unofficial</b> tally for Rob to review — his scoring is authoritative. Champion {esc(CHAMP)} · runner-up {esc(RUNNER)}.</div>'
 f'<div class="src">Live results as of <b>{REFRESHED}</b> · reading mode, favorites and any manual score edits are saved on this device.</div>'
+'<div class="src">🏆 Thank you to <b>Rob Brautigam</b> for hosting the 2026 FIFA World Cup bracket challenge for SLED.</div>'
 + (f'<div class="src credit">{esc(CREDIT)}</div>' if CREDIT else '') + '</div>'
 '</div></div></div><button class="dab" id="dab" title="Back to top" aria-label="Back to top">↑</button>'
 '<div class="statcard" id="statcard" aria-hidden="true"></div>'
