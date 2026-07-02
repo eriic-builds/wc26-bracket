@@ -47,8 +47,8 @@ FREEBIE_MATCH="M73"
 
 # LIVE RESULTS (teamA goals, teamB goals, winner, note) — only completed matches
 RES={"M73":(0,1,"Canada",""),
- "M74":(4,5,"Paraguay",""),
- "M75":(3,4,"Morocco",""),
+ "M74":(1,1,"Paraguay","4–3 pens"),
+ "M75":(1,1,"Morocco","3–2 pens"),
  "M76":(2,1,"Brazil",""),
  "M77":(3,0,"France",""),
  "M78":(1,2,"Norway",""),

@@ -104,13 +104,30 @@ def results_from_footballdata(tmap: dict):
             continue
         note = ""
         winner_side = score.get("winner")
-        if gh == ga:  # decided beyond regulation
-            pens = score.get("penalties") or {}
-            ph, pa = pens.get("home"), pens.get("away")
-            if ph is not None and pa is not None and ph != pa:
+        pens = score.get("penalties") or {}
+        ph, pa = pens.get("home"), pens.get("away")
+        shootout = ph is not None and pa is not None and int(ph) != int(pa)
+        if shootout:
+            ph, pa = int(ph), int(pa)
+            # football-data.org folds the shootout goals into fullTime (so a
+            # 1-1 game won 4-3 on pens reports as 5-4). Recover the level
+            # regulation/ET score by subtracting the shootout tally.
+            if gh != ga:
+                rh, ra = int(gh) - ph, int(ga) - pa
+            else:
+                rh, ra = int(gh), int(ga)
+            if rh < 0 or ra < 0 or rh != ra:
+                rh, ra = int(gh), int(ga)  # unexpected shape -> keep raw
+            gh, ga = rh, ra
+            if winner_side == "HOME_TEAM":
+                w = home
+            elif winner_side == "AWAY_TEAM":
+                w = away
+            else:
                 w = home if ph > pa else away
-                note = f"{max(ph, pa)}\u2013{min(ph, pa)} pens"
-            elif winner_side == "HOME_TEAM":
+            note = f"{max(ph, pa)}\u2013{min(ph, pa)} pens"
+        elif gh == ga:  # level with no shootout -> decided in extra time
+            if winner_side == "HOME_TEAM":
                 w = home; note = "AET"
             elif winner_side == "AWAY_TEAM":
                 w = away; note = "AET"
@@ -216,9 +233,16 @@ def main() -> int:
     new_res = dict(cur_res)
     changed = []
     for code, val in updates.items():
-        if cur_res.get(code) != val:
-            new_res[code] = val
-            changed.append(code)
+        old = cur_res.get(code)
+        if old == val:
+            continue
+        # Safety net: never downgrade a curated shootout/AET result (which has a
+        # decider note) to a note-less value with the same winner. Protects the
+        # dashboard even if a data source ever mangles a shootout score again.
+        if old and old[3] and not val[3] and old[2] == val[2]:
+            continue
+        new_res[code] = val
+        changed.append(code)
 
     if not changed:
         print(f"Source: {src}. No new finished games to apply \u2014 dashboard already current.")
