@@ -958,7 +958,7 @@ def chip(t):
 
 HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf-8">'
 f'<meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(ENTRANT)}’s World Cup 2026 Bracket</title>'+'<style>'+CSS+'</style></head><body><div class="wrap">'
-'<div class="topbar"><div class="brand"><span class="orb"></span><div>Bracket dashboard<small>SLED World Cup 2026 Challenge · live</small></div></div>'
+'<div class="topbar"><div class="brand"><span class="orb"></span><div>2026 FIFA World Cup - Bracket Dashboard - MSFT SLED<small>Live results vs your picks</small></div></div>'
 f'<div class="refreshed glass" id="topRefreshed" title="When live results were last synced"><span class="rf-dot"></span>Updated {REFRESHED}</div>'
 '<div class="modes glass"><button data-mode="dark" class="on">Dark</button><button data-mode="light">Light</button>'
 '<button data-mode="easy" title="Reading mode — a highly legible font, larger text, extra line and letter spacing, sentence case (no all-caps), left-aligned text and a soft, glare-free background">Easy</button></div></div>'
