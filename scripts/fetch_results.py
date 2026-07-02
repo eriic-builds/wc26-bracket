@@ -151,17 +151,18 @@ def results_from_footballdata(tmap: dict):
             else:
                 w = home if ph > pa else away
             note = f"{max(ph, pa)}\u2013{min(ph, pa)} pens"
-        elif gh == ga:  # level with no shootout -> decided in extra time
+        elif gh == ga:  # level score
             if winner_side == "HOME_TEAM":
                 w = home; note = "AET"
             elif winner_side == "AWAY_TEAM":
                 w = away; note = "AET"
             else:
-                continue  # genuine draw with no decider -> skip
+                w = ""; note = "draw"  # genuine draw (e.g. group stage) -> game facts only
         else:
             w = home if gh > ga else away
         out.append({"home": home, "away": away, "gh": int(gh), "ga": int(ga),
-                    "winner": w, "note": note, "date": (m.get("utcDate") or "")})
+                    "winner": w, "note": note, "date": (m.get("utcDate") or ""),
+                    "stage": (m.get("stage") or "")})
     return out
 
 
@@ -181,11 +182,12 @@ def results_from_json(path: str, tmap: dict):
         if gh == ga:
             w = norm(m.get("winner"), tmap)
             if not w:
-                continue  # draw needs an explicit decider
+                note = note or "draw"  # genuine draw -> game facts only
         else:
             w = home if gh > ga else away
         out.append({"home": home, "away": away, "gh": gh, "ga": ga,
-                    "winner": w, "note": note, "date": (m.get("date") or "")})
+                    "winner": w, "note": note, "date": (m.get("date") or ""),
+                    "stage": (m.get("stage", ""))})
     return out
 
 
@@ -204,7 +206,7 @@ def match_all(r32, ko_feed, base_res, feed):
 
     def orient(code, a, b):
         f = by_pair.get(frozenset((a, b)))
-        if not f:
+        if not f or not f.get("winner"):
             return
         if f["home"] == a:
             gA, gB = f["gh"], f["ga"]
@@ -239,27 +241,68 @@ def _fmt_day(iso: str) -> str:
         return ""
 
 
-def build_auto_hl(applied, ko_feed, limit=8):
-    """Newest-first factual one-liners for finished games. Plain facts, no editorializing."""
-    items = sorted(applied.items(),
-                   key=lambda kv: (kv[1].get("date", ""), int(kv[0][1:])), reverse=True)
+STAGE_LABELS = {
+    "GROUP_STAGE": "group stage", "GROUP": "group stage",
+    "LAST_32": "Round of 32", "ROUND_OF_32": "Round of 32",
+    "LAST_16": "Round of 16", "ROUND_OF_16": "Round of 16",
+    "QUARTER_FINALS": "quarterfinal", "QUARTER_FINAL": "quarterfinal",
+    "SEMI_FINALS": "semifinal", "SEMI_FINAL": "semifinal",
+    "THIRD_PLACE": "third-place playoff", "3RD_PLACE": "third-place playoff",
+    "FINAL": "final",
+}
+
+
+def stage_label(stage: str) -> str:
+    """Map a football-data.org stage code to a human round label."""
+    if not stage:
+        return "match"
+    return STAGE_LABELS.get(stage.upper(), stage.replace("_", " ").lower())
+
+
+def build_auto_hl(feed, limit=8):
+    """Newest-first factual one-liners for the most recent finished games.
+
+    Pulls from the WHOLE feed (every finished World Cup game), not only games in
+    the user's bracket, so recent games like Spain vs Austria still show up. Plain
+    facts only, no editorializing. Kept free of the ] character so the emitted
+    AUTO_HL block stays regex-rewritable.
+    """
+    games = sorted(feed, key=lambda f: (f.get("date", ""), f.get("home", "")),
+                   reverse=True)
     entries = []
-    for code, d in items[:limit]:
-        a, b, gA, gB = d["a"], d["b"], d["gA"], d["gB"]
-        w, note = d["winner"], d["note"]
-        loser = a if w == b else b
-        label = ko_label(code, ko_feed)
-        emoji = "🥅" if "pens" in note else "⚽"
-        day = _fmt_day(d.get("date", ""))
-        when = (day + " · " + label) if day else label
-        title = f"{a} {gA}\u2013{gB} {b}"
-        if "pens" in note:
-            body = f"{w} beat {loser} on penalties ({note}) after a {gA}\u2013{gB} draw in the {label}."
+    seen = set()
+    for f in games:
+        home, away = f["home"], f["away"]
+        if not home or not away:
+            continue
+        key = (frozenset((home, away)), f.get("date", "")[:10])
+        if key in seen:
+            continue
+        seen.add(key)
+        gh, ga, w, note = f["gh"], f["ga"], f["winner"], f.get("note", "")
+        label = stage_label(f.get("stage", ""))
+        day = _fmt_day(f.get("date", ""))
+        when = (day + " \u00b7 " + label) if day else label
+        title = f"{home} {gh}\u2013{ga} {away}"
+        if not w or note == "draw":  # genuine draw
+            emoji = "\u2694\ufe0f"
+            body = f"{home} and {away} drew {gh}\u2013{ga} in the {label}."
         else:
-            wg, lg = (gA, gB) if w == a else (gB, gA)
-            body = f"{w} beat {loser} {wg}\u2013{lg} in the {label}."
-        # keep every field free of the ] character so the block stays regex-rewritable
+            loser = away if w == home else home
+            wg, lg = (gh, ga) if w == home else (ga, gh)
+            if "pens" in note:
+                emoji = "\U0001f945"
+                body = (f"{w} beat {loser} on penalties ({note}) after a "
+                        f"{gh}\u2013{ga} draw in the {label}.")
+            elif note == "AET":
+                emoji = "\u26bd"
+                body = f"{w} beat {loser} {wg}\u2013{lg} after extra time in the {label}."
+            else:
+                emoji = "\u26bd"
+                body = f"{w} beat {loser} {wg}\u2013{lg} in the {label}."
         entries.append((emoji, label, title, when, body))
+        if len(entries) >= limit:
+            break
     return entries
 
 
@@ -337,8 +380,9 @@ def main() -> int:
             continue
         changed.append(code)
 
-    # Auto game-fact highlights (newest first) reflect whatever is finished now.
-    auto_entries = build_auto_hl(applied, ko_feed)
+    # Auto game-fact highlights (newest first) reflect every finished game in the
+    # feed, not only the ones in this bracket.
+    auto_entries = build_auto_hl(feed)
     hl_block_new = render_auto_hl(auto_entries)
     cur_hl = re.search(r"AUTO_HL=\[.*?\]", gen_text, re.DOTALL)
     hl_changed = bool(cur_hl) and cur_hl.group(0) != hl_block_new

@@ -154,8 +154,10 @@ You can also run it on demand: **Actions → Sync World Cup results → Run work
    then **every later round** (R16, QF, SF, Final), since each knockout match's teams are the
    winners of its two feeder matches — and writes it into the `RES` / `UPCOMING` / `REFRESHED`
    blocks.
-5. **Auto-writes game-fact highlights** — for each finished game it appends a one-line factual
-   recap to `AUTO_HL` (newest first), so the "Game facts" strip stays current with no editing.
+5. **Auto-writes game-fact highlights** — for **every** recently finished game in the feed
+   (not just the ones in your bracket, and including draws), it appends a one-line factual
+   recap to `AUTO_HL` (newest first), using the match's stage for the round label — so the
+   "Game facts" strip stays current with no editing.
 6. Re-runs the generator to rebuild `docs/index.html`, then commits & pushes if anything
    changed (which triggers the Pages redeploy).
 
