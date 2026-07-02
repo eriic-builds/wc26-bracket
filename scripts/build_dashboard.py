@@ -16,7 +16,7 @@ import html, json, re
 #  exact dashboard design / UI / format. Do not restyle, re-order, or add to it.
 # ══════════════════════════════════════════════════════════════════════════════
 ENTRANT="Eric Lam"; TIEBREAKER=4
-REFRESHED="July 2, 2026 · 11:40 AM PT"
+REFRESHED="July 2, 2026 · 2:32 PM PT"
 CREDIT="Built With Cowork — Imagined by Eric Lam"  # tiny footer signature (personalise per entrant)
 
 SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa":"2A","Canada":"2B",
@@ -55,8 +55,9 @@ RES={"M73":(0,1,"Canada",""),
  "M79":(2,0,"Mexico",""),
  "M80":(2,1,"England",""),
  "M81":(2,0,"United States",""),
- "M82":(3,2,"Belgium","")}
-UPCOMING={"M83":"Thu Jul 2","M84":"Thu Jul 2","M85":"Thu Jul 2","M86":"Fri Jul 3","M87":"Fri Jul 3","M88":"Fri Jul 3"}
+ "M82":(3,2,"Belgium",""),
+ "M84":(3,0,"Spain","")}
+UPCOMING={"M83":"Thu Jul 2","M85":"Thu Jul 2","M86":"Fri Jul 3","M87":"Fri Jul 3","M88":"Fri Jul 3"}
 
 R16_WIN=["France","Morocco","Spain","United States","Japan","England","Argentina","Colombia"]
 QF_WIN=["France","Spain","England","Argentina"]; SF_WIN=["France","England"]
