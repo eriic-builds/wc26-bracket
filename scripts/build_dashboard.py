@@ -16,7 +16,7 @@ import html, json, re
 #  exact dashboard design / UI / format. Do not restyle, re-order, or add to it.
 # ══════════════════════════════════════════════════════════════════════════════
 ENTRANT="Eric Lam"; TIEBREAKER=4
-REFRESHED="July 2, 2026 · 2:32 PM PT"
+REFRESHED="July 2, 2026 · 3:50 PM PT"
 CREDIT="Built With Cowork — Imagined by Eric Lam"  # tiny footer signature (personalise per entrant)
 
 SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa":"2A","Canada":"2B",
@@ -453,7 +453,16 @@ FEATURED=[
  ("🍁","History for the hosts","Canada 1–0 South Africa","Sun, Jun 28 · 3:00 PM ET (12:00 PM PT)",
   "Stephen Eustáquio's strike gave co-hosts Canada their first knockout-round win in World Cup history — the freebie everyone was credited with."),
 ]
-AUTO_HL=[]  # AUTO — maintained by the sync engine; newest finished games first. Do not hand-edit.
+AUTO_HL=[
+ ("⚽","Round of 32","Spain 3–0 Austria","Thu Jul 2 · Round of 32","Spain beat Austria 3–0 in the Round of 32."),
+ ("⚽","Round of 32","United States 2–0 Bosnia & Herz.","Thu Jul 2 · Round of 32","United States beat Bosnia & Herz. 2–0 in the Round of 32."),
+ ("⚽","Round of 32","Belgium 3–2 Senegal","Wed Jul 1 · Round of 32","Belgium beat Senegal 3–2 in the Round of 32."),
+ ("⚽","Round of 32","England 2–1 DR Congo","Wed Jul 1 · Round of 32","England beat DR Congo 2–1 in the Round of 32."),
+ ("⚽","Round of 32","Mexico 2–0 Ecuador","Wed Jul 1 · Round of 32","Mexico beat Ecuador 2–0 in the Round of 32."),
+ ("⚽","Round of 32","France 3–0 Sweden","Tue Jun 30 · Round of 32","France beat Sweden 3–0 in the Round of 32."),
+ ("⚽","Round of 32","Ivory Coast 1–2 Norway","Tue Jun 30 · Round of 32","Norway beat Ivory Coast 2–1 in the Round of 32."),
+ ("🥅","Round of 32","Netherlands 1–1 Morocco","Tue Jun 30 · Round of 32","Morocco beat Netherlands on penalties (3–2 pens) after a 1–1 draw in the Round of 32."),
+]  # AUTO — maintained by the sync engine; newest finished games first. Do not hand-edit.
 HIGHLIGHTS=FEATURED+AUTO_HL
 def build_highlights():
     return ''.join(f'<div class="glass story"><div class="story-ic">{ic}</div>'
