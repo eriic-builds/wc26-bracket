@@ -1,53 +1,108 @@
 # Eric — 2026 FIFA World Cup Bracket Dashboard
 
 > An interactive, single-file web dashboard that scores my 2026 FIFA World Cup
-> bracket-challenge picks against real results — and visualizes the whole bracket.
+> bracket-challenge picks against real results — and visualizes the whole knockout bracket.
+> It builds itself from my picks and keeps itself up to date after games finish.
 
 **Live dashboard:** https://eriic-builds.github.io/Eric-fifa26-wc-bracket-dashboard/
 
 ---
 
+## Table of contents
+
+- [What it does](#what-it-does)
+- [What's in it for me](#whats-in-it-for-me)
+- [How it's built](#how-its-built)
+- [The data model (the `DATA` block)](#the-data-model-the-data-block)
+- [Hosting on GitHub Pages](#hosting-on-github-pages)
+- [Auto-sync automation (Phase 2)](#auto-sync-automation-phase-2)
+- [Refreshing results manually](#refreshing-results-manually)
+- [Repo layout](#repo-layout)
+- [How this repo was built](#how-this-repo-was-built)
+- [Troubleshooting & FAQ](#troubleshooting--faq)
+- [Ideas & how to improve](#ideas--how-to-improve)
+- [Credits & disclaimer](#credits--disclaimer)
+
+---
+
 ## What it does
 
-- **Knockout tree** with colored connectors showing the path from Round of 32 to the Final.
-- **Live scoring** of my picks against actual results as games finish.
-- **"Actual vs my picks" toggle** — flip between how the tournament really went and what I predicted.
-- **Hover-for-country-stats** on each team.
+- **Knockout tree** with colored connectors showing the path from the Round of 32 to the Final.
+- **Live scoring** of my picks against actual results as games finish (confirmed points, points
+  still live, points lost, and maximum attainable).
+- **"Actual vs my picks" toggle** — flip between how the tournament really went and what I
+  predicted.
+- **Hover-for-country-stats** cards (titles, best finish) on each team.
+- **Interactive scorecard** you can hand-adjust in the browser (stored locally) to play out
+  "what if" scenarios.
 - **Dark / Light / Easy reading modes** for comfortable viewing.
+- **Upcoming matches** with kickoff times shown in ET / CT / PT.
 
-Everything runs client-side. Open the page and it just works.
+Everything runs client-side. Open the page and it just works — on desktop or phone.
 
 ---
 
-## What''s in it for me
+## What's in it for me
 
 I filled out a bracket. Instead of manually checking scores and re-tallying a spreadsheet,
-this dashboard does it for me: at a glance I can see how many picks I''ve hit, where my bracket
+this dashboard does it for me: at a glance I can see how many picks I've hit, where my bracket
 broke, and how the real tournament diverged from my predictions — all on a page I can share.
+And once the automation is on, I don't even have to update it: it refreshes itself after games.
 
 ---
 
-## How it''s built
+## How it's built
 
 The dashboard is **one self-contained static `index.html`** — vanilla HTML/CSS/JS, no
-frameworks, no build step, and **no external network requests** (everything is inlined). That
-makes it perfect for GitHub Pages: there''s nothing to compile.
+frameworks, no build step, and **no external network requests** (all CSS/JS/data are inlined).
+That makes it ideal for GitHub Pages: there's nothing to compile and nothing to break.
 
 That HTML is produced by a small generator:
 
-- **`scripts/build_dashboard.py`** — Python 3, standard library only. It has a **`DATA` block**
-  at the top (the picks + results you swap per person or per refresh) and a **verbatim render
-  engine** below that turns the data into the finished `index.html`.
-- **The instructions kit** (`input/instructions.md`) is the build spec: layout, scoring rules,
-  and behavior the generator follows.
-- **My picks** (`input/bracket-picks.xlsx`) seed the `DATA` block.
+- **`scripts/build_dashboard.py`** — Python 3, standard-library only. It has a **`DATA` block**
+  at the top (the picks + results — the only part that changes per person or per refresh) and a
+  **verbatim render engine** below that turns the data into the finished page. The render engine
+  is never edited; only the data changes.
+- **The instructions kit** (`input/instructions.md`, currently **v6**) is the build spec: the
+  exact layout, scoring rules, colors, bracket geometry, and interactions the generator
+  reproduces.
+- **My picks** (`input/bracket-picks.xlsx`) are the source of the `DATA` block — read once from
+  the workbook's **"My Bracket"** tab.
 
-### Refreshing results
+### Build flow (one picture)
 
-1. Update the match results in the `DATA` block of `build_dashboard.py`.
-2. Re-run it: `python scripts/build_dashboard.py`.
-3. It regenerates `docs/index.html`.
-4. Commit and push — GitHub Pages redeploys in about a minute.
+```
+input/bracket-picks.xlsx  ─┐
+                           ├─►  scripts/build_dashboard.py  ─►  docs/index.html  ─►  GitHub Pages
+input/instructions.md  ────┘        (DATA block + render)         (self-contained)     (live site)
+                                            ▲
+        scripts/fetch_results.py  ──────────┘   (Phase 2: writes finished results into DATA)
+```
+
+---
+
+## The data model (the `DATA` block)
+
+Everything the page shows comes from a handful of variables at the top of
+`build_dashboard.py`. The important ones:
+
+| Variable | What it holds |
+| --- | --- |
+| `ENTRANT`, `TIEBREAKER` | Name on the dashboard and the Final total-goals tiebreaker. |
+| `REFRESHED` | "Last updated" timestamp shown in the header. |
+| `SEED` | Every team → its group seed (e.g. `"England":"1L"`). |
+| `R32` | The 16 Round-of-32 fixtures: `(matchcode, date, teamA, teamB, my pick)`. |
+| `FREEBIE_MATCH` | The match everyone is auto-credited (Canada vs South Africa). |
+| `RES` | **Finished** results, keyed by match code: `(goalsA, goalsB, winner, note)`. |
+| `UPCOMING` | Not-yet-played matches → their kickoff day label. |
+| `R32_TIMES`, `R16_FIX`, `R16_PICK` | Kickoff times and later-round fixtures/picks. |
+| `R16_WIN`, `QF_WIN`, `SF_WIN`, `CHAMP`, `RUNNER` | My picks for each later round. |
+| `HIGHLIGHTS` | A few verified storylines shown in the "How it played out" strip. |
+
+**Scoring in plain terms:** each correct advancing pick earns points by round; `winner:null`
+(or a match not in `RES`) means the game is still pending and counts toward *live* points, not
+lost ones. When a result is added, the engine recomputes confirmed / live / lost / attainable
+and marks eliminated teams automatically.
 
 ---
 
@@ -57,7 +112,89 @@ Because the dashboard is a single static file, hosting is trivial:
 
 1. The generated dashboard lives at **`docs/index.html`**.
 2. In the repo: **Settings → Pages → Deploy from a branch → `main`, `/docs`**.
-3. It goes live at `https://eriic-builds.github.io/Eric-fifa26-wc-bracket-dashboard/`.
+3. It goes live at `https://eriic-builds.github.io/Eric-fifa26-wc-bracket-dashboard/`
+   (rebuilds within ~1 minute of any push that changes `docs/`).
+
+---
+
+## Auto-sync automation (Phase 2)
+
+A GitHub Action keeps the dashboard current **without any manual work** — it's already set up
+and running.
+
+**When it runs:** aligned to when games actually finish, not every hour. Three scheduled runs a
+day, each just after a block of matches ends (games kick off ~12 PM–11 PM ET and last ~2 hours),
+so a result appears within roughly **30–60 minutes of the final whistle** — never mid-game.
+
+| Run | Approx. time (ET) | Catches games that kicked off… | Cron (UTC) |
+| --- | --- | --- | --- |
+| ☀️ Afternoon | ~6:00 PM ET | noon–3 PM ET | `0 22 * * *` |
+| 🌆 Evening | ~9:30 PM ET | 5–6:30 PM ET | `30 1 * * *` |
+| 🌙 Late night | ~2:00 AM ET | 8–11 PM ET | `0 6 * * *` |
+
+You can also run it on demand: **Actions → Sync World Cup results → Run workflow**.
+
+**What each run does** (`scripts/fetch_results.py`):
+
+1. Reads the Round-of-32 fixtures straight from `build_dashboard.py` so it always matches my
+   bracket.
+2. Pulls **finished** World Cup matches from [football-data.org](https://www.football-data.org/)
+   (competition `WC`) using the `FOOTBALL_DATA_TOKEN` secret.
+3. Normalizes source team names to the bracket's spellings via **`scripts/team_map.json`**
+   (e.g. "Bosnia and Herzegovina" → "Bosnia & Herz.", "Côte d'Ivoire" → "Ivory Coast").
+4. Matches each finished game to a bracket match by the pair of teams, and writes it into the
+   `RES` / `UPCOMING` / `REFRESHED` blocks.
+5. Re-runs the generator to rebuild `docs/index.html`, then commits & pushes if anything
+   changed (which triggers the Pages redeploy).
+
+**Why it's safe:**
+
+- **Finished games only** — a match still in progress or not started is never written.
+- **Never clobbers** an existing result and is **idempotent**: if nothing new is final, it
+  changes nothing and exits cleanly.
+- **Safe no-op without a token** — if `FOOTBALL_DATA_TOKEN` isn't set, the run succeeds and does
+  nothing (so setup never leaves a red ❌).
+- **Draws need a decider** — a level score is only recorded with a penalties/AET note, so a
+  half-finished match can't be mistaken for a draw.
+
+### First-time setup (already done here, kept for reference)
+
+1. Get a **free** API token at [football-data.org](https://www.football-data.org/client/register)
+   (register → the token arrives by email / shows in your account). No cost.
+2. Repo **Settings → Secrets and variables → Actions → New repository secret**, name it exactly
+   **`FOOTBALL_DATA_TOKEN`**, paste the token, save.
+3. Test it: **Actions → Sync World Cup results → Run workflow**. A green ✅ and the log line
+   `Source: football-data.org …` means it's live.
+
+---
+
+## Refreshing results manually
+
+You don't need the automation to update the board — any of these work:
+
+```bash
+# 1) Edit the DATA block directly, then rebuild:
+python scripts/build_dashboard.py
+
+# 2) Feed results from a local JSON file (same shape the fetcher uses):
+python scripts/fetch_results.py --input results.json
+
+# 3) Preview what a sync WOULD change, writing nothing:
+python scripts/fetch_results.py --dry-run          # (with FOOTBALL_DATA_TOKEN set)
+python scripts/fetch_results.py --input results.json --dry-run
+```
+
+A local `results.json` is just a list of finished games, e.g.:
+
+```json
+[
+  {"home": "Portugal", "away": "Croatia", "homeGoals": 2, "awayGoals": 1},
+  {"home": "Switzerland", "away": "Algeria", "homeGoals": 1, "awayGoals": 1,
+   "winner": "Algeria", "note": "5-4 pens"}
+]
+```
+
+Then commit and push — Pages redeploys in about a minute.
 
 ---
 
@@ -65,47 +202,88 @@ Because the dashboard is a single static file, hosting is trivial:
 
 | Path | What it is |
 | --- | --- |
-| `input/instructions.md` | The instructions kit — the build spec the generator follows. |
-| `input/bracket-picks.xlsx` | My bracket picks (teams, seeds, match ids, predicted winners). |
-| `scripts/build_dashboard.py` | Stdlib generator: `DATA` block + render engine to `index.html`. |
+| `input/instructions.md` | The **v6 build kit** — the spec the generator reproduces. |
+| `input/bracket-picks.xlsx` | My bracket picks (the "My Bracket" tab seeds the `DATA` block). |
+| `scripts/build_dashboard.py` | Stdlib generator: `DATA` block + render engine → `index.html`. |
+| `scripts/fetch_results.py` | Web/offline results sync that updates `DATA` and rebuilds. |
+| `scripts/team_map.json` | Source-name → bracket-name mapping (16 known variants). |
 | `docs/index.html` | The generated, self-contained dashboard (served by Pages). |
-| `scripts/fetch_results.py` | *(Phase 2)* pulls latest results into `DATA` before a rebuild. |
-| `.github/workflows/` | *(Phase 2)* the scheduled auto-rebuild automation. |
+| `.github/workflows/sync-results.yml` | The scheduled auto-sync workflow. |
+| `README.md` | This file. |
+| `.gitignore` | Ignores Python/editor/secret cruft. |
 
 ---
 
-## Two phases
+## How this repo was built
 
-- **Phase 1 — Build + host.** Generate the dashboard from my picks + the kit, publish on Pages.
-  Results are refreshed by updating the `DATA` block and re-running the generator.
-- **Phase 2 — Auto-sync from the web.** A GitHub Action runs after each daily block of games
-  finishes, pulls the latest results into the `DATA` block, re-runs `build_dashboard.py`, and
-  commits the updated `index.html` — so the dashboard refreshes on its own shortly after games.
-
-### Turning on auto-sync (Phase 2)
-
-The automation lives in **`.github/workflows/sync-results.yml`** and runs **right after each
-daily block of matches finishes** — three scheduled runs (late afternoon, evening, and after
-the last night game), so results appear within ~30–60 minutes of the final whistle instead of
-polling every hour. You can also trigger it any time from the **Actions** tab. To activate it:
-
-1. Get a **free** API token from [football-data.org](https://www.football-data.org/) (register → your account shows a token). No cost.
-2. In this repo: **Settings → Secrets and variables → Actions → New repository secret**,
-   name it **`FOOTBALL_DATA_TOKEN`**, paste the token.
-3. That's it. The workflow fetches finished World Cup games, updates results, and redeploys.
-   Until the token is added, the workflow simply does nothing (a safe no-op).
-
-**How the sync stays safe:** it only writes *finished* games, never overwrites a pending
-match, and is idempotent (re-running changes nothing if there's nothing new). Team names from
-the feed are mapped to the bracket's names via **`scripts/team_map.json`** (e.g.
-"Bosnia and Herzegovina" → "Bosnia & Herz.").
-
-**Manual / offline update:** you can also feed results from a local file —
-`python scripts/fetch_results.py --input results.json` — or preview with `--dry-run`.
-
-> **Note on Phase 2:** result-fetching happens *outside* the generator. The automation adds a
-> step that pulls the latest results into the `DATA` block **before** running the generator.
+1. Scaffolded the repo (`input/`, `docs/`, `scripts/`, `.github/workflows/`) with an `input/`
+   drop-zone for the two source files.
+2. Saved the **v6** kit's Python generator verbatim to `scripts/build_dashboard.py` and
+   repointed its output to `docs/index.html`.
+3. **Verified my picks against the Excel "My Bracket" tab** — all Round-of-32 picks, the
+   R16/QF/SF winners, `CHAMP` (England), `RUNNER` (France) and the tiebreaker (4) matched — then
+   personalized `ENTRANT` and the refresh timestamp.
+4. Generated the dashboard, enabled GitHub Pages from `/docs`, and confirmed it served (HTTP
+   200).
+5. Added the Phase 2 sync script, team map, and workflow; verified the update logic with a mock
+   feed (including a penalty shootout) and a live workflow run.
 
 ---
+
+## Troubleshooting & FAQ
+
+- **A game finished but the board didn't update yet.** The next scheduled run picks it up
+  (within ~30–60 min of full time). To see it now: **Actions → Sync World Cup results → Run
+  workflow**.
+- **The run is green but nothing changed.** That's normal when there are no *newly* finished
+  games — the log will say `No new finished games to apply`.
+- **The run failed (red ❌).** Open the failed run's log. Common causes: an expired/mistyped
+  `FOOTBALL_DATA_TOKEN`, or hitting the free-tier rate limit (the schedule only runs 3×/day to
+  avoid this). Re-run after a minute.
+- **A team's result didn't match up.** The feed may spell a country differently — add the
+  variant to `scripts/team_map.json` (left side = feed spelling, right side = bracket spelling).
+- **I want to change when it runs.** Edit the `cron` lines in
+  `.github/workflows/sync-results.yml` (times are in UTC; summer ET = UTC − 4).
+
+---
+
+## Ideas & how to improve
+
+Honest analysis of what could make this better, roughly by value vs. effort:
+
+**High value, low effort**
+- **Add a `LICENSE`** (e.g. MIT) so others can reuse the generator cleanly.
+- **Timezone accuracy for the timestamp.** `REFRESHED` currently assumes summer PDT (UTC−7); it
+  should compute the offset (or label UTC) so it stays correct year-round.
+- **Later-round results.** `RES` covers the Round of 32; extend the fetcher to write R16/QF/SF/
+  Final results as those rounds arrive (map by team pair the same way), so scoring past the R32
+  updates automatically too.
+- **Skip empty commits in CI.** Already handled (commit only on change) — worth keeping an eye on
+  as rounds grow.
+
+**Medium value**
+- **A tiny GitHub Actions badge** in this README showing the last sync status.
+- **A fallback results source.** If football-data.org is ever rate-limited or missing a match,
+  fall back to a second free source so a single outage can't stall updates.
+- **Unit tests** for `fetch_results.py` (name normalization, team-pair matching, draw handling)
+  using a committed sample feed under `tests/`.
+- **Deploy via GitHub Pages Actions** (instead of branch-based) to make the redeploy explicit and
+  add a build check.
+
+**Nice to have**
+- **Multi-entrant support** — the generator already isolates `DATA` per person; a small wrapper
+  could build several brackets (mine + friends') and a shared leaderboard page.
+- **Accessibility pass** — verify color-contrast in all three themes and keyboard navigation of
+  the bracket.
+- **A screenshot / social preview image** in the README and as an OpenGraph tag so shared links
+  look good.
+
+---
+
+## Credits & disclaimer
+
+Match results, scores, and kickoff times come from a verified web lookup (FIFA official records,
+corroborated by major outlets). Historical country stats are public World Cup records. Built
+with the reusable World Cup Bracket Dashboard kit (v6).
 
 > Personal project. Not affiliated with FIFA, GitHub, or Microsoft.
