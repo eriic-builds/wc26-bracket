@@ -1,4 +1,4 @@
-# World Cup 2026 Bracket Dashboard — build kit (v4)
+# World Cup 2026 Bracket Dashboard — build kit (v6)
 
 Run this in **two steps** to get the exact dashboard, tailored to your own picks — then optionally
 keep it auto-updating through the tournament.
@@ -7,19 +7,19 @@ keep it auto-updating through the tournament.
   generator below, then asks you to drop your bracket Excel. It should NOT build anything yet.
 - **Step 2 — upload your filled-in SLED World Cup 2026 bracket Excel.** The assistant reads your
   "My Bracket" tab, looks up the live FIFA results, fills ONLY the data, runs the generator
-  untouched, and delivers your dashboard.
+  untouched, and delivers your dashboard (auto-named after you).
 - **Step 3 — it offers to auto-update** on match days through the Final (you choose).
 
 Because the layout, styling, and interactions are the *same generator code* reused verbatim,
 everyone gets the identical design (bracket, connectors, Actual/My-picks toggle, legend, reading
-modes, and the hover-over country stat cards) — only the picks differ.
+modes, and the hover-over country stat cards) — only the picks and the name differ.
 
 ---
 
 ## Instructions for the assistant
 
 You are reproducing a specific, already-built interactive dashboard **exactly**, then filling it
-with the user's data. Do it in these steps and do not deviate from the generator's design.
+with the user's data. Do these steps and do not deviate from the generator's design.
 
 **Step 1 (now):**
 1. Save the Python generator in the code block below to `working/build_dashboard.py`, **verbatim** —
@@ -28,9 +28,13 @@ with the user's data. Do it in these steps and do not deviate from the generator
    your dashboard." Then stop and wait. Do not build with the example data.
 
 **Step 2 (after they upload their Excel):**
-1. Read their **"My Bracket"** tab and replace ONLY the USER DATA block at the top of the generator
-   (and the HIGHLIGHTS list further down) with their values:
-   - From the sheet, exactly as entered: `ENTRANT`, `TIEBREAKER`, `SEED`, `R32` (each row =
+1. Replace ONLY the USER DATA block at the top of the generator (and the HIGHLIGHTS list) with their
+   values:
+   - **Name (`ENTRANT`):** use the entrant’s name from the **cell next to the "Your Name:" label on their
+     My Bracket tab** (in the SLED template that’s cell C69, by the tiebreaker). If it is blank, use the name of the person running this — the signed-in Cowork
+     user's profile name. The dashboard title, hero, and output filename all derive from `ENTRANT`
+     automatically, so never hardcode a name. You may also personalise the tiny footer `CREDIT` line (defaults to "Built with Cowork").
+   - From the sheet, exactly as entered: `TIEBREAKER`, `SEED`, `R32` (each row =
      `(matchcode, date, teamA, teamB, THEIR pick)`), `FREEBIE_MATCH`, `R16_WIN`, `QF_WIN`,
      `SF_WIN`, `CHAMP`, `RUNNER`. Reconstruct the tree by pairing their picks; work for any teams.
    - From a live web lookup — prefer **FIFA official match records (fifa.com)**, corroborated by
@@ -43,8 +47,9 @@ with the user's data. Do it in these steps and do not deviate from the generator
 2. **Do not edit the RENDER ENGINE** (everything below the USER DATA banner) — it produces the exact
    design, colors, bracket geometry, connectors, Actual/My-picks toggle, legend, hover stat cards,
    reading modes, scorecard, KPIs, and layout. All on-screen copy derives from the data.
-3. Run `python build_dashboard.py`. It writes to `output/...-Bracket.html` — rename the output path
-   in the last few lines to the entrant's name. Verify the file exists (`output/*.html`) and QA it.
+3. Run `python build_dashboard.py`. It **auto-names** the output
+   `output/<Entrant-Name>-World-Cup-2026-Bracket.html`. Verify the file exists (`output/*.html`)
+   and QA it.
 4. Give a short plain-language summary of their standing: confirmed points, round record,
    still-live vs eliminated vs max attainable, which picks busted, and whether their title path is
    intact.
@@ -79,8 +84,8 @@ FIFA results and re-renders from the saved generator.
 
    Simple robust setup: schedule the recurring task on month-days 2,3,4,5,6,7,9,10,11,14,15,19 at
    the user's local equivalent of ~11:30 PM PT (safely after that day's last match — the latest
-   ends ~11 PM PT on Jul 2). If a user is far east of PT and that time crosses midnight, run it the
-   next morning their time instead — either way, capture each match day's final results once.
+   ends ~11 PM PT on Jul 2). If a user is far east of PT and that crosses midnight, run it the next
+   morning their time instead — either way, capture each match day's final results once.
 4. Confirm in plain language what it'll do — e.g. "I'll refresh your bracket after the games each
    match day through the final on July 19, then stop. No runs on the off-days."
 
@@ -93,11 +98,11 @@ result can't be verified, say so plainly.
 
 ```python
 # -*- coding: utf-8 -*-
-"""Eric's World Cup 2026 bracket dashboard -> one self-contained HTML file.
-Picks/scoring rules: SLED World_Cup_2026_Bracket_Challenge_Eric_Lam.xlsx (verified).
-LIVE match results: web (ESPN, CBS Sports, FIFA, Sporting News), Round of 32 as of Jul 1, 2026.
-No results are invented; undecided matches (Jul 2-3) are shown as pending."""
-import html, json
+"""World Cup 2026 bracket-challenge dashboard -> one self-contained HTML file.
+Picks / scoring / tiebreaker come from the entrant's own 'My Bracket' Excel tab.
+Live match results & kickoff times come from a verified web lookup (FIFA official + majors).
+No results are invented; undecided matches are shown as pending."""
+import html, json, re
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  USER DATA — the ONLY part you change per entrant.
@@ -109,8 +114,9 @@ import html, json
 #  Everything below the "RENDER ENGINE" banner is kept VERBATIM — it reproduces the
 #  exact dashboard design / UI / format. Do not restyle, re-order, or add to it.
 # ══════════════════════════════════════════════════════════════════════════════
-ENTRANT="Eric Lam"; TIEBREAKER=4
+ENTRANT="Sample Entrant"; TIEBREAKER=4
 REFRESHED="July 1, 2026 · 10:45 PM PT"
+CREDIT="Built with Cowork"  # tiny footer signature (personalise per entrant)
 
 SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa":"2A","Canada":"2B",
  "Netherlands":"1F","Morocco":"2C","Portugal":"2K","Croatia":"2L","Spain":"1H","Austria":"2J",
@@ -119,7 +125,7 @@ SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa
  "Argentina":"1J","Cape Verde":"2H","Australia":"2D","Egypt":"2G","Switzerland":"1B","Algeria":"3rd",
  "Colombia":"1K","Ghana":"3rd"}
 
-# (matchcode, date, teamA, teamB, Eric's pick)
+# (matchcode, date, teamA, teamB, the entrant's pick)
 R32=[("M74","Mon 6/29","Germany","Paraguay","Germany"),
  ("M77","Tue 6/30","France","Sweden","France"),
  ("M73","Sun 6/28","South Africa","Canada","Canada"),
@@ -745,6 +751,7 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .note b{color:var(--text)}
 .foot{margin-top:34px;padding:20px 22px;font-size:.78rem;color:var(--muted);line-height:1.6}
 .foot b{color:var(--text2)}.foot .src{margin-top:8px}
+.foot .credit{font-size:.66rem;opacity:.6;margin-top:10px;letter-spacing:.02em}
 .dab{position:fixed;right:24px;bottom:24px;width:54px;height:54px;border-radius:50%;border:0;cursor:pointer;background:var(--grad);box-shadow:0 8px 24px rgba(0,151,244,.45);z-index:60;display:grid;place-items:center;font-size:1.3rem;color:#fff;transition:.18s}
 .dab:hover{transform:translateY(-2px) scale(1.04)}
 .dab::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:var(--grad);filter:blur(14px);opacity:.5;z-index:-1}
@@ -885,11 +892,11 @@ def chip(t):
             f'<span class="cseed">{esc(seed_of(t))}</span><span class="ctxt">{esc(t)}</span></button>')
 
 HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf-8">'
-'<meta name="viewport" content="width=device-width,initial-scale=1"><title>Eric\'s World Cup 2026 Bracket</title><style>'+CSS+'</style></head><body><div class="wrap">'
+f'<meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(ENTRANT)}’s World Cup 2026 Bracket</title>'+'<style>'+CSS+'</style></head><body><div class="wrap">'
 '<div class="topbar"><div class="brand"><span class="orb"></span><div>Bracket dashboard<small>SLED World Cup 2026 Challenge · live</small></div></div>'
 '<div class="modes glass"><button data-mode="dark" class="on">Dark</button><button data-mode="light">Light</button>'
 '<button data-mode="easy" title="Reading mode — a highly legible font, larger text, extra line and letter spacing, sentence case (no all-caps), left-aligned text and a soft, glare-free background">Easy</button></div></div>'
-'<section class="hero glass"><div class="eyebrow">Eric Lam · live results vs your picks</div>'
+f'<section class="hero glass"><div class="eyebrow">{esc(ENTRANT)} · live results vs your picks</div>'
 f'<h1>Backing <span class="g">{esc(CHAMP)}</span> {"— and still in it" if CHAMP_ALIVE else "— but knocked out"}</h1>'
 f'<p class="sub">{R32_DONE} of {N_R32} Round-of-32 games are final — you\'re <b>{r32_correct} of {r32_decided} right</b>, '
 f'with <b>{CONF} points</b> banked and <b>{LIVE}</b> still live. Your champion pick {esc(CHAMP)} is <b>{CHAMP_STATUS}</b>{esc(BUSTED_PHRASE)}.</p>'
@@ -952,12 +959,13 @@ f'<div class="g3">{build_story()}</div>'
 '<div class="glass" style="padding:20px"><div style="font-weight:700;margin-bottom:4px">Where the tournament stands</div>'
 f'<div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">Live results as of {REFRESHED}</div>'
 f'<div class="stages" style="grid-template-columns:1fr;padding:0;gap:8px">{build_stages()}</div></div></div>'
-'<div class="glass foot"><b>Sources.</b> Your picks, scoring, tiebreaker and Rob\'s upset-bonus rule from <b>SLED World_Cup_2026_Bracket_Challenge_Eric_Lam.xlsx</b> and Rob\'s challenge emails. '
+'<div class="glass foot"><b>Sources.</b> Your picks, scoring, tiebreaker and any host bonus rule from your <b>SLED World Cup 2026 bracket workbook</b> and the challenge instructions. '
 'Match results, scores and kickoff times from <b>FIFA official match records</b> (fifa.com), corroborated by NBC Sports, CBS Sports, ESPN and Sporting News, for the 2026 FIFA World Cup. Kickoff times anchored to ET, converted to CT/PT. Hover-card country pedigree (titles, best finish) from public FIFA World Cup historical records.'
 f'<div class="src"><b>Status.</b> Round of 32 is {R32_DONE} of {N_R32} games final; {REMAIN_R32} still to play, and every later round is pending. '
 f'You have <b>{CONF} points</b> confirmed ({ADJ} with the optional upset bonus), <b>{LIVE}</b> live, max attainable <b>{ATTAIN}</b>. '
 f'This is your personal, <b>unofficial</b> tally for Rob to review — his scoring is authoritative. Champion {esc(CHAMP)} · runner-up {esc(RUNNER)}.</div>'
-f'<div class="src">Live results as of <b>{REFRESHED}</b> · reading mode, favorites and any manual score edits are saved on this device.</div></div>'
+f'<div class="src">Live results as of <b>{REFRESHED}</b> · reading mode, favorites and any manual score edits are saved on this device.</div>'
++ (f'<div class="src credit">{esc(CREDIT)}</div>' if CREDIT else '') + '</div>'
 '</div><button class="dab" id="dab" title="Back to top" aria-label="Back to top">↑</button>'
 '<div class="statcard" id="statcard" aria-hidden="true"></div>'
 '<script>'+STATS_JS+'</script>'
@@ -965,7 +973,8 @@ f'<div class="src">Live results as of <b>{REFRESHED}</b> · reading mode, favori
 
 import os
 os.makedirs('/mnt/workspace/output',exist_ok=True)
-out='/mnt/workspace/output/Eric-World-Cup-2026-Bracket.html'
+_slug=(re.sub(r'[^A-Za-z0-9]+','-',ENTRANT).strip('-') or 'entry')
+out=f'/mnt/workspace/output/{_slug}-World-Cup-2026-Bracket.html'
 open(out,'w',encoding='utf-8').write(HTML)
 print("WROTE",out,len(HTML),"chars")
 print("Confirmed",CONF,"Live",LIVE,"Out",OUT,"Attainable",ATTAIN,"R32",str(r32_correct)+"/"+str(r32_decided))
