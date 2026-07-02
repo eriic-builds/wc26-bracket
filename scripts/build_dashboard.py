@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Eric's World Cup 2026 bracket dashboard -> one self-contained HTML file.
-Picks/scoring rules: SLED World_Cup_2026_Bracket_Challenge_Eric_Lam.xlsx (verified).
-LIVE match results: web (ESPN, CBS Sports, FIFA, Sporting News), Round of 32 as of Jul 1, 2026.
-No results are invented; undecided matches (Jul 2-3) are shown as pending."""
-import html, json
+"""World Cup 2026 bracket-challenge dashboard -> one self-contained HTML file.
+Picks / scoring / tiebreaker come from the entrant's own 'My Bracket' Excel tab.
+Live match results & kickoff times come from a verified web lookup (FIFA official + majors).
+No results are invented; undecided matches are shown as pending."""
+import html, json, re
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  USER DATA — the ONLY part you change per entrant.
@@ -16,7 +16,8 @@ import html, json
 #  exact dashboard design / UI / format. Do not restyle, re-order, or add to it.
 # ══════════════════════════════════════════════════════════════════════════════
 ENTRANT="Eric Lam"; TIEBREAKER=4
-REFRESHED="July 1, 2026 · 10:45 PM PT"
+REFRESHED="July 2, 2026 · 9:00 AM PT"
+CREDIT="Built with Cowork"  # tiny footer signature (personalise per entrant)
 
 SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa":"2A","Canada":"2B",
  "Netherlands":"1F","Morocco":"2C","Portugal":"2K","Croatia":"2L","Spain":"1H","Austria":"2J",
@@ -25,7 +26,7 @@ SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa
  "Argentina":"1J","Cape Verde":"2H","Australia":"2D","Egypt":"2G","Switzerland":"1B","Algeria":"3rd",
  "Colombia":"1K","Ghana":"3rd"}
 
-# (matchcode, date, teamA, teamB, Eric's pick)
+# (matchcode, date, teamA, teamB, the entrant's pick)
 R32=[("M74","Mon 6/29","Germany","Paraguay","Germany"),
  ("M77","Tue 6/30","France","Sweden","France"),
  ("M73","Sun 6/28","South Africa","Canada","Canada"),
@@ -651,6 +652,7 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .note b{color:var(--text)}
 .foot{margin-top:34px;padding:20px 22px;font-size:.78rem;color:var(--muted);line-height:1.6}
 .foot b{color:var(--text2)}.foot .src{margin-top:8px}
+.foot .credit{font-size:.66rem;opacity:.6;margin-top:10px;letter-spacing:.02em}
 .dab{position:fixed;right:24px;bottom:24px;width:54px;height:54px;border-radius:50%;border:0;cursor:pointer;background:var(--grad);box-shadow:0 8px 24px rgba(0,151,244,.45);z-index:60;display:grid;place-items:center;font-size:1.3rem;color:#fff;transition:.18s}
 .dab:hover{transform:translateY(-2px) scale(1.04)}
 .dab::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:var(--grad);filter:blur(14px);opacity:.5;z-index:-1}
@@ -791,11 +793,11 @@ def chip(t):
             f'<span class="cseed">{esc(seed_of(t))}</span><span class="ctxt">{esc(t)}</span></button>')
 
 HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf-8">'
-'<meta name="viewport" content="width=device-width,initial-scale=1"><title>Eric\'s World Cup 2026 Bracket</title><style>'+CSS+'</style></head><body><div class="wrap">'
+f'<meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(ENTRANT)}’s World Cup 2026 Bracket</title>'+'<style>'+CSS+'</style></head><body><div class="wrap">'
 '<div class="topbar"><div class="brand"><span class="orb"></span><div>Bracket dashboard<small>SLED World Cup 2026 Challenge · live</small></div></div>'
 '<div class="modes glass"><button data-mode="dark" class="on">Dark</button><button data-mode="light">Light</button>'
 '<button data-mode="easy" title="Reading mode — a highly legible font, larger text, extra line and letter spacing, sentence case (no all-caps), left-aligned text and a soft, glare-free background">Easy</button></div></div>'
-'<section class="hero glass"><div class="eyebrow">Eric Lam · live results vs your picks</div>'
+f'<section class="hero glass"><div class="eyebrow">{esc(ENTRANT)} · live results vs your picks</div>'
 f'<h1>Backing <span class="g">{esc(CHAMP)}</span> {"— and still in it" if CHAMP_ALIVE else "— but knocked out"}</h1>'
 f'<p class="sub">{R32_DONE} of {N_R32} Round-of-32 games are final — you\'re <b>{r32_correct} of {r32_decided} right</b>, '
 f'with <b>{CONF} points</b> banked and <b>{LIVE}</b> still live. Your champion pick {esc(CHAMP)} is <b>{CHAMP_STATUS}</b>{esc(BUSTED_PHRASE)}.</p>'
@@ -858,12 +860,13 @@ f'<div class="g3">{build_story()}</div>'
 '<div class="glass" style="padding:20px"><div style="font-weight:700;margin-bottom:4px">Where the tournament stands</div>'
 f'<div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">Live results as of {REFRESHED}</div>'
 f'<div class="stages" style="grid-template-columns:1fr;padding:0;gap:8px">{build_stages()}</div></div></div>'
-'<div class="glass foot"><b>Sources.</b> Your picks, scoring, tiebreaker and Rob\'s upset-bonus rule from <b>SLED World_Cup_2026_Bracket_Challenge_Eric_Lam.xlsx</b> and Rob\'s challenge emails. '
+'<div class="glass foot"><b>Sources.</b> Your picks, scoring, tiebreaker and any host bonus rule from your <b>SLED World Cup 2026 bracket workbook</b> and the challenge instructions. '
 'Match results, scores and kickoff times from <b>FIFA official match records</b> (fifa.com), corroborated by NBC Sports, CBS Sports, ESPN and Sporting News, for the 2026 FIFA World Cup. Kickoff times anchored to ET, converted to CT/PT. Hover-card country pedigree (titles, best finish) from public FIFA World Cup historical records.'
 f'<div class="src"><b>Status.</b> Round of 32 is {R32_DONE} of {N_R32} games final; {REMAIN_R32} still to play, and every later round is pending. '
 f'You have <b>{CONF} points</b> confirmed ({ADJ} with the optional upset bonus), <b>{LIVE}</b> live, max attainable <b>{ATTAIN}</b>. '
 f'This is your personal, <b>unofficial</b> tally for Rob to review — his scoring is authoritative. Champion {esc(CHAMP)} · runner-up {esc(RUNNER)}.</div>'
-f'<div class="src">Live results as of <b>{REFRESHED}</b> · reading mode, favorites and any manual score edits are saved on this device.</div></div>'
+f'<div class="src">Live results as of <b>{REFRESHED}</b> · reading mode, favorites and any manual score edits are saved on this device.</div>'
++ (f'<div class="src credit">{esc(CREDIT)}</div>' if CREDIT else '') + '</div>'
 '</div><button class="dab" id="dab" title="Back to top" aria-label="Back to top">↑</button>'
 '<div class="statcard" id="statcard" aria-hidden="true"></div>'
 '<script>'+STATS_JS+'</script>'
