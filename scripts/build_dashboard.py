@@ -16,7 +16,7 @@ import html, json, re
 #  exact dashboard design / UI / format. Do not restyle, re-order, or add to it.
 # ══════════════════════════════════════════════════════════════════════════════
 ENTRANT="Eric Lam"; TIEBREAKER=4
-REFRESHED="July 2, 2026 · 3:50 PM PT"
+REFRESHED="July 2, 2026 · 4:45 PM PT"
 CREDIT="Built With Cowork — Imagined by Eric Lam"  # tiny footer signature (personalise per entrant)
 
 SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa":"2A","Canada":"2B",
@@ -435,34 +435,21 @@ def build_results_panel():
             f'<b>{r32_correct}/{r32_decided}</b></div>'+''.join(rows)+
             '<div class="rr-h" style="margin-top:12px">Still to play</div>'+''.join(up)+'</div>')
 
-# ── USER DATA (game facts) — optional hand-written featured storylines (kept as-is).
-#    (emoji, tag, headline, "date · time played", one-sentence body). The sync engine
-#    (scripts/fetch_results.py) auto-generates AUTO_HL below from finished games; FEATURED
-#    stays yours to edit. HIGHLIGHTS = your featured stories first, then the auto results.
-FEATURED=[
- ("⏱️","Latest goal in WC history","Belgium 3–2 Senegal","Wed, Jul 1 · 4:00 PM ET (1:00 PM PT)",
-  "Two down with five minutes left, Belgium roared back through Lukaku and Tielemans — whose winning penalty at 124:44 is the latest goal ever recorded at a World Cup."),
- ("🥅","Two giants out on penalties","Germany & Netherlands gone","Mon, Jun 29 · 4:30 PM & 9:00 PM ET",
-  "Germany fell to Paraguay (1–1, 4–3) and the Netherlands to Morocco (1–1, 3–2) — both European heavyweights knocked out in Round-of-32 shootouts."),
- ("⚡","Stoppage-time stunner","Brazil 2–1 Japan","Mon, Jun 29 · 1:00 PM ET (10:00 AM PT)",
-  "Japan led through Kaishu Sano before Casemiro levelled and substitute Gabriel Martinelli curled in a 95th-minute winner — Brazil's deepest scare in years."),
- ("👟","Mbappé & Haaland deliver","France roll, Norway make history","Tue, Jun 30 · 5:00 PM & 1:00 PM ET",
-  "Kylian Mbappé scored twice in France's 3–0 win over Sweden, while Erling Haaland's goal earned Norway a 2–1 win over Ivory Coast — their first World Cup knockout win ever."),
- ("🦁","Kane rescues England","England 2–1 DR Congo","Wed, Jul 1 · Atlanta",
-  "Trailing at the break, Harry Kane scored twice in the second half to drag the Three Lions through."),
- ("🍁","History for the hosts","Canada 1–0 South Africa","Sun, Jun 28 · 3:00 PM ET (12:00 PM PT)",
-  "Stephen Eustáquio's strike gave co-hosts Canada their first knockout-round win in World Cup history — the freebie everyone was credited with."),
-]
+# ── GAME FACTS — the last six finished games, newest first, shown as highlight cards.
+#    Each card is (emoji, headline, scoreline, "day · venue", one-sentence recap).
+#    The sync engine (scripts/fetch_results.py) pulls these automatically from FIFA's
+#    free public feed and rewrites AUTO_HL on every run, so the section stays current
+#    with no manual editing. FEATURED is an optional slot for a hand-written story you
+#    want pinned above the auto cards; leave it empty to show only the live last-six.
+FEATURED=[]
 AUTO_HL=[
- ("⚽","Round of 32","Spain 3–0 Austria","Thu Jul 2 · Round of 32","Spain beat Austria 3–0 in the Round of 32."),
- ("⚽","Round of 32","United States 2–0 Bosnia & Herz.","Thu Jul 2 · Round of 32","United States beat Bosnia & Herz. 2–0 in the Round of 32."),
- ("⚽","Round of 32","Belgium 3–2 Senegal","Wed Jul 1 · Round of 32","Belgium beat Senegal 3–2 in the Round of 32."),
- ("⚽","Round of 32","England 2–1 DR Congo","Wed Jul 1 · Round of 32","England beat DR Congo 2–1 in the Round of 32."),
- ("⚽","Round of 32","Mexico 2–0 Ecuador","Wed Jul 1 · Round of 32","Mexico beat Ecuador 2–0 in the Round of 32."),
- ("⚽","Round of 32","France 3–0 Sweden","Tue Jun 30 · Round of 32","France beat Sweden 3–0 in the Round of 32."),
- ("⚽","Round of 32","Ivory Coast 1–2 Norway","Tue Jun 30 · Round of 32","Norway beat Ivory Coast 2–1 in the Round of 32."),
- ("🥅","Round of 32","Netherlands 1–1 Morocco","Tue Jun 30 · Round of 32","Morocco beat Netherlands on penalties (3–2 pens) after a 1–1 draw in the Round of 32."),
-]  # AUTO — maintained by the sync engine; newest finished games first. Do not hand-edit.
+ ("⚽","Spain cruise past Austria","Spain 3–0 Austria","Thu Jul 2 · Los Angeles","Spain beat Austria 3–0 in the Round of 32."),
+ ("⚽","United States beat Bosnia & Herz.","United States 2–0 Bosnia & Herz.","Thu Jul 2 · San Francisco Bay Area","United States beat Bosnia & Herz. 2–0 in the Round of 32."),
+ ("⚽","Belgium edge Senegal","Belgium 3–2 Senegal","Wed Jul 1 · Seattle","Belgium beat Senegal 3–2 in the Round of 32."),
+ ("⚽","England edge DR Congo","England 2–1 DR Congo","Wed Jul 1 · Atlanta","England beat DR Congo 2–1 in the Round of 32."),
+ ("⚽","Mexico beat Ecuador","Mexico 2–0 Ecuador","Wed Jul 1 · Mexico City","Mexico beat Ecuador 2–0 in the Round of 32."),
+ ("⚽","France cruise past Sweden","France 3–0 Sweden","Tue Jun 30 · New Jersey","France beat Sweden 3–0 in the Round of 32."),
+]  # AUTO — maintained by the sync engine; the last six finished games. Do not hand-edit.
 HIGHLIGHTS=FEATURED+AUTO_HL
 def build_highlights():
     return ''.join(f'<div class="glass story"><div class="story-ic">{ic}</div>'

@@ -124,11 +124,12 @@ and running.
 
 **How to think about it — "set up once, then automatic."** There is no server and no bot you
 have to babysit. The automation is a **GitHub Actions workflow** (a small YAML file in the repo)
-that GitHub itself runs on a schedule. On each run it calls the **football-data.org API** (a free
-sports-data service), grabs any newly *finished* matches, writes them into the dashboard's data,
-rebuilds the page, and commits the change back. The only "manual" parts are the **one-time setup**
-(add the workflow + a free API token, done once) and — if you're impatient — an optional
-**"Run workflow"** button click. After setup, it runs itself.
+that GitHub itself runs on a schedule. On each run it calls **FIFA's free public results feed**
+(`api.fifa.com` — the same data fifa.com's match centre uses; **no API key, no signup, no cost**),
+grabs any newly *finished* matches, writes them into the dashboard's data, refreshes the "Game
+facts" cards, rebuilds the page, and commits the change back. The only "manual" part is adding the
+workflow once — and, if you're impatient, an optional **"Run workflow"** button click. After that
+it runs itself.
 
 **When it runs:** aligned to when games actually finish, not every hour. Three scheduled runs a
 day, each just after a block of matches ends (games kick off ~12 PM–11 PM ET and last ~2 hours),
@@ -146,18 +147,19 @@ You can also run it on demand: **Actions → Sync World Cup results → Run work
 
 1. Reads the Round-of-32 fixtures **and the knockout topology** (`KO_FEED`: R16 → QF → SF →
    Final) straight from `build_dashboard.py` so it always matches my bracket.
-2. Pulls **finished** World Cup matches from [football-data.org](https://www.football-data.org/)
-   (competition `WC`) using the `FOOTBALL_DATA_TOKEN` secret.
+2. Pulls **finished** 2026 World Cup matches from **FIFA's public feed**
+   (`api.fifa.com/api/v3/calendar/matches`, competition `17` / season `285023`) — no token
+   required. (`--source footballdata` is still available if you'd rather use that API + token.)
 3. Normalizes source team names to the bracket's spellings via **`scripts/team_map.json`**
    (e.g. "Bosnia and Herzegovina" → "Bosnia & Herz.", "Côte d'Ivoire" → "Ivory Coast").
 4. Matches each finished game to a bracket match by the pair of teams — first the Round of 32,
    then **every later round** (R16, QF, SF, Final), since each knockout match's teams are the
    winners of its two feeder matches — and writes it into the `RES` / `UPCOMING` / `REFRESHED`
    blocks.
-5. **Auto-writes game-fact highlights** — for **every** recently finished game in the feed
-   (not just the ones in your bracket, and including draws), it appends a one-line factual
-   recap to `AUTO_HL` (newest first), using the match's stage for the round label — so the
-   "Game facts" strip stays current with no editing.
+5. **Auto-writes the "Game facts" highlight cards** — it rebuilds `AUTO_HL` with the **last six
+   finished games** from the whole feed (not just my bracket), each as a card with an emoji, a
+   short headline, the scoreline, the **day · host city**, and a one-sentence factual recap — so
+   a visitor instantly sees what just happened.
 6. Re-runs the generator to rebuild `docs/index.html`, then commits & pushes if anything
    changed (which triggers the Pages redeploy).
 
@@ -166,19 +168,18 @@ You can also run it on demand: **Actions → Sync World Cup results → Run work
 - **Finished games only** — a match still in progress or not started is never written.
 - **Never clobbers** an existing result and is **idempotent**: if nothing new is final, it
   changes nothing and exits cleanly.
-- **Safe no-op without a token** — if `FOOTBALL_DATA_TOKEN` isn't set, the run succeeds and does
-  nothing (so setup never leaves a red ❌).
-- **Draws need a decider** — a level score is only recorded with a penalties/AET note, so a
-  half-finished match can't be mistaken for a draw.
+- **No key, no secret to leak** — the default FIFA feed needs no token, so there's nothing to
+  configure and nothing that can expire.
+- **Draws stay out of the bracket** — a genuine draw (no decider) is shown in the game-fact
+  cards but never recorded as a knockout result.
 
 ### First-time setup (already done here, kept for reference)
 
-1. Get a **free** API token at [football-data.org](https://www.football-data.org/client/register)
-   (register → the token arrives by email / shows in your account). No cost.
-2. Repo **Settings → Secrets and variables → Actions → New repository secret**, name it exactly
-   **`FOOTBALL_DATA_TOKEN`**, paste the token, save.
-3. Test it: **Actions → Sync World Cup results → Run workflow**. A green ✅ and the log line
-   `Source: football-data.org …` means it's live.
+Nothing to configure for data access — the default source is FIFA's free public feed (no token).
+Setup is just: commit `.github/workflows/sync-results.yml`, then test with **Actions → Sync World
+Cup results → Run workflow**. A green ✅ and the log line `Source: FIFA public feed …` means it's
+live. *(Optional: to use football-data.org instead, add a free `FOOTBALL_DATA_TOKEN` secret and
+run the script with `--source footballdata`.)*
 
 ---
 
@@ -194,7 +195,7 @@ python scripts/build_dashboard.py
 python scripts/fetch_results.py --input results.json
 
 # 3) Preview what a sync WOULD change, writing nothing:
-python scripts/fetch_results.py --dry-run          # (with FOOTBALL_DATA_TOKEN set)
+python scripts/fetch_results.py --dry-run          # (default FIFA feed, no token)
 python scripts/fetch_results.py --input results.json --dry-run
 ```
 
@@ -305,32 +306,24 @@ git push
 Repo **Settings → Pages → Build and deployment → Deploy from a branch → `main` / `/docs` →
 Save**. Within ~1 minute it's live at `https://<you>.github.io/my-wc2026-bracket/`.
 
-### 7. Get a free football-data.org API token
+### 7. Results source — nothing to configure
 
-1. Go to **[football-data.org/client/register](https://www.football-data.org/client/register)** and
-   sign up (free tier — no card).
-2. Your **API token** arrives by email and shows in your account dashboard.
-3. The dashboard uses competition code **`WC`** (FIFA World Cup) and only reads **finished**
-   matches. The free tier's rate limit is why the schedule runs just **3×/day** — plenty for a
-   tournament.
+The sync uses **FIFA's free public feed** (`api.fifa.com/api/v3`, competition `17` / season
+`285023` = World Cup 2026) by default. It needs **no API key, no account, and no repo secret** —
+it only reads **finished** matches. There's nothing to set up here.
 
-### 8. Add the token as a repo secret
+> *Optional alternative:* to use football-data.org instead, register for a free token at
+> [football-data.org](https://www.football-data.org/client/register), add it as a repo secret named
+> `FOOTBALL_DATA_TOKEN` (**Settings → Secrets and variables → Actions**), and change the workflow
+> step to `python scripts/fetch_results.py --source footballdata`.
 
-Repo **Settings → Secrets and variables → Actions → New repository secret**:
-
-- **Name:** `FOOTBALL_DATA_TOKEN` (exactly this)
-- **Secret:** paste your token → **Add secret**
-
-> The token is stored encrypted and only exposed to the workflow at run time — never committed to
-> the code. Without it, the workflow still runs but does nothing (a safe no-op).
-
-### 9. Test the automation
+### 8. Test the automation
 
 Repo **Actions → Sync World Cup results → Run workflow → Run**. A green ✅ with a log line like
-`Source: football-data.org …` means it's wired up. If no games are newly final it will correctly
+`Source: FIFA public feed …` means it's wired up. If no games are newly final it will correctly
 report `No new finished games to apply` — that's success, not a failure.
 
-### 10. Done — it now runs itself
+### 9. Done — it now runs itself
 
 From here the workflow fires on its schedule (see the table above), pulls any finished games,
 rebuilds `docs/index.html`, and pushes — which redeploys Pages automatically. To change *when* it
@@ -367,9 +360,9 @@ runs, edit the `cron` lines in `.github/workflows/sync-results.yml` (times are *
   workflow**.
 - **The run is green but nothing changed.** That's normal when there are no *newly* finished
   games — the log will say `No new finished games to apply`.
-- **The run failed (red ❌).** Open the failed run's log. Common causes: an expired/mistyped
-  `FOOTBALL_DATA_TOKEN`, or hitting the free-tier rate limit (the schedule only runs 3×/day to
-  avoid this). Re-run after a minute.
+- **The run failed (red ❌).** Open the failed run's log. With the default FIFA feed there's no
+  token to expire; the usual cause is a transient network/API hiccup — just re-run it. (If you
+  switched to `--source footballdata`, also check the `FOOTBALL_DATA_TOKEN` secret and rate limit.)
 - **A team's result didn't match up.** The feed may spell a country differently — add the
   variant to `scripts/team_map.json` (left side = feed spelling, right side = bracket spelling).
 - **I want to change when it runs.** Edit the `cron` lines in
@@ -390,8 +383,9 @@ Honest analysis of what could make this better, roughly by value vs. effort:
 
 **Medium value**
 - **A tiny GitHub Actions badge** in this README showing the last sync status.
-- **A fallback results source.** If football-data.org is ever rate-limited or missing a match,
-  fall back to a second free source so a single outage can't stall updates.
+- **A fallback results source.** The default is FIFA's free feed; football-data.org is already
+  wired as an alternate (`--source footballdata`). A small auto-fallback between them would make a
+  single outage a non-event.
 - **Unit tests** for `fetch_results.py` (name normalization, team-pair matching, draw handling)
   using a committed sample feed under `tests/`.
 - **Deploy via GitHub Pages Actions** (instead of branch-based) to make the redeploy explicit and

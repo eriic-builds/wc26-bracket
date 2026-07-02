@@ -34,10 +34,9 @@ jobs:
           python-version: "3.12"
 
       - name: Fetch results and rebuild the dashboard
-        env:
-          # Add a free token at Settings > Secrets and variables > Actions.
-          # Without it, this step is a clean no-op.
-          FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
+        # Uses FIFA's free public results feed (api.fifa.com) — no API key or
+        # secret required. Pass --source footballdata (and set FOOTBALL_DATA_TOKEN)
+        # only if you prefer that source instead.
         run: python scripts/fetch_results.py
 
       - name: Commit and push if the dashboard changed

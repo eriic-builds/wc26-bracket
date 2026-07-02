@@ -7,23 +7,25 @@ What it does
 1. Reads the Round-of-32 fixtures straight out of ``build_dashboard.py`` (the
    ``R32`` list) so it always matches the entrant's bracket.
 2. Gets finished-match results from the web:
-     - default: football-data.org (free tier), competition ``WC``, using the
-       ``FOOTBALL_DATA_TOKEN`` environment variable / GitHub secret; or
+     - default: FIFA's free public feed (api.fifa.com/api/v3), competition 17 /
+       season 285023 (World Cup 2026) — no API key or signup required; or
+     - ``--source footballdata`` for football-data.org (needs ``FOOTBALL_DATA_TOKEN``); or
      - ``--input results.json`` for a local/offline feed (also used by self-test).
 3. Normalizes source team names to the bracket's names via ``team_map.json``.
 4. Matches each finished game to a bracket match by the pair of teams, and
    updates the ``RES`` and ``UPCOMING`` blocks in ``build_dashboard.py`` in place
    (finished games only, never clobbering a still-pending game with junk).
-5. Re-runs ``build_dashboard.py`` to regenerate ``docs/index.html``.
+5. Rewrites ``AUTO_HL`` with highlight cards for the last six finished games
+   (from the whole feed, not just this bracket) so the "Game facts" section
+   always shows the latest results.
+6. Re-runs ``build_dashboard.py`` to regenerate ``docs/index.html``.
 
 Safety
 ------
 - Idempotent: if nothing new is final, it changes nothing and exits 0.
 - ``--dry-run`` reports what *would* change and writes nothing.
-- No token and no ``--input`` => clean no-op exit (so the scheduled workflow
-  succeeds even before a token is configured).
-- Only whole, finished matches are written; draws must carry a decider note
-  (e.g. penalties) or they are skipped.
+- Only whole, finished matches are written; genuine draws (no decider) are kept
+  for the game-fact cards but never entered as a bracket result.
 """
 from __future__ import annotations
 import argparse, json, os, re, subprocess, sys, urllib.request, urllib.error
@@ -34,6 +36,13 @@ GEN = os.path.join(HERE, "build_dashboard.py")
 TEAM_MAP = os.path.join(HERE, "team_map.json")
 
 FD_URL = "https://api.football-data.org/v4/competitions/WC/matches?status=FINISHED"
+
+# FIFA's own public results feed — free, no API key, no signup. This is the same
+# JSON the fifa.com match centre uses. idCompetition 17 = FIFA World Cup, idSeason
+# 285023 = the 2026 edition. count=500 covers all 104 matches in one call.
+FIFA_URL = ("https://api.fifa.com/api/v3/calendar/matches"
+            "?idCompetition=17&idSeason=285023&count=500&language=en")
+FIFA_UA = "Mozilla/5.0 (compatible; wc-bracket-sync/1.0; +https://github.com)"
 
 
 def load_team_map() -> dict:
@@ -162,7 +171,66 @@ def results_from_footballdata(tmap: dict):
             w = home if gh > ga else away
         out.append({"home": home, "away": away, "gh": int(gh), "ga": int(ga),
                     "winner": w, "note": note, "date": (m.get("utcDate") or ""),
-                    "stage": (m.get("stage") or "")})
+                    "stage": (m.get("stage") or ""), "city": ""})
+    return out
+
+
+def _fifa_txt(field) -> str:
+    """FIFA localizes text as a list of {Locale, Description}; take the first."""
+    if isinstance(field, list) and field:
+        return (field[0] or {}).get("Description", "") or ""
+    return ""
+
+
+def results_from_fifa(tmap: dict):
+    """Finished 2026 World Cup games from FIFA's free public JSON feed.
+
+    Returns the same feed-dict shape as the other sources. No token required.
+    Penalty scores come as their own fields (not folded into the score), so the
+    regulation/ET scoreline is used as-is. ``city`` carries the host city for the
+    highlight cards' "day · venue" line.
+    """
+    req = urllib.request.Request(FIFA_URL, headers={"User-Agent": FIFA_UA})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.load(resp)
+    out = []
+    for m in data.get("Results", []):
+        if m.get("MatchStatus") != 0:  # 0 = finished
+            continue
+        H = m.get("Home") or {}
+        A = m.get("Away") or {}
+        home = norm(_fifa_txt(H.get("TeamName")), tmap)
+        away = norm(_fifa_txt(A.get("TeamName")), tmap)
+        gh, ga = m.get("HomeTeamScore"), m.get("AwayTeamScore")
+        if gh is None or ga is None or not home or not away:
+            continue
+        gh, ga = int(gh), int(ga)
+        stage = _fifa_txt(m.get("StageName"))
+        city = _fifa_txt((m.get("Stadium") or {}).get("CityName"))
+        win_id = m.get("Winner")
+        ph, pa = m.get("HomeTeamPenaltyScore"), m.get("AwayTeamPenaltyScore")
+        note = ""
+        if ph is not None and pa is not None and int(ph) != int(pa):
+            ph, pa = int(ph), int(pa)
+            if win_id and win_id == A.get("IdTeam"):
+                w = away
+            elif win_id and win_id == H.get("IdTeam"):
+                w = home
+            else:
+                w = home if ph > pa else away
+            note = f"{max(ph, pa)}\u2013{min(ph, pa)} pens"
+        elif gh == ga:  # level after normal/extra time
+            if win_id == H.get("IdTeam"):
+                w, note = home, "AET"
+            elif win_id == A.get("IdTeam"):
+                w, note = away, "AET"
+            else:
+                w, note = "", "draw"  # genuine draw (group stage) -> game facts only
+        else:
+            w = home if gh > ga else away
+        out.append({"home": home, "away": away, "gh": gh, "ga": ga,
+                    "winner": w, "note": note, "date": (m.get("Date") or ""),
+                    "stage": stage, "city": city})
     return out
 
 
@@ -187,7 +255,7 @@ def results_from_json(path: str, tmap: dict):
             w = home if gh > ga else away
         out.append({"home": home, "away": away, "gh": gh, "ga": ga,
                     "winner": w, "note": note, "date": (m.get("date") or ""),
-                    "stage": (m.get("stage", ""))})
+                    "stage": (m.get("stage", "")), "city": (m.get("city", ""))})
     return out
 
 
@@ -242,30 +310,49 @@ def _fmt_day(iso: str) -> str:
 
 
 STAGE_LABELS = {
-    "GROUP_STAGE": "group stage", "GROUP": "group stage",
+    "GROUP_STAGE": "group stage", "GROUP": "group stage", "FIRST_STAGE": "group stage",
     "LAST_32": "Round of 32", "ROUND_OF_32": "Round of 32",
     "LAST_16": "Round of 16", "ROUND_OF_16": "Round of 16",
     "QUARTER_FINALS": "quarterfinal", "QUARTER_FINAL": "quarterfinal",
     "SEMI_FINALS": "semifinal", "SEMI_FINAL": "semifinal",
     "THIRD_PLACE": "third-place playoff", "3RD_PLACE": "third-place playoff",
+    "PLAY_OFF_FOR_THIRD_PLACE": "third-place playoff",
     "FINAL": "final",
 }
 
 
 def stage_label(stage: str) -> str:
-    """Map a football-data.org stage code to a human round label."""
+    """Map a source stage string (football-data code OR FIFA display name) to a
+    human round label. Normalizes spaces/hyphens so both 'LAST_16' and
+    'Round of 16' / 'Quarter-final' resolve the same way."""
     if not stage:
         return "match"
-    return STAGE_LABELS.get(stage.upper(), stage.replace("_", " ").lower())
+    key = re.sub(r"[^A-Za-z0-9]+", "_", stage).strip("_").upper()
+    return STAGE_LABELS.get(key, stage.replace("_", " ").lower())
 
 
-def build_auto_hl(feed, limit=8):
-    """Newest-first factual one-liners for the most recent finished games.
+def _headline(w, loser, a, b, gh, ga, note):
+    """A short, factual card headline (the bold tag line)."""
+    if not w or note == "draw":
+        return f"{a} and {b} share the points"
+    if "pens" in note:
+        return f"{w} win on penalties"
+    margin = abs(gh - ga)
+    if margin >= 3:
+        return f"{w} cruise past {loser}"
+    if margin == 1:
+        return f"{w} edge {loser}"
+    return f"{w} beat {loser}"
+
+
+def build_auto_hl(feed, limit=6):
+    """Newest-first factual highlight cards for the most recent finished games.
 
     Pulls from the WHOLE feed (every finished World Cup game), not only games in
-    the user's bracket, so recent games like Spain vs Austria still show up. Plain
-    facts only, no editorializing. Kept free of the ] character so the emitted
-    AUTO_HL block stays regex-rewritable.
+    the user's bracket, so a viewer sees the latest results at a glance. Each entry
+    is (emoji, headline, scoreline, "day \u00b7 venue", one-sentence recap) to match
+    the featured-card layout. Plain facts only; kept free of the ] character so the
+    emitted AUTO_HL block stays regex-rewritable.
     """
     games = sorted(feed, key=lambda f: (f.get("date", ""), f.get("home", "")),
                    reverse=True)
@@ -282,13 +369,15 @@ def build_auto_hl(feed, limit=8):
         gh, ga, w, note = f["gh"], f["ga"], f["winner"], f.get("note", "")
         label = stage_label(f.get("stage", ""))
         day = _fmt_day(f.get("date", ""))
-        when = (day + " \u00b7 " + label) if day else label
+        city = f.get("city", "")
+        when = " \u00b7 ".join(x for x in (day, city or label) if x) or label
         title = f"{home} {gh}\u2013{ga} {away}"
+        loser = away if w == home else home
+        headline = _headline(w, loser, home, away, gh, ga, note)
         if not w or note == "draw":  # genuine draw
             emoji = "\u2694\ufe0f"
             body = f"{home} and {away} drew {gh}\u2013{ga} in the {label}."
         else:
-            loser = away if w == home else home
             wg, lg = (gh, ga) if w == home else (ga, gh)
             if "pens" in note:
                 emoji = "\U0001f945"
@@ -300,7 +389,7 @@ def build_auto_hl(feed, limit=8):
             else:
                 emoji = "\u26bd"
                 body = f"{w} beat {loser} {wg}\u2013{lg} in the {label}."
-        entries.append((emoji, label, title, when, body))
+        entries.append((emoji, headline, title, when, body))
         if len(entries) >= limit:
             break
     return entries
@@ -340,6 +429,8 @@ def now_pt_stamp() -> str:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--input", help="local results.json feed (instead of the web API)")
+    ap.add_argument("--source", choices=["fifa", "footballdata"], default="fifa",
+                    help="web source when --input is not used (default: fifa, free/no key)")
     ap.add_argument("--dry-run", action="store_true", help="report changes, write nothing")
     ap.add_argument("--no-build", action="store_true", help="update source but skip regenerating HTML")
     args = ap.parse_args()
@@ -355,12 +446,15 @@ def main() -> int:
     if args.input:
         feed = results_from_json(args.input, tmap)
         src = f"local file {args.input}"
-    else:
+    elif args.source == "footballdata":
         feed = results_from_footballdata(tmap)
         src = "football-data.org"
         if feed is None:
             print("No FOOTBALL_DATA_TOKEN set and no --input given \u2014 nothing to do.")
             return 0
+    else:
+        feed = results_from_fifa(tmap)
+        src = "FIFA public feed (api.fifa.com)"
 
     # Resolve every round (R32 -> R16 -> QF -> SF -> Final) from the same feed.
     new_res, applied = match_all(r32, ko_feed, cur_res, feed)
