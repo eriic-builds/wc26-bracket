@@ -63,7 +63,7 @@ That HTML is produced by a small generator:
   at the top (the picks + results — the only part that changes per person or per refresh) and a
   **verbatim render engine** below that turns the data into the finished page. The render engine
   is never edited; only the data changes.
-- **The instructions kit** (`input/instructions.md`, currently **v6**) is the build spec: the
+- **The instructions kit** (`input/instructions.md`, currently **v7**) is the build spec: the
   exact layout, scoring rules, colors, bracket geometry, and interactions the generator
   reproduces.
 - **My picks** (`input/bracket-picks.xlsx`) are the source of the `DATA` block — read once from
@@ -210,7 +210,7 @@ Then commit and push — Pages redeploys in about a minute.
 
 | Path | What it is |
 | --- | --- |
-| `input/instructions.md` | The **v6 build kit** — the spec the generator reproduces. |
+| `input/instructions.md` | The **v7 build kit** — the spec the generator reproduces. |
 | `input/bracket-picks.xlsx` | My bracket picks (the "My Bracket" tab seeds the `DATA` block). |
 | `scripts/build_dashboard.py` | Stdlib generator: `DATA` block + render engine → `index.html`. |
 | `scripts/fetch_results.py` | Web/offline results sync that updates `DATA` and rebuilds. |
@@ -234,7 +234,7 @@ macOS/Linux users can drop the `.exe`/`py` differences.
 - **Git** installed — check with `git --version`.
 - **Python 3.10+** installed — check with `python --version`.
 - The two source files:
-  - the **build kit** (`instructions.md` — the generator + spec; this repo uses **v6**), and
+  - the **build kit** (`instructions.md` — the generator + spec; this repo uses **v7**), and
   - your **bracket picks** as an Excel file (the workbook's **"My Bracket"** tab).
 
 > No other dependencies. The generator is **standard-library only** — nothing to `pip install`.
@@ -336,7 +336,7 @@ runs, edit the `cron` lines in `.github/workflows/sync-results.yml` (times are *
 
 1. Scaffolded the repo (`input/`, `docs/`, `scripts/`, `.github/workflows/`) with an `input/`
    drop-zone for the two source files.
-2. Saved the **v6** kit's Python generator verbatim to `scripts/build_dashboard.py` and
+2. Saved the kit's Python generator verbatim to `scripts/build_dashboard.py` and
    repointed its output to `docs/index.html`.
 3. **Verified my picks against the Excel "My Bracket" tab** — all Round-of-32 picks, the
    R16/QF/SF winners, `CHAMP` (England), `RUNNER` (France) and the tiebreaker (4) matched — then
@@ -345,6 +345,9 @@ runs, edit the `cron` lines in `.github/workflows/sync-results.yml` (times are *
    200).
 5. Added the Phase 2 sync script, team map, and workflow; verified the update logic with a mock
    feed (including a penalty shootout) and a live workflow run.
+6. **Kit v7:** added a sticky left side-navigation rail (with scrollspy) and a top "last refreshed"
+   indicator to the render engine, and bumped `input/instructions.md` to v7 so the rail is
+   reproduced for any future build.
 
 ---
 
@@ -402,6 +405,6 @@ Honest analysis of what could make this better, roughly by value vs. effort:
 
 Match results, scores, and kickoff times come from a verified web lookup (FIFA official records,
 corroborated by major outlets). Historical country stats are public World Cup records. Built
-with the reusable World Cup Bracket Dashboard kit (v6).
+with the reusable World Cup Bracket Dashboard kit (v7).
 
 > Personal project. Not affiliated with FIFA, GitHub, or Microsoft.
