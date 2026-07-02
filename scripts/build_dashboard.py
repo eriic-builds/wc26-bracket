@@ -436,6 +436,7 @@ html[data-theme="easy"]{--bg:#F6F1E6;--panel:#FCFAF3;--text:#2b2a30;--text2:#333
  --gold:#C98A00;--gold-ink:#8f6300;--win:#0a7d54;--win-ink:#0a6b49;--out:#8a8790;--lose-ink:#A63A2E;--g1:rgba(0,151,244,.10);--g2:rgba(0,178,145,.08);--g3:rgba(0,178,145,.08);
  --fs:18px;--lh:1.8;--ls:.03em;--radius:22px;--radius-sm:15px;--gap:22px;--fstack:"Verdana","Tahoma","Trebuchet MS","Segoe UI",system-ui,sans-serif;}
 *{box-sizing:border-box}html,body{margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
 body{font-family:var(--fstack);font-size:var(--fs);line-height:var(--lh);letter-spacing:var(--ls);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative;min-height:100vh}
 body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-index:0;pointer-events:none;background:radial-gradient(closest-side,var(--g1),transparent) -8% -12%/55% 90% no-repeat,radial-gradient(closest-side,var(--g2),transparent) 108% -8%/55% 85% no-repeat,radial-gradient(closest-side,var(--g3),transparent) 60% 120%/60% 80% no-repeat;filter:blur(6px)}
 .wrap{max-width:1280px;margin:0 auto;padding:26px 22px 90px;position:relative;z-index:1}
@@ -448,6 +449,28 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .modes button{font-family:inherit;font-size:.82rem;font-weight:600;color:var(--muted);background:transparent;border:0;padding:7px 15px;border-radius:999px;cursor:pointer;transition:.16s}
 .modes button:hover{color:var(--text);background:var(--hover)}
 .modes button.on{color:#fff;background:var(--blue);box-shadow:0 4px 14px rgba(0,151,244,.4)}
+.refreshed{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;font-size:.76rem;font-weight:600;color:var(--text2)}
+.refreshed .rf-dot{width:8px;height:8px;border-radius:50%;background:var(--win);box-shadow:0 0 8px var(--win);flex:0 0 auto;animation:rfpulse 2.4s ease-in-out infinite}
+@keyframes rfpulse{0%,100%{opacity:.45}50%{opacity:1}}
+.shell{display:grid;grid-template-columns:186px minmax(0,1fr);gap:22px;align-items:start}
+.content{min-width:0}
+.rail{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow:auto;padding:14px 12px;align-self:start;z-index:5}
+.rail .rt{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);padding:4px 10px 8px}
+.rail .links{display:flex;flex-direction:column;gap:2px}
+.rail a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;border-left:2px solid transparent;color:var(--muted);font-size:.82rem;font-weight:600;text-decoration:none;line-height:1.25;transition:color .14s,background .14s,border-color .14s}
+.rail a .ic{font-size:.95rem;flex:0 0 auto;width:20px;text-align:center}
+.rail a:hover{color:var(--text);background:var(--hover)}
+.rail a:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.rail a.active{color:var(--text);background:var(--g2);border-left-color:var(--teal)}
+.navtoggle{display:none}
+@media(max-width:1200px){
+ .shell{grid-template-columns:1fr;gap:0}
+ .rail{position:static;max-height:none;overflow:visible;order:-1;margin-bottom:16px;padding:8px 10px}
+ .rail .rt{display:none}
+ .navtoggle{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-family:inherit;font-size:.86rem;font-weight:700;color:var(--text);background:transparent;border:0;padding:11px;border-radius:12px;cursor:pointer}
+ .rail .links{display:none;margin-top:6px}
+ .rail.open .links{display:flex}
+}
 .hero{padding:34px 32px 30px;margin-bottom:var(--gap);position:relative;overflow:hidden}
 .eyebrow{font-size:.74rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
 .hero h1{font-size:clamp(2rem,5.4vw,3.5rem);line-height:1.05;margin:.34em 0 .28em;font-weight:700;letter-spacing:-.01em}
@@ -784,6 +807,17 @@ JS=r"""
    el.addEventListener('mousemove',posCard);
    el.addEventListener('mouseleave',function(){card.classList.remove('show')});});
  paintFav();apply();recalc();drawConnectors();
+ // ── side-nav rail: mobile toggle + scrollspy ──
+ var rail=document.getElementById('rail'),navToggle=document.getElementById('navToggle');
+ if(navToggle&&rail){navToggle.addEventListener('click',function(){var o=rail.classList.toggle('open');navToggle.setAttribute('aria-expanded',o?'true':'false');});}
+ var railLinks=rail?rail.querySelectorAll('.links a'):[];
+ if(railLinks.length){
+   var linkFor={};
+   railLinks.forEach(function(a){linkFor[a.getAttribute('href').slice(1)]=a;a.addEventListener('click',function(){rail.classList.remove('open');if(navToggle)navToggle.setAttribute('aria-expanded','false');});});
+   var secs=document.querySelectorAll('#intro, .shead[id]');
+   var spy=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){railLinks.forEach(function(l){l.classList.remove('active');});var a=linkFor[e.target.id];if(a)a.classList.add('active');}});},{rootMargin:'-45% 0px -50% 0px',threshold:0});
+   secs.forEach(function(s){spy.observe(s);});
+ }
 })();
 """
 
@@ -795,9 +829,24 @@ def chip(t):
 HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf-8">'
 f'<meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(ENTRANT)}’s World Cup 2026 Bracket</title>'+'<style>'+CSS+'</style></head><body><div class="wrap">'
 '<div class="topbar"><div class="brand"><span class="orb"></span><div>Bracket dashboard<small>SLED World Cup 2026 Challenge · live</small></div></div>'
+f'<div class="refreshed glass" id="topRefreshed" title="When live results were last synced"><span class="rf-dot"></span>Updated {REFRESHED}</div>'
 '<div class="modes glass"><button data-mode="dark" class="on">Dark</button><button data-mode="light">Light</button>'
 '<button data-mode="easy" title="Reading mode — a highly legible font, larger text, extra line and letter spacing, sentence case (no all-caps), left-aligned text and a soft, glare-free background">Easy</button></div></div>'
-f'<section class="hero glass"><div class="eyebrow">{esc(ENTRANT)} · live results vs your picks</div>'
+'<div class="shell"><nav class="rail glass" id="rail">'
+'<button class="navtoggle" id="navToggle" aria-expanded="false" aria-controls="railLinks">📑 Contents ☰</button>'
+'<div class="links" id="railLinks"><div class="rt">On this page</div>'
+'<a href="#intro"><span class="ic">🔎</span> Overview</a>'
+'<a href="#sec-standing"><span class="ic">📊</span> Live standing</a>'
+'<a href="#sec-scorecard"><span class="ic">🧮</span> Scorecard</a>'
+'<a href="#sec-r32"><span class="ic">⚽</span> Round of 32</a>'
+'<a href="#sec-r16"><span class="ic">📅</span> Next up · R16</a>'
+'<a href="#sec-news"><span class="ic">📰</span> Around the R32</a>'
+'<a href="#sec-bracket"><span class="ic">🗺️</span> Bracket map</a>'
+'<a href="#sec-finalfour"><span class="ic">🏅</span> Final four</a>'
+'<a href="#sec-story"><span class="ic">✨</span> How it played out</a>'
+'<a href="#sec-scoring"><span class="ic">🎯</span> Scoring &amp; schedule</a>'
+'</div></nav><div class="content">'
+f'<section class="hero glass" id="intro"><div class="eyebrow">{esc(ENTRANT)} · live results vs your picks</div>'
 f'<h1>Backing <span class="g">{esc(CHAMP)}</span> {"— and still in it" if CHAMP_ALIVE else "— but knocked out"}</h1>'
 f'<p class="sub">{R32_DONE} of {N_R32} Round-of-32 games are final — you\'re <b>{r32_correct} of {r32_decided} right</b>, '
 f'with <b>{CONF} points</b> banked and <b>{LIVE}</b> still live. Your champion pick {esc(CHAMP)} is <b>{CHAMP_STATUS}</b>{esc(BUSTED_PHRASE)}.</p>'
@@ -812,9 +861,9 @@ f'<span class="pill"><span class="dot"></span>{esc(CHAMP)} alive</span></div>'
 '<span class="mic">🎤</span><button class="clr" id="clear">Clear</button></div></section>'
 '<div class="filterbar glass"><div class="chips">'+''.join(chip(t) for t in r32_win)+
 '</div><label class="toggle"><input type="checkbox" id="favonly"><span class="tsw"></span>Favorites only</label><span class="count" id="count"></span></div>'
-'<div class="shead"><span class="tile">📊</span><h2>Your live standing</h2><span class="cap">6 signals</span></div>'
+'<div class="shead" id="sec-standing"><span class="tile">📊</span><h2>Your live standing</h2><span class="cap">6 signals</span></div>'
 f'<div class="kpigrid">{build_kpis()}</div>'
-'<div class="shead"><span class="tile">🧮</span><h2>Scorecard — your path, scored live</h2>'
+'<div class="shead" id="sec-scorecard"><span class="tile">🧮</span><h2>Scorecard — your path, scored live</h2>'
 f'<span class="cap">{CONF} confirmed · {LIVE} live</span></div>'
 '<div class="note"><b>How this is scored.</b> Results are pulled from live web coverage (ESPN, CBS Sports, FIFA) and matched to your Excel picks. '
 f'The Round of 32 is <b>{R32_DONE} of {N_R32} games</b> final — you sit on <b>{CONF} points</b> ({r32_correct}/{r32_decided} correct). '
@@ -831,21 +880,21 @@ f'You\'ve hit <b>{len(bonus_won)}</b> so far — {esc(", ".join(bonus_won))} —
 + ' It is Rob\'s discretion whether the bonus applies and whether the Canada freebie counts.</div></div>'
 f'<div class="bb-r"><div class="bb-big">{ADJ}</div><div class="bb-cap">unofficial adjusted total</div>'
 f'<div class="bb-sub">{CONF} base + {BONUS_CONF} bonus</div></div></div>'
-'<div class="shead"><span class="tile">⚽</span><h2>Round of 32 results</h2><span class="cap">10 final · 6 to play</span></div>'
+'<div class="shead" id="sec-r32"><span class="tile">⚽</span><h2>Round of 32 results</h2><span class="cap">10 final · 6 to play</span></div>'
 f'{build_results_panel()}'
-'<div class="shead"><span class="tile">📅</span><h2>Next up — Round of 16</h2><span class="cap">Jul 4–7 · PT / CT / ET</span></div>'
+'<div class="shead" id="sec-r16"><span class="tile">📅</span><h2>Next up — Round of 16</h2><span class="cap">Jul 4–7 · PT / CT / ET</span></div>'
 f'{build_upcoming()}'
-'<div class="shead"><span class="tile">📰</span><h2>Around the Round of 32</h2><span class="cap">game facts</span></div>'
+'<div class="shead" id="sec-news"><span class="tile">📰</span><h2>Around the Round of 32</h2><span class="cap">game facts</span></div>'
 f'<div class="g3">{build_highlights()}</div>'
-'<div class="shead"><span class="tile">🗺️</span><h2>Your bracket, marked up</h2><span class="cap">✓ hit · ✕ miss · ▲ who went through</span></div>'
+'<div class="shead" id="sec-bracket"><span class="tile">🗺️</span><h2>Your bracket, marked up</h2><span class="cap">✓ hit · ✕ miss · ▲ who went through</span></div>'
 f'{build_legend()}'
 '<div class="brk-toggle"><button data-view="actual" class="on">Actual path</button><button data-view="picked">My picks</button></div>'
 f'<div class="glass brk-wrap" data-view="actual">{build_bracket("actual")}{build_bracket("picked")}</div>'
-'<div class="shead"><span class="tile">🏅</span><h2>Your final four</h2><span class="cap">'+f'{FF_ALIVE}/{len(QF_WIN)} still alive'+'</span></div>'
+'<div class="shead" id="sec-finalfour"><span class="tile">🏅</span><h2>Your final four</h2><span class="cap">'+f'{FF_ALIVE}/{len(QF_WIN)} still alive'+'</span></div>'
 f'<div class="ffgrid">{build_finalfour()}</div>'
-'<div class="shead"><span class="tile">✨</span><h2>How it played out</h2><span class="cap">so far</span></div>'
+'<div class="shead" id="sec-story"><span class="tile">✨</span><h2>How it played out</h2><span class="cap">so far</span></div>'
 f'<div class="g3">{build_story()}</div>'
-'<div class="shead"><span class="tile">🎯</span><h2>Scoring &amp; schedule</h2><span class="cap">80 max</span></div>'
+'<div class="shead" id="sec-scoring"><span class="tile">🎯</span><h2>Scoring &amp; schedule</h2><span class="cap">80 max</span></div>'
 '<div class="g2"><div class="glass" style="padding:20px"><div style="font-weight:700;margin-bottom:12px">Points double every round</div>'
 '<div class="scard" style="padding:0">'
 '<div class="scrow schead" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Round</div><div class="tc">Games</div><div class="tc">Pts/pick</div><div class="tc">Max</div></div>'
@@ -867,7 +916,7 @@ f'You have <b>{CONF} points</b> confirmed ({ADJ} with the optional upset bonus),
 f'This is your personal, <b>unofficial</b> tally for Rob to review — his scoring is authoritative. Champion {esc(CHAMP)} · runner-up {esc(RUNNER)}.</div>'
 f'<div class="src">Live results as of <b>{REFRESHED}</b> · reading mode, favorites and any manual score edits are saved on this device.</div>'
 + (f'<div class="src credit">{esc(CREDIT)}</div>' if CREDIT else '') + '</div>'
-'</div><button class="dab" id="dab" title="Back to top" aria-label="Back to top">↑</button>'
+'</div></div></div><button class="dab" id="dab" title="Back to top" aria-label="Back to top">↑</button>'
 '<div class="statcard" id="statcard" aria-hidden="true"></div>'
 '<script>'+STATS_JS+'</script>'
 '<script>'+JS+'</script></body></html>')
