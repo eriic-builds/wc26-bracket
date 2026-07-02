@@ -63,6 +63,34 @@ R16_WIN=["France","Morocco","Spain","United States","Japan","England","Argentina
 QF_WIN=["France","Spain","England","Argentina"]; SF_WIN=["France","England"]
 CHAMP="England"; RUNNER="France"
 
+# Knockout topology — which two prior matches feed each match (fixed FIFA bracket, same
+# for every entrant). Single source of truth, shared with the sync engine
+# (scripts/fetch_results.py). R32 codes feed the Round of 16.
+KO_FEED={"M89":("M74","M77"),"M90":("M73","M75"),"M91":("M76","M78"),"M92":("M79","M80"),
+ "M93":("M83","M84"),"M94":("M81","M82"),"M95":("M86","M88"),"M96":("M85","M87"),
+ "M97":("M89","M90"),"M98":("M93","M94"),"M99":("M91","M92"),"M100":("M95","M96"),
+ "M101":("M97","M98"),"M102":("M99","M100"),"M104":("M101","M102")}
+# Derive each round's per-match pick (by code) from the entrant's tree picks + topology,
+# so no extra per-match data entry is needed. Tree slot i in a round pairs the two prior
+# matches (2i, 2i+1); the code is looked up from KO_FEED.
+_feed_to_code={v:k for k,v in KO_FEED.items()}
+def _code_for(fa,fb): return _feed_to_code.get((fa,fb)) or _feed_to_code.get((fb,fa))
+PICK_BY_CODE={}; KO_ROUND={}
+def _derive_round(prev_codes, wins, short):
+    codes=[]
+    for j,w in enumerate(wins):
+        c=_code_for(prev_codes[2*j], prev_codes[2*j+1])
+        PICK_BY_CODE[c]=w; KO_ROUND[c]=short; codes.append(c)
+    return codes
+_r32codes=[m[0] for m in R32]
+_r16codes=_derive_round(_r32codes, R16_WIN, "r16")
+_qfcodes=_derive_round(_r16codes, QF_WIN, "qf")
+_sfcodes=_derive_round(_qfcodes, SF_WIN, "sf")
+_finalcodes=_derive_round(_sfcodes, [CHAMP], "final")
+R16_PICK={c:PICK_BY_CODE[c] for c in _r16codes}
+CODE_OF_PICK={}
+for _c,_t in PICK_BY_CODE.items(): CODE_OF_PICK[(KO_ROUND[_c],_t)]=_c
+
 def pairs(s): return [(s[i],s[i+1]) for i in range(0,len(s),2)]
 r32_win=[m[4] for m in R32]
 rounds=[("Round of 32","r32",1,[(m[2],m[3],m[4]) for m in R32])]
@@ -82,16 +110,33 @@ for (mc,dt,a,b,pk) in R32:
         w=RES[mc][2]; ELIM.add(a if w==b else b)
 R32_ACTUAL_WINNERS={RES[mc][2] for mc in RES}
 r32_pick_actual={m[4]:RES[m[0]][2] for m in R32 if m[0] in RES}  # your pick -> team that actually advanced
+# later-round eliminations (losers of finished knockout matches) feed the live bracket + scoring
+for _mc,(_fa,_fb) in KO_FEED.items():
+    if _mc in RES:
+        _wa=RES[_fa][2] if _fa in RES else None
+        _wb=RES[_fb][2] if _fb in RES else None
+        _w=RES[_mc][2]
+        _loser=_wa if _w==_wb else (_wb if _w==_wa else None)
+        if _loser: ELIM.add(_loser)
+KO_WINNERS_BY_ROUND={}
+for _mc in KO_FEED:
+    if _mc in RES: KO_WINNERS_BY_ROUND.setdefault(KO_ROUND[_mc],set()).add(RES[_mc][2])
 def reach_status(team, short):
     """Did this team actually reach (win into) the round this column represents?"""
     if team in ELIM: return "lost"
-    if short=="r16": return "won" if team in R32_ACTUAL_WINNERS else "pending"
-    return "pending"  # later rounds not played yet
+    prev={"r16":"r32","qf":"r16","sf":"qf","final":"sf","champion":"final"}.get(short)
+    if prev=="r32": won=team in R32_ACTUAL_WINNERS
+    elif prev: won=team in KO_WINNERS_BY_ROUND.get(prev,set())
+    else: won=False
+    return "won" if won else "pending"
 
 def pick_status(short, team, mc=None):
     if short=="r32":
         if mc in RES: return "won" if team==RES[mc][2] else "lost"
         return "pending"
+    code=CODE_OF_PICK.get((short,team))
+    if code and code in RES:
+        return "won" if team==RES[code][2] else "lost"
     return "lost" if team in ELIM else "pending"
 
 # compute totals
@@ -152,7 +197,6 @@ R16_FIX=[  # match, day, teamA, teamB, ET, CT, PT
  ("M94","Mon Jul 6","United States","Belgium","8:00 PM","7:00 PM","5:00 PM"),
  ("M95","Tue Jul 7","Argentina / Cape Verde","Australia / Egypt","12:00 PM","11:00 AM","9:00 AM"),
  ("M96","Tue Jul 7","Switzerland / Algeria","Colombia / Ghana","4:00 PM","3:00 PM","1:00 PM")]
-R16_PICK={"M89":"France","M90":"Morocco","M91":"Japan","M92":"England","M93":"Spain","M94":"United States","M95":"Argentina","M96":"Colombia"}
 
 def esc(s): return html.escape(str(s))
 def seed_of(t): return SEED.get(t,"")
@@ -272,10 +316,29 @@ def build_scorecard():
     for (label,short,pts,ms) in rounds[1:]:
         for i,(a,b,w) in enumerate(ms):
             st=pick_status(short,w); pid=f"{short}-{i}"
-            if st=="lost": detail="out — eliminated in the Round of 32"
+            code=CODE_OF_PICK.get((short,w))
+            if st=="won":
+                if code and code in RES:
+                    gA,gB,ww,note=RES[code]
+                    detail=f'won {gA}{DASH}{gB}{(" ("+note+")") if note else ""} — '+{
+                        "r16":"into the quarterfinals","qf":"into the semifinals",
+                        "sf":"into the Final","final":"champions 🏆"}[short]
+                else:
+                    detail={"r16":"through to the quarterfinals","qf":"through to the semifinals",
+                            "sf":"through to the Final","final":"lifted the trophy 🏆"}[short]
+            elif st=="lost":
+                parts=set()
+                if code:
+                    for f in KO_FEED[code]:
+                        if f in RES: parts.add(RES[f][2])
+                if code and code in RES and w in parts:
+                    gA,gB,ww,note=RES[code]
+                    detail=f'lost to {esc(ww)} {gA}{DASH}{gB}{(" ("+note+")") if note else ""}'
+                else:
+                    detail="out — pick eliminated earlier"
             else:
-                nxt={"r16":"to reach the quarterfinals","qf":"to reach the semifinals","sf":"to reach the Final","final":"to lift the trophy"}[short]
-                detail=nxt
+                detail={"r16":"to reach the quarterfinals","qf":"to reach the semifinals",
+                        "sf":"to reach the Final","final":"to lift the trophy"}[short]
             rows.append(scrow(pid,short,pts,w,detail,st,a,b))
     head=('<div class="scrow schead"><div class="tc">Round</div><div class="tc">Your pick &amp; result</div>'
           '<div class="tc">Value</div><div class="tc">Status</div></div>')
@@ -372,9 +435,11 @@ def build_results_panel():
             f'<b>{r32_correct}/{r32_decided}</b></div>'+''.join(rows)+
             '<div class="rr-h" style="margin-top:12px">Still to play</div>'+''.join(up)+'</div>')
 
-# ── USER DATA (game facts) — replace with a few verified storylines from the live FIFA lookup:
-#    (emoji, tag, headline, "date · time played", one-sentence body). Everything else stays verbatim.
-HIGHLIGHTS=[
+# ── USER DATA (game facts) — optional hand-written featured storylines (kept as-is).
+#    (emoji, tag, headline, "date · time played", one-sentence body). The sync engine
+#    (scripts/fetch_results.py) auto-generates AUTO_HL below from finished games; FEATURED
+#    stays yours to edit. HIGHLIGHTS = your featured stories first, then the auto results.
+FEATURED=[
  ("⏱️","Latest goal in WC history","Belgium 3–2 Senegal","Wed, Jul 1 · 4:00 PM ET (1:00 PM PT)",
   "Two down with five minutes left, Belgium roared back through Lukaku and Tielemans — whose winning penalty at 124:44 is the latest goal ever recorded at a World Cup."),
  ("🥅","Two giants out on penalties","Germany & Netherlands gone","Mon, Jun 29 · 4:30 PM & 9:00 PM ET",
@@ -388,6 +453,8 @@ HIGHLIGHTS=[
  ("🍁","History for the hosts","Canada 1–0 South Africa","Sun, Jun 28 · 3:00 PM ET (12:00 PM PT)",
   "Stephen Eustáquio's strike gave co-hosts Canada their first knockout-round win in World Cup history — the freebie everyone was credited with."),
 ]
+AUTO_HL=[]  # AUTO — maintained by the sync engine; newest finished games first. Do not hand-edit.
+HIGHLIGHTS=FEATURED+AUTO_HL
 def build_highlights():
     return ''.join(f'<div class="glass story"><div class="story-ic">{ic}</div>'
         f'<div class="story-tag">{esc(tag)}</div><div class="story-title">{esc(ti)}</div>'
@@ -407,6 +474,49 @@ def build_upcoming():
             f'<div class="uf-t">{esc(day)}<span>{ptz} PT · {ct} CT · {et} ET</span></div>'
             f'<div class="uf-p">{tag}</div></div>')
     return '<div class="glass ufbox">'+''.join(rows)+'</div>'
+
+# Live knockout board — Round of 16, Quarterfinals, Semifinals, Final. Actual teams and
+# scores come from RES (kept current by the sync engine); teams for each match are the
+# winners of its two feeder matches (KO_FEED). Pending matches show the known/So-far teams.
+KO_DATES={"r16":"Jul 4–7","qf":"Jul 9–11","sf":"Jul 14–15","final":"Sun Jul 19 · MetLife"}
+KO_ROUND_ORDER=[("Round of 16","r16",[f"M{n}" for n in range(89,97)]),
+ ("Quarterfinals","qf",[f"M{n}" for n in range(97,101)]),
+ ("Semifinals","sf",["M101","M102"]),("Final","final",["M104"])]
+def build_knockouts():
+    r16day={mc:(day,et,ct,ptz) for (mc,day,a,b,et,ct,ptz) in R16_FIX}
+    blocks=[]
+    for (label,short,codes) in KO_ROUND_ORDER:
+        rows=[]; done=0
+        for mc in codes:
+            fa,fb=KO_FEED[mc]
+            a=RES[fa][2] if fa in RES else None
+            b=RES[fb][2] if fb in RES else None
+            pk=PICK_BY_CODE.get(mc)
+            if mc in RES:
+                done+=1; gA,gB,w,note=RES[mc]
+                an=a or "?"; bn=b or "?"
+                if pk is None: badge=''
+                elif pk==w: badge='<span class="res-ok">✓ you</span>'
+                elif pk in ELIM: badge='<span class="res-no">✕ pick out</span>'
+                else: badge='<span class="res-no">✕ you</span>'
+                sc=(f'<b class="{"w" if w==an else "l"}">{esc(an)}</b> {gA}{DASH}{gB} '
+                    f'<b class="{"w" if w==bn else "l"}">{esc(bn)}</b>'+((' <i>'+esc(note)+'</i>') if note else ''))
+                rows.append(f'<div class="rr"><div class="rr-m">{esc(mc)}</div>'
+                    f'<div class="rr-s">{sc}</div><div class="rr-p">{badge}</div></div>')
+            else:
+                if short=="r16" and mc in r16day:
+                    day,et,ct,ptz=r16day[mc]; when=f'{day} · {ptz} PT · {ct} CT · {et} ET'
+                else: when=KO_DATES[short]
+                ta=a or ("Winner "+fa); tb=b or ("Winner "+fb)
+                if pk and pk in ELIM: pkt=f'<span class="res-no">pick {esc(pk)} out</span>'
+                elif pk: pkt=f'<span class="res-soon">your pick: {esc(pk)}</span>'
+                else: pkt=''
+                rows.append(f'<div class="rr up"><div class="rr-m">{esc(mc)}</div>'
+                    f'<div class="rr-s">{esc(ta)} vs {esc(tb)}<span class="rr-t">{when}</span></div>'
+                    f'<div class="rr-p">{pkt}</div></div>')
+        blocks.append('<div class="glass rrbox ko-block">'
+            f'<div class="rr-h">{esc(label)} · {done}/{len(codes)} final</div>'+''.join(rows)+'</div>')
+    return '<div class="g2 kogrid">'+''.join(blocks)+'</div>'
 
 def build_legend():
     items=[
@@ -840,8 +950,8 @@ f'<div class="refreshed glass" id="topRefreshed" title="When live results were l
 '<a href="#sec-standing"><span class="ic">📊</span> Live standing</a>'
 '<a href="#sec-scorecard"><span class="ic">🧮</span> Scorecard</a>'
 '<a href="#sec-r32"><span class="ic">⚽</span> Round of 32</a>'
-'<a href="#sec-r16"><span class="ic">📅</span> Next up · R16</a>'
-'<a href="#sec-news"><span class="ic">📰</span> Around the R32</a>'
+'<a href="#sec-r16"><span class="ic">🏆</span> Knockouts</a>'
+'<a href="#sec-news"><span class="ic">📰</span> Game facts</a>'
 '<a href="#sec-bracket"><span class="ic">🗺️</span> Bracket map</a>'
 '<a href="#sec-finalfour"><span class="ic">🏅</span> Final four</a>'
 '<a href="#sec-story"><span class="ic">✨</span> How it played out</a>'
@@ -881,11 +991,11 @@ f'You\'ve hit <b>{len(bonus_won)}</b> so far — {esc(", ".join(bonus_won))} —
 + ' It is Rob\'s discretion whether the bonus applies and whether the Canada freebie counts.</div></div>'
 f'<div class="bb-r"><div class="bb-big">{ADJ}</div><div class="bb-cap">unofficial adjusted total</div>'
 f'<div class="bb-sub">{CONF} base + {BONUS_CONF} bonus</div></div></div>'
-'<div class="shead" id="sec-r32"><span class="tile">⚽</span><h2>Round of 32 results</h2><span class="cap">10 final · 6 to play</span></div>'
+'<div class="shead" id="sec-r32"><span class="tile">⚽</span><h2>Round of 32 results</h2>'+f'<span class="cap">{R32_DONE} final · {REMAIN_R32} to play</span></div>'
 f'{build_results_panel()}'
-'<div class="shead" id="sec-r16"><span class="tile">📅</span><h2>Next up — Round of 16</h2><span class="cap">Jul 4–7 · PT / CT / ET</span></div>'
-f'{build_upcoming()}'
-'<div class="shead" id="sec-news"><span class="tile">📰</span><h2>Around the Round of 32</h2><span class="cap">game facts</span></div>'
+'<div class="shead" id="sec-r16"><span class="tile">🏆</span><h2>Knockout rounds — live</h2><span class="cap">R16 · QF · SF · Final</span></div>'
+f'{build_knockouts()}'
+'<div class="shead" id="sec-news"><span class="tile">📰</span><h2>Game facts — recent games</h2><span class="cap">newest first</span></div>'
 f'<div class="g3">{build_highlights()}</div>'
 '<div class="shead" id="sec-bracket"><span class="tile">🗺️</span><h2>Your bracket, marked up</h2><span class="cap">✓ hit · ✕ miss · ▲ who went through</span></div>'
 f'{build_legend()}'

@@ -63,7 +63,7 @@ That HTML is produced by a small generator:
   at the top (the picks + results — the only part that changes per person or per refresh) and a
   **verbatim render engine** below that turns the data into the finished page. The render engine
   is never edited; only the data changes.
-- **The instructions kit** (`input/instructions.md`, currently **v7**) is the build spec: the
+- **The instructions kit** (`input/instructions.md`, currently **v8**) is the build spec: the
   exact layout, scoring rules, colors, bracket geometry, and interactions the generator
   reproduces.
 - **My picks** (`input/bracket-picks.xlsx`) are the source of the `DATA` block — read once from
@@ -97,7 +97,7 @@ Everything the page shows comes from a handful of variables at the top of
 | `UPCOMING` | Not-yet-played matches → their kickoff day label. |
 | `R32_TIMES`, `R16_FIX`, `R16_PICK` | Kickoff times and later-round fixtures/picks. |
 | `R16_WIN`, `QF_WIN`, `SF_WIN`, `CHAMP`, `RUNNER` | My picks for each later round. |
-| `HIGHLIGHTS` | A few verified storylines shown in the "How it played out" strip. |
+| `FEATURED` / `AUTO_HL` | Game-fact recaps in the "Game facts" strip. `FEATURED` is hand-written; `AUTO_HL` is auto-appended by the sync (newest game first). `HIGHLIGHTS = FEATURED + AUTO_HL`. |
 
 **Scoring in plain terms:** each correct advancing pick earns points by round; `winner:null`
 (or a match not in `RES`) means the game is still pending and counts toward *live* points, not
@@ -144,15 +144,19 @@ You can also run it on demand: **Actions → Sync World Cup results → Run work
 
 **What each run does** (`scripts/fetch_results.py`):
 
-1. Reads the Round-of-32 fixtures straight from `build_dashboard.py` so it always matches my
-   bracket.
+1. Reads the Round-of-32 fixtures **and the knockout topology** (`KO_FEED`: R16 → QF → SF →
+   Final) straight from `build_dashboard.py` so it always matches my bracket.
 2. Pulls **finished** World Cup matches from [football-data.org](https://www.football-data.org/)
    (competition `WC`) using the `FOOTBALL_DATA_TOKEN` secret.
 3. Normalizes source team names to the bracket's spellings via **`scripts/team_map.json`**
    (e.g. "Bosnia and Herzegovina" → "Bosnia & Herz.", "Côte d'Ivoire" → "Ivory Coast").
-4. Matches each finished game to a bracket match by the pair of teams, and writes it into the
-   `RES` / `UPCOMING` / `REFRESHED` blocks.
-5. Re-runs the generator to rebuild `docs/index.html`, then commits & pushes if anything
+4. Matches each finished game to a bracket match by the pair of teams — first the Round of 32,
+   then **every later round** (R16, QF, SF, Final), since each knockout match's teams are the
+   winners of its two feeder matches — and writes it into the `RES` / `UPCOMING` / `REFRESHED`
+   blocks.
+5. **Auto-writes game-fact highlights** — for each finished game it appends a one-line factual
+   recap to `AUTO_HL` (newest first), so the "Game facts" strip stays current with no editing.
+6. Re-runs the generator to rebuild `docs/index.html`, then commits & pushes if anything
    changed (which triggers the Pages redeploy).
 
 **Why it's safe:**
@@ -210,7 +214,7 @@ Then commit and push — Pages redeploys in about a minute.
 
 | Path | What it is |
 | --- | --- |
-| `input/instructions.md` | The **v7 build kit** — the spec the generator reproduces. |
+| `input/instructions.md` | The **v8 build kit** — the spec the generator reproduces. |
 | `input/bracket-picks.xlsx` | My bracket picks (the "My Bracket" tab seeds the `DATA` block). |
 | `scripts/build_dashboard.py` | Stdlib generator: `DATA` block + render engine → `index.html`. |
 | `scripts/fetch_results.py` | Web/offline results sync that updates `DATA` and rebuilds. |
@@ -234,7 +238,7 @@ macOS/Linux users can drop the `.exe`/`py` differences.
 - **Git** installed — check with `git --version`.
 - **Python 3.10+** installed — check with `python --version`.
 - The two source files:
-  - the **build kit** (`instructions.md` — the generator + spec; this repo uses **v7**), and
+  - the **build kit** (`instructions.md` — the generator + spec; this repo uses **v8**), and
   - your **bracket picks** as an Excel file (the workbook's **"My Bracket"** tab).
 
 > No other dependencies. The generator is **standard-library only** — nothing to `pip install`.
@@ -348,6 +352,9 @@ runs, edit the `cron` lines in `.github/workflows/sync-results.yml` (times are *
 6. **Kit v7:** added a sticky left side-navigation rail (with scrollspy) and a top "last refreshed"
    indicator to the render engine, and bumped `input/instructions.md` to v7 so the rail is
    reproduced for any future build.
+7. **Kit v8:** added a live knockout board (R16/QF/SF/Final) that scores from real results via a
+   shared bracket topology (`KO_FEED`) and derived per-round picks, extended the sync to resolve
+   every knockout round, and made it auto-append factual game-fact highlights.
 
 ---
 
@@ -376,9 +383,6 @@ Honest analysis of what could make this better, roughly by value vs. effort:
 - **Add a `LICENSE`** (e.g. MIT) so others can reuse the generator cleanly.
 - **Timezone accuracy for the timestamp.** `REFRESHED` currently assumes summer PDT (UTC−7); it
   should compute the offset (or label UTC) so it stays correct year-round.
-- **Later-round results.** `RES` covers the Round of 32; extend the fetcher to write R16/QF/SF/
-  Final results as those rounds arrive (map by team pair the same way), so scoring past the R32
-  updates automatically too.
 - **Skip empty commits in CI.** Already handled (commit only on change) — worth keeping an eye on
   as rounds grow.
 
@@ -405,6 +409,6 @@ Honest analysis of what could make this better, roughly by value vs. effort:
 
 Match results, scores, and kickoff times come from a verified web lookup (FIFA official records,
 corroborated by major outlets). Historical country stats are public World Cup records. Built
-with the reusable World Cup Bracket Dashboard kit (v7).
+with the reusable World Cup Bracket Dashboard kit (v8).
 
 > Personal project. Not affiliated with FIFA, GitHub, or Microsoft.
