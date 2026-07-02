@@ -143,7 +143,7 @@ import html, json, re
 # ══════════════════════════════════════════════════════════════════════════════
 ENTRANT="Sample Entrant"; TIEBREAKER=4
 REFRESHED="July 1, 2026 · 10:45 PM PT"
-CREDIT="Built with Cowork"  # tiny footer signature (personalise per entrant)
+CREDIT="Built With Cowork"  # tiny footer signature — personalise per entrant, e.g. "Built With Cowork — Imagined by <Your Name>"
 
 SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa":"2A","Canada":"2B",
  "Netherlands":"1F","Morocco":"2C","Portugal":"2K","Croatia":"2L","Spain":"1H","Austria":"2J",
