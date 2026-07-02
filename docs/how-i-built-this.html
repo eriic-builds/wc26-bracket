@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How I Built This — 2026 FIFA World Cup Bracket Dashboard (MSFT SLED)</title>
+<style>
+:root{
+  --blue:#0097F4;--teal:#00B291;--purple:#CB85FF;--orange:#FFA200;--red:#E5484D;--green:#9BC72A;
+  --grad:linear-gradient(120deg,#0097F4,#00B291);
+  --bg:#141317;--panel:#1c1b21;--text:#FFF;--text2:#F4F7EE;--muted:#9aa2ad;
+  --border:rgba(255,255,255,.10);--border2:rgba(255,255,255,.16);
+  --glass:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.028));
+  --shadow:0 10px 30px rgba(0,0,0,.45);--hover:rgba(255,255,255,.05);
+  --g2:rgba(0,178,145,.16);--code:#12222b;--codeborder:rgba(0,151,244,.25);
+  --radius:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{font-family:"Segoe UI","Segoe Sans Display",system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.62;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100vh}
+body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-index:0;pointer-events:none;background:radial-gradient(closest-side,rgba(0,151,244,.22),transparent) -8% -12%/55% 90% no-repeat,radial-gradient(closest-side,rgba(0,178,145,.16),transparent) 108% -8%/55% 85% no-repeat;filter:blur(6px)}
+.wrap{max-width:1180px;margin:0 auto;padding:26px 22px 90px;position:relative;z-index:1}
+.glass{background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+
+/* header */
+.topbar{display:flex;align-items:center;gap:14px;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:11px;font-weight:700;font-size:1.05rem}
+.orb{width:32px;height:32px;border-radius:50%;background:var(--grad);box-shadow:0 0 16px rgba(0,151,244,.5);flex:0 0 auto}
+.brand small{display:block;color:var(--muted);font-weight:500;font-size:.72rem;letter-spacing:.03em}
+.tag{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;font-size:.76rem;font-weight:600;color:var(--text2)}
+.tag .dot{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal)}
+
+.hero{padding:32px 30px;margin-bottom:22px;position:relative;overflow:hidden}
+.hero .eyebrow{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--blue);margin-bottom:10px}
+.hero h1{font-size:1.9rem;margin:.1em 0 .35em;letter-spacing:-.02em;line-height:1.15}
+.hero h1 .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--text2);font-size:1.02rem;max-width:74ch;margin:.4em 0}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.pill{display:inline-flex;align-items:center;gap:7px;font-size:.78rem;font-weight:600;color:var(--text2);padding:6px 13px;border-radius:999px;background:var(--hover);border:1px solid var(--border)}
+
+/* shell + rail */
+.shell{display:grid;grid-template-columns:210px minmax(0,1fr);gap:26px;align-items:start}
+.content{min-width:0}
+.rail{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow:auto;padding:16px 12px;align-self:start;z-index:5}
+.rail .rt{font-size:.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);padding:2px 10px 10px}
+.rail .links{display:flex;flex-direction:column;gap:1px}
+.rail a{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:9px;border-left:2px solid transparent;color:var(--muted);font-size:.8rem;font-weight:600;text-decoration:none;line-height:1.2;transition:color .14s,background .14s,border-color .14s}
+.rail a .n{font-size:.66rem;color:var(--blue);font-weight:800;width:20px;flex:0 0 auto}
+.rail a:hover{color:var(--text);background:var(--hover)}
+.rail a:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.rail a.active{color:var(--text);background:var(--g2);border-left-color:var(--teal)}
+.navtoggle{display:none}
+
+section.step{scroll-margin-top:24px;padding:26px 28px;margin-bottom:18px}
+section.step h2{font-size:1.28rem;margin:0 0 4px;letter-spacing:-.01em;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+section.step h2 .num{font-size:.7rem;font-weight:800;color:#fff;background:var(--grad);border-radius:8px;padding:4px 9px;letter-spacing:.04em;flex:0 0 auto;transform:translateY(-2px)}
+section.step h3{font-size:1rem;margin:22px 0 6px;color:var(--text2)}
+section.step .lead{color:var(--muted);margin:.2em 0 1em;font-size:.94rem}
+p{margin:.6em 0}
+ul,ol{margin:.5em 0 .9em;padding-left:1.35em}
+li{margin:.32em 0}
+a{color:var(--blue)}
+b,strong{color:#fff}
+code{font-family:"Cascadia Code",Consolas,"SF Mono",monospace;font-size:.86em;background:var(--code);border:1px solid var(--codeborder);border-radius:6px;padding:1px 6px;color:#7fd7ff}
+pre{background:var(--code);border:1px solid var(--codeborder);border-radius:12px;padding:15px 16px;overflow:auto;margin:12px 0;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+pre code{background:none;border:0;padding:0;color:#cfe9f5;font-size:.83rem;line-height:1.65;display:block;white-space:pre}
+.tok-c{color:#6d7a86;font-style:italic}      /* comment */
+.tok-k{color:#ff8ac8}                          /* keyword */
+.tok-s{color:#9bdc7a}                          /* string */
+.tok-f{color:#7fd7ff}                          /* function/label */
+
+.callout{border-radius:12px;padding:14px 16px;margin:14px 0;border:1px solid var(--border2);background:var(--hover);font-size:.92rem}
+.callout .h{font-weight:800;display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.callout.tip{border-color:rgba(0,178,145,.45);background:rgba(0,178,145,.08)}
+.callout.warn{border-color:rgba(255,162,0,.5);background:rgba(255,162,0,.09)}
+.callout.bug{border-color:rgba(229,72,77,.5);background:rgba(229,72,77,.08)}
+
+.diagram{font-family:"Cascadia Code",Consolas,monospace;font-size:.8rem;line-height:1.5;white-space:pre;overflow:auto;color:#b9e6da;background:var(--code);border:1px solid var(--codeborder);border-radius:12px;padding:16px}
+
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:.88rem}
+th,td{border:1px solid var(--border);padding:8px 11px;text-align:left;vertical-align:top}
+th{background:var(--hover);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.filetree{font-family:"Cascadia Code",Consolas,monospace;font-size:.82rem;line-height:1.7;color:#cfe9f5}
+.filetree .c{color:#6d7a86}
+.foot{padding:20px 24px;margin-top:8px;color:var(--muted);font-size:.85rem}
+.foot b{color:var(--text2)}
+.kbd{font-family:"Cascadia Code",Consolas,monospace;font-size:.8em;background:#222;border:1px solid var(--border2);border-bottom-width:2px;border-radius:5px;padding:1px 6px;color:#eee}
+.chip{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--g2);color:#7fe3cf;border:1px solid rgba(0,178,145,.4);margin-left:4px}
+
+@media(max-width:1000px){
+  .shell{grid-template-columns:1fr;gap:0}
+  .rail{position:static;max-height:none;overflow:visible;order:-1;margin-bottom:16px;padding:10px}
+  .rail .rt{display:none}
+  .navtoggle{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-family:inherit;font-size:.86rem;font-weight:700;color:var(--text);background:transparent;border:0;padding:11px;border-radius:12px;cursor:pointer}
+  .rail .links{display:none;margin-top:6px}
+  .rail.open .links{display:flex}
+  .hero h1{font-size:1.5rem}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="orb"></span><div>How I Built This<small>2026 FIFA World Cup · Bracket Dashboard · MSFT SLED</small></div></div>
+    <div class="tag glass"><span class="dot"></span>A precise, follow-along build log</div>
+  </div>
+
+  <section class="hero glass" id="intro">
+    <div class="eyebrow">End-to-end walkthrough · no experience assumed</div>
+    <h1>From an empty GitHub repo to a <span class="g">self-updating</span> World Cup bracket dashboard</h1>
+    <p>This is the complete story of how the <b>2026 FIFA World Cup Bracket Dashboard</b> was built — every command, file, and click, in order. Follow it top to bottom and you'll end up with your own interactive dashboard, hosted free on GitHub Pages, that <b>scores itself</b> and <b>refreshes automatically after games finish</b>.</p>
+    <p>It's written for someone who is <b>not a developer</b>. Where a step needs a tool or a concept, it's explained in plain language first. The whole thing is a single static web page generated by one small Python script — nothing to compile, no servers to run.</p>
+    <div class="pills">
+      <span class="pill">🧱 GitHub repo + Pages</span>
+      <span class="pill">🐍 Python generator (stdlib only)</span>
+      <span class="pill">⚙️ GitHub Actions automation</span>
+      <span class="pill">🔌 football-data.org API</span>
+      <span class="pill">🤖 Built with Microsoft Cowork</span>
+    </div>
+  </section>
+
+  <div class="shell">
+    <nav class="rail glass" id="rail">
+      <button class="navtoggle" id="navToggle" aria-expanded="false" aria-controls="railLinks">📑 Contents ☰</button>
+      <div class="links" id="railLinks">
+        <div class="rt">On this page</div>
+        <a href="#overview"><span class="n">00</span> The big picture</a>
+        <a href="#prereq"><span class="n">01</span> Prerequisites</a>
+        <a href="#repo"><span class="n">02</span> Create the GitHub repo</a>
+        <a href="#clone"><span class="n">03</span> Clone &amp; scaffold</a>
+        <a href="#generator"><span class="n">04</span> The generator</a>
+        <a href="#picks"><span class="n">05</span> Add your picks</a>
+        <a href="#build"><span class="n">06</span> Build &amp; push</a>
+        <a href="#pages"><span class="n">07</span> Enable GitHub Pages</a>
+        <a href="#fetch"><span class="n">08</span> The sync script</a>
+        <a href="#teammap"><span class="n">09</span> Team-name map</a>
+        <a href="#workflow"><span class="n">10</span> The GitHub Action</a>
+        <a href="#token"><span class="n">11</span> API token</a>
+        <a href="#secret"><span class="n">12</span> Add the secret</a>
+        <a href="#schedule"><span class="n">13</span> Schedule it</a>
+        <a href="#test"><span class="n">14</span> Test the run</a>
+        <a href="#bug"><span class="n">15</span> A real bug &amp; fix</a>
+        <a href="#polish"><span class="n">16</span> v7 UI polish</a>
+        <a href="#recap"><span class="n">17</span> Command recap</a>
+      </div>
+    </nav>
+
+    <div class="content">
+
+      <!-- 00 -->
+      <section class="step glass" id="overview">
+        <h2><span class="num">00</span> The big picture</h2>
+        <p class="lead">Before any commands, here's the shape of the whole thing so every later step has a place to sit.</p>
+        <p>There are exactly <b>two moving parts</b>:</p>
+        <ol>
+          <li><b>A generator</b> — one Python file (<code>scripts/build_dashboard.py</code>) with your picks and the live results near the top (the <b>DATA block</b>), and a big untouched <b>render engine</b> below it. Run it and it writes one self-contained web page, <code>docs/index.html</code>.</li>
+          <li><b>An automation</b> — a scheduled <b>GitHub Action</b> that, a few times a day, pulls finished match results from a free sports API, writes them into the DATA block, re-runs the generator, and commits the new page. GitHub Pages serves it.</li>
+        </ol>
+        <div class="diagram">  input/bracket-picks.xlsx ─┐
+                            ├─►  scripts/build_dashboard.py  ─►  docs/index.html  ─►  GitHub Pages
+  input/instructions.md ────┘        (DATA block + render)        (one static file)     (live website)
+                                            ▲
+       scripts/fetch_results.py ────────────┘
+       (GitHub Action, on a schedule: pulls finished results into the DATA block, then rebuilds)</div>
+        <div class="callout tip"><div class="h">💡 Why one static HTML file?</div>Because it has <b>zero external requests</b> — all the CSS, JavaScript, and data are inlined. That makes hosting trivial (GitHub Pages just serves the file), it can't "break" from a missing dependency, and it opens instantly on a phone.</div>
+      </section>
+
+      <!-- 01 -->
+      <section class="step glass" id="prereq">
+        <h2><span class="num">01</span> Prerequisites <span class="chip">one-time</span></h2>
+        <p class="lead">Four things on your machine and one account. Everything else is free and installed as you go.</p>
+        <table>
+          <tr><th>Need</th><th>Why</th><th>Check it's there</th></tr>
+          <tr><td><b>A GitHub account</b></td><td>Hosts the code and the live site; runs the automation.</td><td>Sign in at <a href="https://github.com">github.com</a></td></tr>
+          <tr><td><b>Git</b></td><td>Moves files between your PC and GitHub.</td><td><code>git --version</code></td></tr>
+          <tr><td><b>Python 3.10+</b></td><td>Runs the generator. <b>Standard library only</b> — nothing to install.</td><td><code>python --version</code></td></tr>
+          <tr><td><b>A terminal</b></td><td>Where you type commands. On Windows: <b>PowerShell</b>.</td><td>Open the Start menu → "PowerShell"</td></tr>
+          <tr><td><b>The build kit + your Excel</b></td><td>The kit (<code>instructions.md</code>) is the generator + spec; the Excel holds your picks.</td><td>You have both files</td></tr>
+        </table>
+        <div class="callout warn"><div class="h">⚠️ Windows Python + special characters</div>The dashboard uses characters like <code>★</code>, <code>–</code>, and <code>·</code>. Before running Python on Windows, set the output encoding once per terminal so it doesn't error:<pre><code>$env:PYTHONIOENCODING=<span class="tok-s">"utf-8"</span></code></pre></div>
+      </section>
+
+      <!-- 02 -->
+      <section class="step glass" id="repo">
+        <h2><span class="num">02</span> Create the GitHub repository</h2>
+        <p class="lead">The repo is the home for the code <i>and</i> the live website. Public, so GitHub Pages is free.</p>
+        <h3>Option A — the website (easiest)</h3>
+        <ol>
+          <li>Go to <a href="https://github.com/new">github.com/new</a>.</li>
+          <li><b>Repository name:</b> e.g. <code>my-wc2026-bracket</code>.</li>
+          <li>Set it to <b>Public</b>.</li>
+          <li><b>Do not</b> add a README or <code>.gitignore</code> yet — you'll push your own.</li>
+          <li>Click <b>Create repository</b>.</li>
+        </ol>
+        <h3>Option B — the GitHub CLI</h3>
+        <pre><code>gh repo create my-wc2026-bracket --public --clone</code></pre>
+        <div class="callout tip"><div class="h">💡 What "public" means here</div>Your picks and results are just for fun, and a public repo is what makes free GitHub Pages hosting work. No secrets ever go in the code — the one API token you'll add later is stored separately and encrypted (Step&nbsp;12).</div>
+      </section>
+
+      <!-- 03 -->
+      <section class="step glass" id="clone">
+        <h2><span class="num">03</span> Clone it and scaffold the folders</h2>
+        <p class="lead">"Clone" = download the empty repo to your PC so you can add files. Then create the four folders the project uses.</p>
+        <pre><code><span class="tok-c"># download the repo to your PC</span>
+git clone https://github.com/&lt;you&gt;/my-wc2026-bracket.git
+cd my-wc2026-bracket
+
+<span class="tok-c"># create the folder structure (PowerShell)</span>
+mkdir input, docs, scripts, .github\workflows</code></pre>
+        <p>Here's what each folder is for — the finished layout you're working toward:</p>
+        <div class="filetree glass" style="padding:16px 18px">my-wc2026-bracket/
+├── input/
+│   ├── instructions.md        <span class="c"># the build kit (generator + spec)</span>
+│   └── bracket-picks.xlsx     <span class="c"># your picks (the "My Bracket" tab)</span>
+├── scripts/
+│   ├── build_dashboard.py     <span class="c"># the generator: DATA block + render engine</span>
+│   ├── fetch_results.py       <span class="c"># the results sync (used by the automation)</span>
+│   └── team_map.json          <span class="c"># source name → bracket name fixes</span>
+├── docs/
+│   └── index.html             <span class="c"># the generated dashboard (served by Pages)</span>
+├── .github/workflows/
+│   └── sync-results.yml        <span class="c"># the scheduled GitHub Action</span>
+├── README.md
+└── .gitignore</div>
+      </section>
+
+      <!-- 04 -->
+      <section class="step glass" id="generator">
+        <h2><span class="num">04</span> The generator — DATA block + render engine</h2>
+        <p class="lead">This is the heart of the project. Copy the Python generator out of the build kit into <code>scripts/build_dashboard.py</code>. You'll only ever edit the top of it.</p>
+        <p>The file has two clearly separated parts:</p>
+        <ul>
+          <li><b>USER DATA</b> (the top ~60 lines) — your name, tiebreaker, the 16 first-round fixtures and your picks, and the finished results. <b>This is the only part you change.</b></li>
+          <li><b>RENDER ENGINE</b> (everything below the banner) — the layout, colours, bracket geometry, scoring maths, hover cards, reading modes, the side-navigation rail, etc. <b>Never edited</b> — it's what guarantees every entrant gets the identical design.</li>
+        </ul>
+        <p>A trimmed look at the DATA block so you can see its shape:</p>
+        <pre><code><span class="tok-f">ENTRANT</span>=<span class="tok-s">"Eric Lam"</span>          <span class="tok-c"># the name on the dashboard</span>
+<span class="tok-f">TIEBREAKER</span>=<span class="tok-f">4</span>               <span class="tok-c"># total goals in the Final (your guess)</span>
+<span class="tok-f">REFRESHED</span>=<span class="tok-s">"July 2, 2026 · 11:40 AM PT"</span>  <span class="tok-c"># "last updated" stamp</span>
+
+<span class="tok-c"># The 16 Round-of-32 games: (match code, date, teamA, teamB, YOUR pick)</span>
+<span class="tok-f">R32</span>=[(<span class="tok-s">"M74"</span>,<span class="tok-s">"Mon 6/29"</span>,<span class="tok-s">"Germany"</span>,<span class="tok-s">"Paraguay"</span>,<span class="tok-s">"Germany"</span>),
+     (<span class="tok-s">"M75"</span>,<span class="tok-s">"Mon 6/29"</span>,<span class="tok-s">"Netherlands"</span>,<span class="tok-s">"Morocco"</span>,<span class="tok-s">"Morocco"</span>),
+     <span class="tok-c"># ... 14 more ...</span> ]
+
+<span class="tok-c"># Finished results: match code → (goalsA, goalsB, winner, note)</span>
+<span class="tok-f">RES</span>={<span class="tok-s">"M74"</span>:(<span class="tok-f">1</span>,<span class="tok-f">1</span>,<span class="tok-s">"Paraguay"</span>,<span class="tok-s">"4–3 pens"</span>),
+     <span class="tok-s">"M75"</span>:(<span class="tok-f">1</span>,<span class="tok-f">1</span>,<span class="tok-s">"Morocco"</span>,<span class="tok-s">"3–2 pens"</span>)}
+
+<span class="tok-c"># Your later-round picks</span>
+<span class="tok-f">CHAMP</span>=<span class="tok-s">"England"</span>; <span class="tok-f">RUNNER</span>=<span class="tok-s">"France"</span>
+
+<span class="tok-c"># ════ RENDER ENGINE — do not edit anything below this banner ════</span></code></pre>
+        <div class="callout tip"><div class="h">💡 The scoring rule, in one sentence</div>Each correct advancing pick earns points that <b>double every round</b> (R32 = 1, R16 = 2, QF = 4, SF = 8, Champion = 16; 80 max). A game not yet in <code>RES</code> is treated as <b>pending</b> and counts toward "still live" points, never as a loss.</div>
+      </section>
+
+      <!-- 05 -->
+      <section class="step glass" id="picks">
+        <h2><span class="num">05</span> Put in your picks</h2>
+        <p class="lead">Open <code>scripts/build_dashboard.py</code> and edit only the DATA block to match your Excel's "My Bracket" tab.</p>
+        <ul>
+          <li>Set <code>ENTRANT</code> and <code>TIEBREAKER</code>.</li>
+          <li>Fill <code>R32</code> with your 16 fixtures and picks.</li>
+          <li>Set your later-round picks (<code>R16_PICK</code>, <code>QF_WIN</code>, <code>SF_WIN</code>, <code>CHAMP</code>, <code>RUNNER</code>).</li>
+          <li>Leave <code>RES</code> empty (or with only genuinely-final games) — the automation fills it as matches play.</li>
+        </ul>
+        <div class="callout tip"><div class="h">🤖 The shortcut most people will use</div>Instead of editing Python by hand, hand the whole kit to <b>Microsoft Cowork</b> and say <b>"follow this"</b>, then upload your Excel. Cowork reads your "My Bracket" tab, looks up the results, fills the DATA block for you, and runs the generator untouched.</div>
+      </section>
+
+      <!-- 06 -->
+      <section class="step glass" id="build">
+        <h2><span class="num">06</span> Build the dashboard &amp; push it</h2>
+        <p class="lead">Run the generator to create the page, then send everything up to GitHub.</p>
+        <pre><code>$env:PYTHONIOENCODING=<span class="tok-s">"utf-8"</span>      <span class="tok-c"># Windows: avoid encoding errors</span>
+python scripts\build_dashboard.py    <span class="tok-c"># writes docs\index.html</span>
+
+git add .
+git commit -m <span class="tok-s">"Initial dashboard"</span>
+git push</code></pre>
+        <p>You should see a line like <code>WROTE …\docs\index.html 118076 chars</code>. Open that file in a browser to preview it locally.</p>
+        <div class="callout tip"><div class="h">✅ A quick self-check worth doing</div>Confirm the page is truly self-contained — it should have <b>zero</b> external links. This tiny check counts <code>&lt;div&gt;</code> balance and external <code>http(s)</code> references:<pre><code>python -c <span class="tok-s">"import re;h=open('docs/index.html',encoding='utf-8').read();print('external refs:',len(re.findall(r'(?:src|href)=\"(?:https?:)?//',h)))"</span></code></pre>Expect <code>external refs: 0</code>.</div>
+      </section>
+
+      <!-- 07 -->
+      <section class="step glass" id="pages">
+        <h2><span class="num">07</span> Turn on GitHub Pages</h2>
+        <p class="lead">This is the free hosting. One setting, and your page is live on the internet.</p>
+        <ol>
+          <li>In your repo on github.com, open <b>Settings → Pages</b>.</li>
+          <li>Under <b>Build and deployment → Source</b>, choose <b>Deploy from a branch</b>.</li>
+          <li>Pick branch <b>main</b> and folder <b>/docs</b>. Click <b>Save</b>.</li>
+        </ol>
+        <p>Within about a minute it's live at:</p>
+        <pre><code>https://&lt;you&gt;.github.io/my-wc2026-bracket/</code></pre>
+        <p>Every time a push changes <code>docs/</code>, Pages re-deploys automatically. That single fact is what makes the automation in the next steps "just work."</p>
+      </section>
+
+      <!-- 08 -->
+      <section class="step glass" id="fetch">
+        <h2><span class="num">08</span> The sync script — <code>fetch_results.py</code></h2>
+        <p class="lead">This is the brain of the automation. It reads finished games and writes them into the DATA block, then rebuilds the page. It runs the same whether triggered by the schedule or by you.</p>
+        <p>What one run does, in order:</p>
+        <ol>
+          <li>Reads your <code>R32</code> fixtures straight out of <code>build_dashboard.py</code>, so it always matches your bracket.</li>
+          <li>Gets <b>finished</b> matches from the web (the football-data.org API), or from a local <code>--input results.json</code> file for testing.</li>
+          <li>Normalises team spellings using <code>team_map.json</code> (Step&nbsp;9).</li>
+          <li>Matches each finished game to one of your bracket games by the <b>pair of teams</b>.</li>
+          <li>Writes changed/new results into <code>RES</code> / <code>UPCOMING</code> / <code>REFRESHED</code>, then re-runs the generator.</li>
+        </ol>
+        <p>It has handy flags for safe experimentation:</p>
+        <pre><code>python scripts\fetch_results.py --dry-run             <span class="tok-c"># show what WOULD change, write nothing</span>
+python scripts\fetch_results.py --input results.json  <span class="tok-c"># use a local file instead of the web</span></code></pre>
+        <div class="callout tip"><div class="h">💡 Built-in safety</div>It only ever writes <b>finished</b> games, it's <b>idempotent</b> (if nothing new is final, it changes nothing), and with no token and no <code>--input</code> it exits cleanly as a no-op — so the automation never shows a red ❌ just because setup isn't finished.</div>
+      </section>
+
+      <!-- 09 -->
+      <section class="step glass" id="teammap">
+        <h2><span class="num">09</span> The team-name map — <code>team_map.json</code></h2>
+        <p class="lead">Different sources spell countries differently. This tiny file translates the feed's spelling into your bracket's spelling so games match up.</p>
+        <pre><code>{
+  <span class="tok-s">"Bosnia and Herzegovina"</span>: <span class="tok-s">"Bosnia &amp; Herz."</span>,
+  <span class="tok-s">"Côte d'Ivoire"</span>:          <span class="tok-s">"Ivory Coast"</span>,
+  <span class="tok-s">"Korea Republic"</span>:         <span class="tok-s">"South Korea"</span>
+  <span class="tok-c">// … left side = feed spelling, right side = your bracket spelling …</span>
+}</code></pre>
+        <p>If a result ever fails to match, the fix is almost always: add one line here.</p>
+      </section>
+
+      <!-- 10 -->
+      <section class="step glass" id="workflow">
+        <h2><span class="num">10</span> The GitHub Action — <code>sync-results.yml</code></h2>
+        <p class="lead">A GitHub Action is a small recipe GitHub runs <i>for</i> you on their servers. This one checks out the repo, runs the sync script, and commits the refreshed page if anything changed.</p>
+        <p>Put this in <code>.github/workflows/sync-results.yml</code>:</p>
+        <pre><code><span class="tok-f">name</span>: Sync World Cup results
+
+<span class="tok-f">on</span>:
+  <span class="tok-f">schedule</span>:
+    <span class="tok-c"># Times are UTC. Three runs, timed just after each block of games ends.</span>
+    - <span class="tok-f">cron</span>: <span class="tok-s">"0 22 * * *"</span>    <span class="tok-c"># ~6:00 PM ET</span>
+    - <span class="tok-f">cron</span>: <span class="tok-s">"30 1 * * *"</span>    <span class="tok-c"># ~9:30 PM ET</span>
+    - <span class="tok-f">cron</span>: <span class="tok-s">"0 6 * * *"</span>     <span class="tok-c"># ~2:00 AM ET</span>
+  <span class="tok-f">workflow_dispatch</span>: {}      <span class="tok-c"># adds a manual "Run workflow" button</span>
+
+<span class="tok-f">permissions</span>:
+  <span class="tok-f">contents</span>: write            <span class="tok-c"># lets the job commit the refreshed page back</span>
+
+<span class="tok-f">jobs</span>:
+  <span class="tok-f">sync</span>:
+    <span class="tok-f">runs-on</span>: ubuntu-latest
+    <span class="tok-f">steps</span>:
+      - <span class="tok-f">uses</span>: actions/checkout@v4
+      - <span class="tok-f">uses</span>: actions/setup-python@v5
+        <span class="tok-f">with</span>: {python-version: <span class="tok-s">"3.12"</span>}
+      - <span class="tok-f">name</span>: Fetch results and rebuild
+        <span class="tok-f">env</span>:
+          <span class="tok-f">FOOTBALL_DATA_TOKEN</span>: ${{ secrets.FOOTBALL_DATA_TOKEN }}
+        <span class="tok-f">run</span>: python scripts/fetch_results.py
+      - <span class="tok-f">name</span>: Commit if the dashboard changed
+        <span class="tok-f">run</span>: |
+          if [[ -n <span class="tok-s">"$(git status --porcelain docs/index.html scripts/build_dashboard.py)"</span> ]]; then
+            git config user.name <span class="tok-s">"github-actions[bot]"</span>
+            git config user.email <span class="tok-s">"41898282+github-actions[bot]@users.noreply.github.com"</span>
+            git add docs/index.html scripts/build_dashboard.py
+            git commit -m <span class="tok-s">"chore: auto-sync World Cup results [skip ci]"</span>
+            git push
+          fi</code></pre>
+        <div class="callout tip"><div class="h">💡 The mental model</div>There's no server you rent or babysit. GitHub itself wakes up on the schedule, runs these steps on a throwaway Ubuntu machine, and shuts it down. You only pay attention if you <i>want</i> to (the "Run workflow" button).</div>
+      </section>
+
+      <!-- 11 -->
+      <section class="step glass" id="token">
+        <h2><span class="num">11</span> Get a free API token</h2>
+        <p class="lead">The script needs a key to read match results from <a href="https://www.football-data.org/">football-data.org</a>. The free tier is plenty for a tournament.</p>
+        <ol>
+          <li>Go to <a href="https://www.football-data.org/client/register">football-data.org/client/register</a> and sign up (free — no card).</li>
+          <li>Your <b>API token</b> arrives by email and shows in your account.</li>
+          <li>The dashboard uses competition code <code>WC</code> (FIFA World Cup) and only reads <b>finished</b> matches.</li>
+        </ol>
+        <div class="callout warn"><div class="h">⚠️ Rate limits</div>The free tier limits how often you can call the API — which is exactly why the schedule runs just <b>3×/day</b> instead of hourly. Don't crank the schedule up.</div>
+      </section>
+
+      <!-- 12 -->
+      <section class="step glass" id="secret">
+        <h2><span class="num">12</span> Add the token as a repository secret</h2>
+        <p class="lead">Secrets are stored encrypted by GitHub and handed to the workflow only at run time — they're never written into your code.</p>
+        <ol>
+          <li>Repo <b>Settings → Secrets and variables → Actions</b>.</li>
+          <li>Click <b>New repository secret</b>.</li>
+          <li><b>Name:</b> <code>FOOTBALL_DATA_TOKEN</code> (exactly this — the workflow reads that name).</li>
+          <li><b>Secret:</b> paste your token → <b>Add secret</b>.</li>
+        </ol>
+        <p>That's the link between "the workflow" and "the API." Without it the workflow still runs green, it just does nothing.</p>
+      </section>
+
+      <!-- 13 -->
+      <section class="step glass" id="schedule">
+        <h2><span class="num">13</span> Understand (and tune) the schedule</h2>
+        <p class="lead">The three <code>cron</code> lines are timed to fire shortly after each daily block of matches ends, so results land within ~30–60 minutes of the final whistle — never mid-game.</p>
+        <table>
+          <tr><th>Run</th><th>Approx. time (ET)</th><th>Catches kickoffs…</th><th>Cron (UTC)</th></tr>
+          <tr><td>☀️ Afternoon</td><td>~6:00 PM</td><td>noon–3 PM</td><td><code>0 22 * * *</code></td></tr>
+          <tr><td>🌆 Evening</td><td>~9:30 PM</td><td>5–6:30 PM</td><td><code>30 1 * * *</code></td></tr>
+          <tr><td>🌙 Late night</td><td>~2:00 AM</td><td>8–11 PM</td><td><code>0 6 * * *</code></td></tr>
+        </table>
+        <p>A cron line is five fields: <code>minute hour day month weekday</code>. <code>0 22 * * *</code> means "at minute&nbsp;0 of hour&nbsp;22 (UTC), every day." Summer Eastern Time is UTC−4, so 22:00 UTC = 6:00 PM ET. Change these numbers to shift when it runs.</p>
+      </section>
+
+      <!-- 14 -->
+      <section class="step glass" id="test">
+        <h2><span class="num">14</span> Test the automation</h2>
+        <p class="lead">You don't have to wait for the schedule — trigger it by hand.</p>
+        <ol>
+          <li>Repo <b>Actions → Sync World Cup results → Run workflow → Run</b>.</li>
+          <li>Watch the run. A green ✅ with a log line like <code>Source: football-data.org …</code> means it's wired up.</li>
+          <li>If no games are newly final, it correctly reports <code>No new finished games to apply</code> — that's success, not failure.</li>
+        </ol>
+        <div class="callout tip"><div class="h">✅ Done — it now runs itself</div>From here the workflow fires on its schedule, pulls finished games, rebuilds <code>docs/index.html</code>, and pushes — which re-deploys Pages automatically. The only "manual" parts were this one-time setup and the optional Run-workflow button.</div>
+      </section>
+
+      <!-- 15 -->
+      <section class="step glass" id="bug">
+        <h2><span class="num">15</span> A real bug — and the fix <span class="chip">worth reading</span></h2>
+        <p class="lead">This actually happened during the build, and it's a great lesson in trusting real data over assumptions.</p>
+        <p>The first live automation run changed two penalty-shootout games from <b>"1–1 (4–3 pens)"</b> and <b>"1–1 (3–2 pens)"</b> into nonsensical-looking <b>4–5</b> and <b>3–4</b> scorelines. The winners were still right, but the scores looked wrong.</p>
+        <div class="callout bug"><div class="h">🐞 The root cause</div>The football-data.org API <b>folds the penalty-shootout kicks into the full-time score</b>. A game that was 1–1 and won 4–3 on penalties is reported as <b>5–4</b> in the <code>fullTime</code> field. The original code didn't expect that, so it wrote the folded score and dropped the "pens" note.</div>
+        <p>The fix: detect a shootout via the separate <code>penalties</code> field, <b>subtract</b> the shootout tally to recover the true level score (5−4 pens → 1–1), take the winner from the API's own <code>winner</code> field, and rebuild the clean <code>"4–3 pens"</code> note. A guard was also added so a note-less value can never silently overwrite a curated shootout result again.</p>
+        <div class="callout tip"><div class="h">💡 The takeaway</div>Real feeds have quirks the docs don't mention. When automated data looks wrong, inspect the actual payload and reconcile the numbers — don't assume the source matches your mental model.</div>
+      </section>
+
+      <!-- 16 -->
+      <section class="step glass" id="polish">
+        <h2><span class="num">16</span> The v7 UI polish</h2>
+        <p class="lead">Two finishing touches were added to the render engine (and to the reusable kit, bumping it to v7).</p>
+        <ul>
+          <li><b>A top "last refreshed" indicator</b> — a small live chip in the header mirroring the footer timestamp, so the last sync time is visible without scrolling.</li>
+          <li><b>A sticky left side-navigation rail</b> with a scrollspy that highlights your current section, smooth jumps, and a mobile tap-drawer.</li>
+        </ul>
+        <div class="callout tip"><div class="h">💡 The one tricky CSS detail</div>The rail sits in a two-column layout, but the bracket map must <b>never</b> get its own horizontal scrollbar. The trick: <code>.content{min-width:0}</code> lets the content column shrink so the bracket keeps its own overflow behaviour, and <code>body{overflow-x:hidden}</code> is the final guard. Below 1200px the layout collapses to a single column and the rail becomes a <code>📑 Contents</code> drawer.</div>
+        <p>Because these live in the <b>render engine</b>, they need no per-entrant data — every rebuild reproduces them automatically. That's the whole point of the DATA-vs-engine split.</p>
+      </section>
+
+      <!-- 17 -->
+      <section class="step glass" id="recap">
+        <h2><span class="num">17</span> The whole thing, as a command list</h2>
+        <p class="lead">Every command, start to finish, for quick reference.</p>
+        <pre><code><span class="tok-c"># 1. get the repo onto your PC</span>
+git clone https://github.com/&lt;you&gt;/my-wc2026-bracket.git
+cd my-wc2026-bracket
+mkdir input, docs, scripts, .github\workflows
+
+<span class="tok-c"># 2. add the 4 code files + your Excel (from the kit / this repo), then set your picks</span>
+<span class="tok-c">#    in scripts\build_dashboard.py</span>
+
+<span class="tok-c"># 3. build and publish</span>
+$env:PYTHONIOENCODING=<span class="tok-s">"utf-8"</span>
+python scripts\build_dashboard.py
+git add .
+git commit -m <span class="tok-s">"Initial dashboard"</span>
+git push
+
+<span class="tok-c"># 4. on github.com: Settings → Pages → main / /docs → Save</span>
+<span class="tok-c"># 5. get a free token at football-data.org, then add it as the</span>
+<span class="tok-c">#    FOOTBALL_DATA_TOKEN repository secret</span>
+<span class="tok-c"># 6. Actions → Sync World Cup results → Run workflow  (test it)</span>
+
+<span class="tok-c"># refreshing later, by hand, is just:</span>
+python scripts\fetch_results.py            <span class="tok-c"># or --dry-run to preview</span></code></pre>
+        <p>And the recurring maintenance? None. The Action keeps the board current on its own through the Final. To retire it, delete the <code>cron</code> lines from the workflow.</p>
+      </section>
+
+      <div class="glass foot">
+        <b>Built by Eric Lam with Microsoft Cowork.</b> A single self-contained HTML dashboard, generated by a standard-library Python script, hosted free on GitHub Pages, and kept current by a scheduled GitHub Action reading football-data.org. Thanks to <b>Rob Brautigam</b> for hosting the 2026 FIFA World Cup bracket challenge for SLED.
+        <div style="margin-top:8px">Live dashboard: <a href="https://eriic-builds.github.io/Eric-fifa26-wc-bracket-dashboard/">eriic-builds.github.io/Eric-fifa26-wc-bracket-dashboard</a></div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /shell -->
+</div><!-- /wrap -->
+
+<script>
+(function(){
+  var rail=document.getElementById('rail'),navToggle=document.getElementById('navToggle');
+  if(navToggle&&rail){navToggle.addEventListener('click',function(){var o=rail.classList.toggle('open');navToggle.setAttribute('aria-expanded',o?'true':'false');});}
+  var railLinks=rail?rail.querySelectorAll('.links a'):[];
+  if(railLinks.length){
+    var linkFor={};
+    railLinks.forEach(function(a){linkFor[a.getAttribute('href').slice(1)]=a;a.addEventListener('click',function(){rail.classList.remove('open');if(navToggle)navToggle.setAttribute('aria-expanded','false');});});
+    var secs=document.querySelectorAll('#intro, section.step[id]');
+    var spy=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){railLinks.forEach(function(l){l.classList.remove('active');});var a=linkFor[e.target.id];if(a)a.classList.add('active');}});},{rootMargin:'-45% 0px -50% 0px',threshold:0});
+    secs.forEach(function(s){spy.observe(s);});
+  }
+})();
+</script>
+</body>
+</html>
