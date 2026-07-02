@@ -1,12 +1,16 @@
 name: Sync World Cup results
 
 # Pulls finished-game results from the web and refreshes the dashboard.
-# Runs on a schedule (about hourly, so updates land within an hour of a game
-# finishing) and can also be triggered by hand from the Actions tab.
+# Scheduled to run right after each daily block of matches finishes (games kick
+# off ~12pm-11pm ET and last ~2h), so results land within ~30-60 min of the final
+# whistle -- no idle hourly runs. Can also be triggered by hand from the Actions tab.
 
 on:
   schedule:
-    - cron: "15 * * * *"   # every hour at :15 (UTC)
+    # Times are UTC. Summer ET = UTC-4. Three runs cover the day's match blocks:
+    - cron: "0 22 * * *"   # 6:00 PM ET  - after the afternoon games (noon-3pm ET kickoffs)
+    - cron: "30 1 * * *"   # 9:30 PM ET  - after the early-evening games (5-6:30pm ET kickoffs)
+    - cron: "0 6 * * *"    # 2:00 AM ET  - after the late-night games (8-11pm ET kickoffs)
   workflow_dispatch: {}      # manual "Run workflow" button
 
 # Let the job commit the refreshed dashboard back to the repo.

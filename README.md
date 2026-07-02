@@ -78,14 +78,16 @@ Because the dashboard is a single static file, hosting is trivial:
 
 - **Phase 1 — Build + host.** Generate the dashboard from my picks + the kit, publish on Pages.
   Results are refreshed by updating the `DATA` block and re-running the generator.
-- **Phase 2 — Auto-sync from the web.** A scheduled GitHub Action pulls the latest match
-  results into the `DATA` block, re-runs `build_dashboard.py`, and commits the updated
-  `index.html` — so the dashboard refreshes on its own about an hour after games.
+- **Phase 2 — Auto-sync from the web.** A GitHub Action runs after each daily block of games
+  finishes, pulls the latest results into the `DATA` block, re-runs `build_dashboard.py`, and
+  commits the updated `index.html` — so the dashboard refreshes on its own shortly after games.
 
 ### Turning on auto-sync (Phase 2)
 
-The automation lives in **`.github/workflows/sync-results.yml`** and runs
-**`scripts/fetch_results.py`** every hour (and on demand from the Actions tab). To activate it:
+The automation lives in **`.github/workflows/sync-results.yml`** and runs **right after each
+daily block of matches finishes** — three scheduled runs (late afternoon, evening, and after
+the last night game), so results appear within ~30–60 minutes of the final whistle instead of
+polling every hour. You can also trigger it any time from the **Actions** tab. To activate it:
 
 1. Get a **free** API token from [football-data.org](https://www.football-data.org/) (register → your account shows a token). No cost.
 2. In this repo: **Settings → Secrets and variables → Actions → New repository secret**,
