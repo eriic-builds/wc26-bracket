@@ -82,10 +82,27 @@ Because the dashboard is a single static file, hosting is trivial:
   results into the `DATA` block, re-runs `build_dashboard.py`, and commits the updated
   `index.html` — so the dashboard refreshes on its own about an hour after games.
 
-> **Note on Phase 2:** result-fetching happens *outside* the generator today. The automation
-> adds a step that pulls the latest match results into the `DATA` block **before** running the
-> generator. Team-name matching (e.g. "Bosnia & Herz." vs "Bosnia and Herzegovina") is handled
-> by a small mapping file.
+### Turning on auto-sync (Phase 2)
+
+The automation lives in **`.github/workflows/sync-results.yml`** and runs
+**`scripts/fetch_results.py`** every hour (and on demand from the Actions tab). To activate it:
+
+1. Get a **free** API token from [football-data.org](https://www.football-data.org/) (register → your account shows a token). No cost.
+2. In this repo: **Settings → Secrets and variables → Actions → New repository secret**,
+   name it **`FOOTBALL_DATA_TOKEN`**, paste the token.
+3. That's it. The workflow fetches finished World Cup games, updates results, and redeploys.
+   Until the token is added, the workflow simply does nothing (a safe no-op).
+
+**How the sync stays safe:** it only writes *finished* games, never overwrites a pending
+match, and is idempotent (re-running changes nothing if there's nothing new). Team names from
+the feed are mapped to the bracket's names via **`scripts/team_map.json`** (e.g.
+"Bosnia and Herzegovina" → "Bosnia & Herz.").
+
+**Manual / offline update:** you can also feed results from a local file —
+`python scripts/fetch_results.py --input results.json` — or preview with `--dry-run`.
+
+> **Note on Phase 2:** result-fetching happens *outside* the generator. The automation adds a
+> step that pulls the latest results into the `DATA` block **before** running the generator.
 
 ---
 

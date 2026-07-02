@@ -1,0 +1,19 @@
+{
+  "_comment": "Maps team names as they may appear in a web/API results feed to the exact names used in this bracket (build_dashboard.py). Add a variant on the left whenever a source spells a country differently. Names not listed are used as-is.",
+  "Bosnia and Herzegovina": "Bosnia & Herz.",
+  "Bosnia & Herzegovina": "Bosnia & Herz.",
+  "Bosnia-Herzegovina": "Bosnia & Herz.",
+  "USA": "United States",
+  "United States of America": "United States",
+  "US": "United States",
+  "Democratic Republic of the Congo": "DR Congo",
+  "Congo DR": "DR Congo",
+  "DR Congo": "DR Congo",
+  "Cabo Verde": "Cape Verde",
+  "Cape Verde Islands": "Cape Verde",
+  "C\u00f4te d'Ivoire": "Ivory Coast",
+  "Cote d'Ivoire": "Ivory Coast",
+  "Republic of Ireland": "Ireland",
+  "Korea Republic": "South Korea",
+  "Republic of Korea": "South Korea"
+}
