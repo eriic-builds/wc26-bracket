@@ -3,8 +3,7 @@
 > An interactive, single-file web dashboard that scores my 2026 FIFA World Cup
 > bracket-challenge picks against real results — and visualizes the whole bracket.
 
-**Live dashboard:** _coming once the build runs_ →
-`https://eriic-builds.github.io/Eric-fifa26-wc-bracket-dashboard/`
+**Live dashboard:** https://eriic-builds.github.io/Eric-fifa26-wc-bracket-dashboard/
 
 ---
 
