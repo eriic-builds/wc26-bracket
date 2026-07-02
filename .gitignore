@@ -1,0 +1,17 @@
+# OS / editor cruft
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Python (build/fetch scripts)
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node (if used instead)
+node_modules/
+
+# Secrets / local env
+.env
+*.local
