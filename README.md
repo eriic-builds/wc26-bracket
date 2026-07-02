@@ -18,7 +18,7 @@
 - [Auto-sync automation (Phase 2)](#auto-sync-automation-phase-2)
 - [Refreshing results manually](#refreshing-results-manually)
 - [Repo layout](#repo-layout)
-- [How this repo was built](#how-this-repo-was-built)
+- [Replicate this yourself (from zero)](#replicate-this-yourself-from-zero)
 - [Troubleshooting & FAQ](#troubleshooting--faq)
 - [Ideas & how to improve](#ideas--how-to-improve)
 - [Credits & disclaimer](#credits--disclaimer)
@@ -122,6 +122,14 @@ Because the dashboard is a single static file, hosting is trivial:
 A GitHub Action keeps the dashboard current **without any manual work** — it's already set up
 and running.
 
+**How to think about it — "set up once, then automatic."** There is no server and no bot you
+have to babysit. The automation is a **GitHub Actions workflow** (a small YAML file in the repo)
+that GitHub itself runs on a schedule. On each run it calls the **football-data.org API** (a free
+sports-data service), grabs any newly *finished* matches, writes them into the dashboard's data,
+rebuilds the page, and commits the change back. The only "manual" parts are the **one-time setup**
+(add the workflow + a free API token, done once) and — if you're impatient — an optional
+**"Run workflow"** button click. After setup, it runs itself.
+
 **When it runs:** aligned to when games actually finish, not every hour. Three scheduled runs a
 day, each just after a block of matches ends (games kick off ~12 PM–11 PM ET and last ~2 hours),
 so a result appears within roughly **30–60 minutes of the final whistle** — never mid-game.
@@ -214,7 +222,117 @@ Then commit and push — Pages redeploys in about a minute.
 
 ---
 
-## How this repo was built
+## Replicate this yourself (from zero)
+
+Want your own copy — for your picks, or a friend's? Follow these steps end to end. You'll go from
+an empty repo to a live, self-updating dashboard. Commands are shown for **Windows PowerShell**;
+macOS/Linux users can drop the `.exe`/`py` differences.
+
+### 0. Prerequisites (one-time, on your machine)
+
+- A **GitHub account**.
+- **Git** installed — check with `git --version`.
+- **Python 3.10+** installed — check with `python --version`.
+- The two source files:
+  - the **build kit** (`instructions.md` — the generator + spec; this repo uses **v6**), and
+  - your **bracket picks** as an Excel file (the workbook's **"My Bracket"** tab).
+
+> No other dependencies. The generator is **standard-library only** — nothing to `pip install`.
+
+### 1. Create an empty repo on GitHub
+
+- **Web:** github.com → **New repository** → name it (e.g. `my-wc2026-bracket`) → **Public** →
+  *don't* add a README/`.gitignore` (you'll push your own) → **Create repository**.
+- **Or with the GitHub CLI:** `gh repo create my-wc2026-bracket --public --clone`
+
+### 2. Clone it and scaffold the folders
+
+```powershell
+git clone https://github.com/<you>/my-wc2026-bracket.git
+cd my-wc2026-bracket
+mkdir input, docs, scripts, .github\workflows
+```
+
+### 3. Add the four code files
+
+Copy these in from the kit / this repo (they're generic — only the **data** at the top of
+`build_dashboard.py` is personal):
+
+| File | Where it comes from |
+| --- | --- |
+| `scripts/build_dashboard.py` | The Python generator inside the **build kit** (`input/instructions.md`). Point its output at `docs/index.html`. |
+| `scripts/fetch_results.py` | The results-sync script (copy from this repo). |
+| `scripts/team_map.json` | The source-name → bracket-name map (copy from this repo). |
+| `.github/workflows/sync-results.yml` | The scheduled workflow (copy from this repo). |
+
+Also drop your kit + Excel into `input/` for reference:
+
+```powershell
+copy <path-to>\instructions.md      input\instructions.md
+copy <path-to>\your-picks.xlsx      input\bracket-picks.xlsx
+```
+
+### 4. Put in your picks (the `DATA` block)
+
+Open `scripts/build_dashboard.py` and edit only the **`DATA` block** at the top (see
+[the data model](#the-data-model-the-data-block)) to match your workbook's "My Bracket" tab:
+
+- `ENTRANT`, `TIEBREAKER` — your name and Final total-goals tiebreaker.
+- `R32` — your 16 Round-of-32 fixtures and picks.
+- `R16_PICK`, `R16_WIN`, `QF_WIN`, `SF_WIN`, `CHAMP`, `RUNNER` — your later-round picks.
+- Leave `RES` empty (or with only truly-finished games) — the automation fills it as games play.
+
+**Everything below the `RENDER ENGINE` banner stays verbatim — don't edit it.**
+
+### 5. Build, then push
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"      # Windows: avoid cp1252 errors on ★ / – characters
+python scripts\build_dashboard.py  # writes docs\index.html
+git add .
+git commit -m "Initial dashboard"
+git push
+```
+
+### 6. Turn on GitHub Pages
+
+Repo **Settings → Pages → Build and deployment → Deploy from a branch → `main` / `/docs` →
+Save**. Within ~1 minute it's live at `https://<you>.github.io/my-wc2026-bracket/`.
+
+### 7. Get a free football-data.org API token
+
+1. Go to **[football-data.org/client/register](https://www.football-data.org/client/register)** and
+   sign up (free tier — no card).
+2. Your **API token** arrives by email and shows in your account dashboard.
+3. The dashboard uses competition code **`WC`** (FIFA World Cup) and only reads **finished**
+   matches. The free tier's rate limit is why the schedule runs just **3×/day** — plenty for a
+   tournament.
+
+### 8. Add the token as a repo secret
+
+Repo **Settings → Secrets and variables → Actions → New repository secret**:
+
+- **Name:** `FOOTBALL_DATA_TOKEN` (exactly this)
+- **Secret:** paste your token → **Add secret**
+
+> The token is stored encrypted and only exposed to the workflow at run time — never committed to
+> the code. Without it, the workflow still runs but does nothing (a safe no-op).
+
+### 9. Test the automation
+
+Repo **Actions → Sync World Cup results → Run workflow → Run**. A green ✅ with a log line like
+`Source: football-data.org …` means it's wired up. If no games are newly final it will correctly
+report `No new finished games to apply` — that's success, not a failure.
+
+### 10. Done — it now runs itself
+
+From here the workflow fires on its schedule (see the table above), pulls any finished games,
+rebuilds `docs/index.html`, and pushes — which redeploys Pages automatically. To change *when* it
+runs, edit the `cron` lines in `.github/workflows/sync-results.yml` (times are **UTC**).
+
+---
+
+## How this repo was built (history)
 
 1. Scaffolded the repo (`input/`, `docs/`, `scripts/`, `.github/workflows/`) with an `input/`
    drop-zone for the two source files.
