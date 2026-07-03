@@ -721,6 +721,12 @@ html[data-theme="winxp"]{--bg:#5B9BD5;--panel:#ECE9D8;--text:#000000;--text2:#10
  --gold:#2A5BDA;--gold-ink:#0A246A;--win:#3B9E1F;--win-ink:#2E7D18;--out:#8a94a0;--lose-ink:#C4262E;--g1:rgba(42,91,218,.10);--g2:rgba(59,158,31,.10);--g3:rgba(255,255,255,.10);
  --blue:#2A5BDA;--purple:#0A246A;--pink:#C4262E;--green:#3B9E1F;--teal:#245EDB;--grad:linear-gradient(180deg,#3D95FF,#0A3FC0);
  --radius:6px;--radius-sm:4px;--fs:15px;--lh:1.5;--ls:0em;--fstack:"Tahoma","Franklin Gothic","Segoe UI",sans-serif;}
+/* Fun · Doodle — hand-drawn pencil sketch on paper: warm off-white paper with faint ruled lines and grain, graphite strokes, wobbly hand-drawn borders, handwriting font, grayscale (penciled) flags */
+html[data-theme="doodle"]{--bg:#F4EFE1;--panel:#FBF7EC;--text:#333029;--text2:#4b473e;--muted:#8b857a;--border:#3a362f;--border2:#6f6a60;
+ --glass:#FBF7EC;--shadow:2px 3px 0 rgba(58,54,47,.16);--hover:#efe7d3;
+ --gold:#b1892f;--gold-ink:#8a6a20;--win:#5f7d40;--win-ink:#48602f;--out:#9a948a;--lose-ink:#a6453b;--g1:rgba(58,54,47,.05);--g2:rgba(58,54,47,.04);--g3:rgba(58,54,47,.03);
+ --blue:#3b5a78;--purple:#5b4a6b;--pink:#a6453b;--orange:#b1732f;--green:#5f7d40;--teal:#3f6b64;--grad:linear-gradient(90deg,#4a463d,#6f6a60);
+ --radius:14px;--radius-sm:10px;--fs:16px;--lh:1.55;--ls:.01em;--fstack:"Segoe Print","Bradley Hand","Comic Sans MS","Chalkboard SE",cursive;}
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 html{scroll-behavior:smooth;scroll-padding-top:24px}
 body{font-family:var(--fstack);font-size:var(--fs);line-height:var(--lh);letter-spacing:var(--ls);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative;min-height:100vh}
@@ -1036,6 +1042,17 @@ html[data-theme="winxp"] .modes button.on,html[data-theme="winxp"] .fun-btn.on,h
 html[data-theme="winxp"] .shead h2,html[data-theme="winxp"] .hero h1,html[data-theme="winxp"] .story-title{background:linear-gradient(180deg,#2F8AF0,#0A3FC0);color:#FFF;padding:3px 10px;border-radius:6px 6px 0 0;display:inline-block;text-shadow:0 1px 1px rgba(0,0,0,.35)}
 html[data-theme="winxp"] a{color:#0A3FC0}
 html[data-theme="winxp"] .team{background:#FFFFFF;color:#000;border:1px solid #7A96DF;border-radius:4px}
+/* Fun · Doodle decorative — paper texture (faint ruled lines + red margin + grain), wobbly hand-drawn borders, wavy underlines, grayscale flags */
+html[data-theme="doodle"] body::before{display:none}
+html[data-theme="doodle"] body{background-color:#F4EFE1;background-image:repeating-linear-gradient(0deg,transparent 0 27px,rgba(90,120,160,.10) 27px 28px),linear-gradient(90deg,transparent 46px,rgba(200,90,80,.20) 46px 47px,transparent 48px),radial-gradient(circle at 18% 26%,rgba(0,0,0,.022),transparent 55%),radial-gradient(circle at 82% 72%,rgba(0,0,0,.022),transparent 55%)}
+html[data-theme="doodle"] *{text-shadow:none}
+html[data-theme="doodle"] .glass{background:var(--panel);backdrop-filter:none;-webkit-backdrop-filter:none;border:2px solid var(--border);border-radius:255px 12px 225px 15px/15px 225px 18px 255px;box-shadow:2px 2px 0 rgba(58,54,47,.14),-1px 1px 0 rgba(58,54,47,.10)}
+html[data-theme="doodle"] .card,html[data-theme="doodle"] .team,html[data-theme="doodle"] .chip,html[data-theme="doodle"] .modes button,html[data-theme="doodle"] .fun-btn,html[data-theme="doodle"] .seg button,html[data-theme="doodle"] .pill{border:2px solid var(--border);border-radius:225px 15px 235px 15px/15px 235px 15px 225px;background:var(--panel)}
+html[data-theme="doodle"] .modes button.on,html[data-theme="doodle"] .fun-btn.on,html[data-theme="doodle"] .fun-menu button.on,html[data-theme="doodle"] .seg button.on{background:#e9e0cc;color:var(--text);box-shadow:inset 1px 1px 0 rgba(58,54,47,.22)}
+html[data-theme="doodle"] h1,html[data-theme="doodle"] h2,html[data-theme="doodle"] .story-title,html[data-theme="doodle"] .hero h1{background:none;color:var(--text);-webkit-text-fill-color:currentColor;text-shadow:none;text-decoration:underline wavy rgba(58,54,47,.5);text-underline-offset:6px}
+html[data-theme="doodle"] a{color:#3b5a78;text-decoration:underline wavy}
+html[data-theme="doodle"] img,html[data-theme="doodle"] .flag{filter:grayscale(1) contrast(1.15) brightness(.98)}
+html[data-theme="doodle"] .orb,html[data-theme="doodle"] .pill.live .dot,html[data-theme="doodle"] .rf-dot{filter:grayscale(1)}
 """
 
 JS=r"""
@@ -1043,7 +1060,7 @@ JS=r"""
  var root=document.documentElement,LS=window.localStorage;
  var KTHEME='wcb.theme',KFAV='wcb.favs',KFO='wcb.favonly',KSC='wcb.scores.v3';
  function setTheme(t){root.setAttribute('data-theme',t);document.querySelectorAll('.modes button').forEach(function(b){if(b.dataset.mode)b.classList.toggle('on',b.dataset.mode===t)});if(funBtn)funBtn.classList.toggle('on',!!FUN[t]);try{LS.setItem(KTHEME,t)}catch(e){}closeFun();if(window.__drawConn)setTimeout(window.__drawConn,80);}
- var FUN={geocities:1,minecraft:1,winxp:1};
+ var FUN={geocities:1,minecraft:1,winxp:1,doodle:1};
  var funWrap=document.getElementById('funWrap'),funBtn=document.getElementById('funBtn');
  function closeFun(){if(funWrap){funWrap.classList.remove('open');if(funBtn)funBtn.setAttribute('aria-expanded','false');}}
  document.querySelectorAll('.modes button').forEach(function(b){if(b.dataset.mode)b.addEventListener('click',function(){setTheme(b.dataset.mode)})});
@@ -1167,6 +1184,7 @@ f'<div class="refreshed glass" id="topRefreshed" title="When live results were l
 '<button data-mode="geocities" role="menuitem" title="90s web nostalgia — neon, rainbow headers, Comic Sans, tiled starfield"><span class="fm-em">🌐</span> GeoCities</button>'
 '<button data-mode="minecraft" role="menuitem" title="Blocky stone-and-grass — pixelated panels, drop-shadow text, sky-blue world"><span class="fm-em">⛏️</span> Minecraft</button>'
 '<button data-mode="winxp" role="menuitem" title="Windows XP — Luna blue, Bliss green-hills desktop, cream dialogs, rounded blue title bars, Tahoma"><span class="fm-em">🪟</span> Windows XP</button>'
+'<button data-mode="doodle" role="menuitem" title="Hand-drawn pencil sketch — warm paper with faint ruled lines, graphite wobbly borders, handwriting font, grayscale flags"><span class="fm-em">✏️</span> Doodle</button>'
 '</div></div></div></div>'
 '<div class="shell"><nav class="rail glass" id="rail">'
 '<button class="navtoggle" id="navToggle" aria-expanded="false" aria-controls="railLinks">📑 Contents ☰</button>'
