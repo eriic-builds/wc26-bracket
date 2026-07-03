@@ -276,13 +276,20 @@ def build_bracket(mode="actual"):
     cols.append('<div class="round"><div class="rhead">Round of 32<span>'+f'{R32_DONE} of {N_R32} final'+'</span></div><div class="matches">'+''.join(cells)+'</div></div>')
     meta=[("Round of 16","r16","Jul 4–7",rounds[1][3]),("Quarterfinals","qf","Jul 9–11",rounds[2][3]),
           ("Semifinals","sf","Jul 14–15",rounds[3][3]),("Final","final","Jul 19",rounds[4][3])]
+    round_codes={"r16":_r16codes,"qf":_qfcodes,"sf":_sfcodes,"final":_finalcodes}
+    r16_day={mc:day for (mc,day,a,b,et,ct,ptz) in R16_FIX}
     for label,short,sub,ms in meta:
         cc=[]
-        for (a,b,w) in ms:
+        codes=round_codes.get(short,[])
+        for j,(a,b,w) in enumerate(ms):
             isf=(label=="Final")
             aa=r32_pick_actual.get(a) if short=="r16" else None
             ab=r32_pick_actual.get(b) if short=="r16" else None
-            cc.append('<div class="match">'+later_cell(a,w==a,short,champ=(isf and w==a),actual=aa,mode=mode)+later_cell(b,w==b,short,champ=(isf and w==b),actual=ab,mode=mode)+'</div>')
+            code=codes[j] if j<len(codes) else ""
+            when=r16_day.get(code,"")
+            lab=(esc(code)+(' · '+esc(when) if when else '')) if code else ""
+            mlab=f'<div class="mlabel up">{lab}</div>' if lab else ""
+            cc.append('<div class="match">'+mlab+later_cell(a,w==a,short,champ=(isf and w==a),actual=aa,mode=mode)+later_cell(b,w==b,short,champ=(isf and w==b),actual=ab,mode=mode)+'</div>')
         cols.append(f'<div class="round"><div class="rhead">{esc(label)}<span>{esc(sub)}</span></div><div class="matches">'+''.join(cc)+'</div></div>')
     cols.append('<div class="round champcol"><div class="rhead">Champion<span>your pick</span></div><div class="matches">'
         '<div class="match">'+later_cell(CHAMP,True,"champion",champ=True,mode=mode)+
@@ -686,6 +693,7 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .rhead span{display:block;font-size:.6rem;font-weight:600;color:var(--muted);opacity:.8;text-transform:none;margin-top:2px}
 .match{position:relative;height:132px;display:flex;flex-direction:column;justify-content:center}
 .mlabel{font-size:.58rem;font-weight:700;color:var(--muted);opacity:.75;text-align:center}
+.mlabel.up{opacity:.85;margin-bottom:3px;letter-spacing:.02em}
 .mscore{font-size:.57rem;color:var(--text2);text-align:center;margin:1px 0 4px;font-weight:600}
 .mscore.up{color:var(--muted);opacity:.8;font-weight:600;font-style:italic}
 .team{position:relative;display:flex;align-items:center;gap:7px;padding:8px 10px;margin:3px 0;border-radius:10px;border:1px solid var(--border);background:var(--panel);font-size:.82rem;font-weight:600;transition:.16s}
