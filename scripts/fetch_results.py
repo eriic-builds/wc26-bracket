@@ -854,7 +854,16 @@ def main() -> int:
     hl_changed = bool(cur_hl) and cur_hl.group(0) != hl_block_new
 
     if not changed and not hl_changed:
-        print(f"Source: {src}. No new finished games to apply \u2014 dashboard already current.")
+        if args.dry_run:
+            print(f"Source: {src}. No new finished games to apply \u2014 dashboard already current (dry-run).")
+            return 0
+        # Nothing to apply, but record that we checked so "last synced" stays honest.
+        stamp = now_pt_stamp()
+        out_text = re.sub(r'REFRESHED="[^"]*"', f'REFRESHED="{stamp}"', gen_text, count=1)
+        if out_text != gen_text:
+            with open(GEN, "w", encoding="utf-8") as fh:
+                fh.write(out_text)
+        print(f"Source: {src}. No new finished games \u2014 refreshed sync time to {stamp}.")
         return 0
 
     new_up = {c: d for c, d in cur_up.items() if c not in new_res}
