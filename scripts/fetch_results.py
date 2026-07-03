@@ -788,9 +788,11 @@ def render_upcoming(up: dict) -> str:
 
 def now_pt_stamp() -> str:
     pt = timezone(timedelta(hours=-7))  # PDT (summer)
-    stamp = datetime.now(pt).strftime("%B %d, %Y \u00b7 %I:%M %p PT")
-    # trim leading zeros for readability ("July 02" -> "July 2", "09:00" -> "9:00")
-    return re.sub(r"\b0(\d)", r"\1", stamp)
+    now = datetime.now(pt)
+    # Trim leading zeros on day and hour, but keep the minute zero-padded ("10:06").
+    day = str(now.day)
+    hour = str(int(now.strftime("%I")))
+    return now.strftime(f"%B {day}, %Y \u00b7 {hour}:%M %p PT")
 
 
 def main() -> int:
