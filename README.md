@@ -112,6 +112,8 @@ Because the dashboard is a single static file, hosting is trivial:
 
 1. The generated dashboard lives at **`docs/index.html`**.
 2. In the repo: **Settings → Pages → Deploy from a branch → `main`, `/docs`**.
+   Keep the committed **`docs/.nojekyll`** marker file in place so Pages serves the
+   generated dashboard as a plain static site instead of running Jekyll's default theme build.
 3. It goes live at `https://eriic-builds.github.io/Eric-fifa26-wc-bracket-dashboard/`
    (rebuilds within ~1 minute of any push that changes `docs/`).
 
@@ -309,7 +311,9 @@ git push
 ### 6. Turn on GitHub Pages
 
 Repo **Settings → Pages → Build and deployment → Deploy from a branch → `main` / `/docs` →
-Save**. Within ~1 minute it's live at `https://<you>.github.io/my-wc2026-bracket/`.
+Save**. Leave the committed **`docs/.nojekyll`** file in place so GitHub Pages serves the
+generated HTML as-is instead of trying to rebuild it with Jekyll. Within ~1 minute it's live
+at `https://<you>.github.io/my-wc2026-bracket/`.
 
 ### 7. Results source — nothing to configure
 

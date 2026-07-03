@@ -292,6 +292,7 @@ git push</code></pre>
           <li>Under <b>Build and deployment → Source</b>, choose <b>Deploy from a branch</b>.</li>
           <li>Pick branch <b>main</b> and folder <b>/docs</b>. Click <b>Save</b>.</li>
         </ol>
+        <p>Leave the committed <code>docs/.nojekyll</code> file in place so GitHub Pages serves the generated dashboard directly instead of trying to apply Jekyll's default theme.</p>
         <p>Within about a minute it's live at:</p>
         <pre><code>https://&lt;you&gt;.github.io/my-wc2026-bracket/</code></pre>
         <p>Every time a push changes <code>docs/</code>, Pages re-deploys automatically. That single fact is what makes the automation in the next steps "just work."</p>
@@ -461,6 +462,7 @@ git commit -m <span class="tok-s">"Initial dashboard"</span>
 git push
 
 <span class="tok-c"># 4. on github.com: Settings → Pages → main / /docs → Save</span>
+<span class="tok-c">#    leave docs/.nojekyll committed so Pages serves the static HTML as-is</span>
 <span class="tok-c"># 5. get a free token at football-data.org, then add it as the</span>
 <span class="tok-c">#    FOOTBALL_DATA_TOKEN repository secret</span>
 <span class="tok-c"># 6. Actions → Sync World Cup results → Run workflow  (test it)</span>
