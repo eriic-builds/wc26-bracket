@@ -158,8 +158,11 @@ You can also run it on demand: **Actions → Sync World Cup results → Run work
    blocks.
 5. **Auto-writes the "Game facts" highlight cards** — it rebuilds `AUTO_HL` with the **last six
    finished games** from the whole feed (not just my bracket), each as a card with an emoji, a
-   short headline, the scoreline, the **day · host city**, and a one-sentence factual recap — so
-   a visitor instantly sees what just happened.
+   short headline, the scoreline, the **day · host city**, and a one-sentence recap. For those six
+   games it also pulls the goals (scorer, minute, half) from FIFA's free per-match feed, so the
+   recap **names the scorers and flags braces, penalties, own goals, and half-time comebacks** —
+   e.g. *"Down at the break, Kane (75', 86') scored as England beat DR Congo 2–1."* — so a visitor
+   instantly sees what just happened.
 6. Re-runs the generator to rebuild `docs/index.html`, then commits & pushes if anything
    changed (which triggers the Pages redeploy).
 

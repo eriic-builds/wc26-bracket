@@ -16,8 +16,9 @@ What it does
    updates the ``RES`` and ``UPCOMING`` blocks in ``build_dashboard.py`` in place
    (finished games only, never clobbering a still-pending game with junk).
 5. Rewrites ``AUTO_HL`` with highlight cards for the last six finished games
-   (from the whole feed, not just this bracket) so the "Game facts" section
-   always shows the latest results.
+   (from the whole feed, not just this bracket). For the FIFA source it also
+   pulls each of those games' goals (scorer, minute, half) from FIFA's free
+   per-match feed so the recap names scorers and flags braces/comebacks.
 6. Re-runs ``build_dashboard.py`` to regenerate ``docs/index.html``.
 
 Safety
@@ -230,8 +231,103 @@ def results_from_fifa(tmap: dict):
             w = home if gh > ga else away
         out.append({"home": home, "away": away, "gh": gh, "ga": ga,
                     "winner": w, "note": note, "date": (m.get("Date") or ""),
-                    "stage": stage, "city": city})
+                    "stage": stage, "city": city,
+                    # IDs let enrich_fifa_goals() pull scorers for the card recap.
+                    "_ids": (m.get("IdCompetition"), m.get("IdSeason"),
+                             m.get("IdStage"), m.get("IdMatch"))})
     return out
+
+
+# FIFA's free per-match feed. Same host/no key as the calendar feed; carries the
+# goal list (scorer, minute, half) that the highlight cards use for a real recap.
+FIFA_LIVE = ("https://api.fifa.com/api/v3/live/football/"
+             "{ic}/{isea}/{ist}/{im}?language=en")
+
+# FIFA goal Type enum (observed in the 2026 feed): 1=penalty, 2=goal, 3=own goal.
+_GOAL_PEN, _GOAL_NORMAL, _GOAL_OG = 1, 2, 3
+
+
+def _fifa_name(short) -> str:
+    """FIFA short names come as 'Mikel OYARZABAL' (surname in caps). Return a
+    tidy surname for headlines/recaps ('Oyarzabal'); '' if unavailable."""
+    txt = _fifa_txt(short)
+    if not txt:
+        return ""
+    caps = [w for w in txt.split() if len(w) > 1 and w.isupper()]
+    surname = caps[-1] if caps else txt.split()[-1]
+    return surname[:1].upper() + surname[1:].lower()
+
+
+def _goal_half(minute: str) -> str:
+    """'36\\'' -> '1H', '66\\'' -> '2H', '104\\'' -> 'ET' (best-effort)."""
+    m = re.match(r"\s*(\d+)", minute or "")
+    if not m:
+        return ""
+    base = int(m.group(1))
+    if base <= 45:
+        return "1H"
+    if base <= 90:
+        return "2H"
+    return "ET"
+
+
+def fetch_match_goals(ids) -> list:
+    """Return this match's goals as ordered dicts {name, minute, half, kind, side}.
+
+    Uses FIFA's free live endpoint (no key). ``kind`` is 'goal'/'pen'/'og';
+    ``side`` is 'home'/'away' (the team credited with the goal). Own-goal scorers
+    are looked up across both rosters. Returns [] on any error so cards degrade
+    gracefully to the plain factual recap.
+    """
+    ic, isea, ist, im = ids
+    if not all((ic, isea, ist, im)):
+        return []
+    url = FIFA_LIVE.format(ic=ic, isea=isea, ist=ist, im=im)
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": FIFA_UA})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            d = json.load(resp)
+    except (urllib.error.URLError, ValueError, TimeoutError):
+        return []
+    roster = {}
+    for team in (d.get("HomeTeam") or {}, d.get("AwayTeam") or {}):
+        for p in (team.get("Players") or []):
+            roster[p.get("IdPlayer")] = _fifa_name(p.get("ShortName"))
+    goals = []
+    for side, key in (("home", "HomeTeam"), ("away", "AwayTeam")):
+        team = d.get(key) or {}
+        for g in (team.get("Goals") or []):
+            t = g.get("Type")
+            kind = "pen" if t == _GOAL_PEN else "og" if t == _GOAL_OG else "goal"
+            minute = g.get("Minute", "") or ""
+            mm = re.match(r"\s*(\d+)", minute)
+            goals.append({"name": roster.get(g.get("IdPlayer"), ""),
+                          "minute": minute.strip(),
+                          "min_n": int(mm.group(1)) if mm else 999,
+                          "half": _goal_half(minute), "kind": kind, "side": side})
+    goals.sort(key=lambda x: x["min_n"])
+    return goals
+
+
+def enrich_fifa_goals(feed, limit=6):
+    """Attach a ``goals`` list to the ~newest ``limit`` finished games so their
+    highlight cards can name scorers. Only the games that will become cards are
+    fetched (a handful of extra free calls), not the whole tournament."""
+    games = sorted(feed, key=lambda f: (f.get("date", ""), f.get("home", "")),
+                   reverse=True)
+    seen, picked = set(), 0
+    for f in games:
+        key = (frozenset((f.get("home"), f.get("away"))), f.get("date", "")[:10])
+        if key in seen:
+            continue
+        seen.add(key)
+        ids = f.get("_ids")
+        if ids:
+            f["goals"] = fetch_match_goals(ids)
+        picked += 1
+        if picked >= limit:
+            break
+    return feed
 
 
 def results_from_json(path: str, tmap: dict):
@@ -332,7 +428,8 @@ def stage_label(stage: str) -> str:
 
 
 def _headline(w, loser, a, b, gh, ga, note):
-    """A short, factual card headline (the bold tag line)."""
+    """A short, factual card headline (the bold tag line) used when no per-scorer
+    data is available for the game."""
     if not w or note == "draw":
         return f"{a} and {b} share the points"
     if "pens" in note:
@@ -345,14 +442,72 @@ def _headline(w, loser, a, b, gh, ga, note):
     return f"{w} beat {loser}"
 
 
+def _scorer_phrase(goals, side) -> str:
+    """'Oyarzabal (36', 89'), Pedri (66')' for a team's goals; '' if none named.
+
+    Groups multiple goals by the same scorer, tags penalties, and renders own
+    goals as 'Surname OG'. Caps the list at three names for card brevity.
+    """
+    order, mins = [], {}
+    for g in goals:
+        if g.get("side") != side:
+            continue
+        if g.get("kind") == "og":
+            nm = (g["name"] + " OG") if g.get("name") else "an own goal"
+        else:
+            nm = g.get("name")
+        if not nm:
+            continue
+        tag = g.get("minute", "")
+        if g.get("kind") == "pen":
+            tag = (tag + " pen").strip()
+        if nm not in mins:
+            order.append(nm)
+            mins[nm] = []
+        if tag:
+            mins[nm].append(tag)
+    parts = [f"{nm} ({', '.join(mins[nm])})" if mins[nm] else nm for nm in order]
+    if len(parts) > 3:
+        parts = parts[:3] + ["others"]
+    if not parts:
+        return ""
+    if len(parts) == 1:
+        return parts[0]
+    return ", ".join(parts[:-1]) + " and " + parts[-1]
+
+
+def _winner_star(goals, side):
+    """(surname, goal_count) of the winner's top scorer from play/penalty; own
+    goals don't count toward a player's tally. ('', 0) if none named."""
+    cnt = {}
+    for g in goals:
+        if g.get("side") == side and g.get("kind") in ("goal", "pen") and g.get("name"):
+            cnt[g["name"]] = cnt.get(g["name"], 0) + 1
+    if not cnt:
+        return ("", 0)
+    nm = max(cnt, key=cnt.get)
+    return (nm, cnt[nm])
+
+
+def _trailed_at_half(goals, win_side) -> bool:
+    """True if the eventual winner was behind on first-half goals."""
+    lose_side = "away" if win_side == "home" else "home"
+    wh = sum(1 for g in goals if g.get("side") == win_side and g.get("half") == "1H")
+    lh = sum(1 for g in goals if g.get("side") == lose_side and g.get("half") == "1H")
+    return wh < lh
+
+
 def build_auto_hl(feed, limit=6):
-    """Newest-first factual highlight cards for the most recent finished games.
+    """Newest-first highlight cards for the most recent finished games.
 
     Pulls from the WHOLE feed (every finished World Cup game), not only games in
     the user's bracket, so a viewer sees the latest results at a glance. Each entry
     is (emoji, headline, scoreline, "day \u00b7 venue", one-sentence recap) to match
-    the featured-card layout. Plain facts only; kept free of the ] character so the
-    emitted AUTO_HL block stays regex-rewritable.
+    the featured-card layout. When the game carries a ``goals`` list (FIFA source,
+    via enrich_fifa_goals) the headline/recap name scorers, halves, and comebacks
+    the way the hand-written cards read; otherwise it falls back to a plain factual
+    recap. Kept free of the ] character so the emitted AUTO_HL block stays
+    regex-rewritable.
     """
     games = sorted(feed, key=lambda f: (f.get("date", ""), f.get("home", "")),
                    reverse=True)
@@ -372,23 +527,60 @@ def build_auto_hl(feed, limit=6):
         city = f.get("city", "")
         when = " \u00b7 ".join(x for x in (day, city or label) if x) or label
         title = f"{home} {gh}\u2013{ga} {away}"
-        loser = away if w == home else home
-        headline = _headline(w, loser, home, away, gh, ga, note)
+        goals = f.get("goals") or []
+
         if not w or note == "draw":  # genuine draw
             emoji = "\u2694\ufe0f"
-            body = f"{home} and {away} drew {gh}\u2013{ga} in the {label}."
+            headline = _headline(w, "", home, away, gh, ga, note)
+            hs = _scorer_phrase(goals, "home")
+            as_ = _scorer_phrase(goals, "away")
+            if hs and as_:
+                body = (f"{hs} for {home} and {as_} for {away} in a {gh}\u2013{ga} "
+                        f"{label} draw.")
+            else:
+                body = f"{home} and {away} drew {gh}\u2013{ga} in the {label}."
+            entries.append((emoji, headline, title, when, body))
+            if len(entries) >= limit:
+                break
+            continue
+
+        win_side = "home" if w == home else "away"
+        loser = away if w == home else home
+        wg, lg = (gh, ga) if w == home else (ga, gh)
+        star, n = _winner_star(goals, win_side)
+        comeback = _trailed_at_half(goals, win_side)
+        wphrase = _scorer_phrase(goals, win_side)
+
+        # Headline: prefer a scorer story, then comeback, then plain fact.
+        if star and n >= 3:
+            headline = f"{star} hat-trick sinks {loser}"
+        elif star and n >= 2:
+            headline = f"{star}'s brace sinks {loser}"
+        elif comeback:
+            headline = f"{w} come from behind vs {loser}"
         else:
-            wg, lg = (gh, ga) if w == home else (ga, gh)
-            if "pens" in note:
-                emoji = "\U0001f945"
+            headline = _headline(w, loser, home, away, gh, ga, note)
+
+        prefix = "Down at the break, " if comeback else ""
+        if "pens" in note:
+            emoji = "\U0001f945"
+            if wphrase or _scorer_phrase(goals, "away" if win_side == "home" else "home"):
+                body = (f"{w} beat {loser} on penalties ({note}) after a "
+                        f"{gh}\u2013{ga} {label} draw.")
+            else:
                 body = (f"{w} beat {loser} on penalties ({note}) after a "
                         f"{gh}\u2013{ga} draw in the {label}.")
-            elif note == "AET":
-                emoji = "\u26bd"
-                body = f"{w} beat {loser} {wg}\u2013{lg} after extra time in the {label}."
-            else:
-                emoji = "\u26bd"
-                body = f"{w} beat {loser} {wg}\u2013{lg} in the {label}."
+        elif wphrase:
+            emoji = "\u26bd"
+            tail = " after extra time" if note == "AET" else ""
+            body = (f"{prefix}{wphrase} scored as {w} beat {loser} "
+                    f"{wg}\u2013{lg}{tail} in the {label}.")
+        elif note == "AET":
+            emoji = "\u26bd"
+            body = f"{w} beat {loser} {wg}\u2013{lg} after extra time in the {label}."
+        else:
+            emoji = "\u26bd"
+            body = f"{w} beat {loser} {wg}\u2013{lg} in the {label}."
         entries.append((emoji, headline, title, when, body))
         if len(entries) >= limit:
             break
@@ -455,6 +647,9 @@ def main() -> int:
     else:
         feed = results_from_fifa(tmap)
         src = "FIFA public feed (api.fifa.com)"
+        # Pull scorers/half/comeback context for just the games that will become
+        # highlight cards (a handful of extra free FIFA calls, read-only).
+        enrich_fifa_goals(feed)
 
     # Resolve every round (R32 -> R16 -> QF -> SF -> Final) from the same feed.
     new_res, applied = match_all(r32, ko_feed, cur_res, feed)
