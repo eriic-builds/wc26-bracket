@@ -30,9 +30,14 @@ modes, and the hover-over country stat cards) — only the picks and the name di
   derived per-round picks (`PICK_BY_CODE`) mean R16/QF/SF/Final wins and losses count toward
   your score exactly like the Round of 32 did. No extra per-entrant data — picks are derived
   from your existing `R16_WIN`/`QF_WIN`/`SF_WIN`/`CHAMP`.
-- **Auto game-fact highlights** — the "Game facts — recent games" section now shows a
-  hand-written `FEATURED` list first, then `AUTO_HL` — one-line factual recaps the sync engine
-  appends for each finished game (newest first). See `scripts/fetch_results.py`.
+- **Auto game-fact highlights** — the "Game facts — recent games" section shows highlight cards
+  for the **most recent finished games across the whole tournament** (newest first). Each card is
+  **one emoji + headline + scoreline + "day · city" + a fun one-sentence recap that names the
+  scorers and minutes** and adapts to the story (brace, hat-trick, comeback, rout, late winner,
+  shootout, draw). The single emoji is the **winner's nickname** (England 🦁, France 🐓, Belgium
+  😈…), falling back to the country flag. In the repo the sync engine (`scripts/fetch_results.py`)
+  regenerates these automatically from FIFA's free feed; a Cowork build fills them from its live
+  lookup (see Step 2). `HIGHLIGHTS = FEATURED + AUTO_HL`.
 - Everything is part of the **verbatim render engine** below; only your picks and name differ.
 
 ## What's new in v7
@@ -85,8 +90,23 @@ with the user's data. Do these steps and do not deviate from the generator's des
    - From a live web lookup — prefer **FIFA official match records (fifa.com)**, corroborated by
      ESPN / CBS / NBC Sports / Sporting News — fill `RES` (decided results), `UPCOMING`,
      `R32_TIMES` / `R16_FIX` / `R16_PICK` (kickoff times in **ET, then CT = ET-1, PT = ET-3**),
-     `REFRESHED` (timestamp), and `HIGHLIGHTS` (a few verified storylines, each with date/time
-     played). Use only verified results; anything unplayed stays PENDING; never fabricate.
+     `REFRESHED` (timestamp), and the game-fact cards. Use only verified results; anything unplayed
+     stays PENDING; never fabricate.
+   - **Game-fact cards (`FEATURED`):** fill with the **last ~6 finished games across the whole
+     tournament** (not just this bracket), **newest first**. Each tuple is
+     `(emoji, headline, "Team A x–y Team B", "Day · City", recap)`:
+     - **emoji** — ONE emoji: the **winner's team nickname** if it has a well-known one, else the
+       **country flag**. Nicknames: England 🦁, France 🐓, Belgium 😈, Spain 🐂, Germany 🦅,
+       Netherlands 🟠, Australia 🦘, Canada 🍁, Mexico 🌵, USA 🗽, South Korea 🐯, Japan ⚔️,
+       Ivory Coast 🐘, DR Congo 🐆, New Zealand 🥝, Bosnia & Herz. 🐉, Ghana ⭐, Türkiye 🐺,
+       Colombia ☕, Cape Verde 🦈, Algeria 🦊, Brazil 💛, Argentina 💙, Egypt 🏺. Draws → 🤝.
+     - **headline** — a short punchy tag (e.g. "Kane's brace sinks DR Congo", "Belgium come from
+       behind", "Spain cruise past Austria").
+     - **recap** — ONE fun sentence that **names the scorers with their minutes** and matches the
+       story: brace/hat-trick ("Kane struck twice after the break (75', 86')"), comeback ("Down at
+       the break, … roared back"), rout ("ran riot"), late winner ("nicked it late"), shootout
+       ("held their nerve from twelve yards"), or draw ("couldn't be separated"). Keep it factual —
+       real scorers/minutes only, never invented.
    - Leave `WC_HISTORY` (country titles / best finish) as-is — constant historical reference data;
      only extend it if a bracket team is missing.
 2. **Do not edit the RENDER ENGINE** (everything below the USER DATA banner) — it produces the exact
@@ -579,10 +599,14 @@ def build_results_panel():
             f'<b>{r32_correct}/{r32_decided}</b></div>'+''.join(rows)+
             '<div class="rr-h" style="margin-top:12px">Still to play</div>'+''.join(up)+'</div>')
 
-# ── USER DATA (game facts) — optional hand-written featured storylines (kept as-is).
-#    (emoji, tag, headline, "date · time played", one-sentence body). The sync engine
-#    (scripts/fetch_results.py) auto-generates AUTO_HL below from finished games; FEATURED
-#    stays yours to edit. HIGHLIGHTS = your featured stories first, then the auto results.
+# ── USER DATA (game facts) — highlight cards for the most recent finished games,
+#    newest first: (emoji, headline, "Team A x–y Team B", "Day · City", recap).
+#    ONE emoji = the winner's nickname (England 🦁, France 🐓, Belgium 😈…) or the
+#    country flag; draws use 🤝. The recap is one fun sentence naming the scorers &
+#    minutes, matched to the story (brace, comeback, rout, late winner, shootout).
+#    Fill this from your live lookup (Step 2). In the repo, the sync engine
+#    (scripts/fetch_results.py) regenerates AUTO_HL from FIFA's free feed in exactly
+#    this style; FEATURED stays yours to pin. HIGHLIGHTS = FEATURED first, then AUTO_HL.
 FEATURED=[
  ("⏱️","Latest goal in WC history","Belgium 3–2 Senegal","Wed, Jul 1 · 4:00 PM ET (1:00 PM PT)",
   "Two down with five minutes left, Belgium roared back through Lukaku and Tielemans — whose winning penalty at 124:44 is the latest goal ever recorded at a World Cup."),
