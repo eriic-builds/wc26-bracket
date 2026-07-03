@@ -564,6 +564,13 @@ html[data-theme="doodle"]{--bg:#F4EFE1;--panel:#FBF7EC;--text:#333029;--text2:#4
  --gold:#b1892f;--gold-ink:#8a6a20;--win:#5f7d40;--win-ink:#48602f;--out:#9a948a;--lose-ink:#a6453b;--g1:rgba(58,54,47,.05);--g2:rgba(58,54,47,.04);--g3:rgba(58,54,47,.03);
  --blue:#3b5a78;--purple:#5b4a6b;--pink:#a6453b;--orange:#b1732f;--green:#5f7d40;--teal:#3f6b64;--grad:linear-gradient(90deg,#4a463d,#6f6a60);
  --radius:14px;--radius-sm:10px;--fs:16px;--lh:1.55;--ls:.01em;--fstack:"Segoe Print","Bradley Hand","Comic Sans MS","Chalkboard SE",cursive;}
+/* Fun · Hong Kong 1989 — neon-noir Kowloon nightscape: deep-midnight sky, glowing neon-sign colours (electric red, jade, cyan, gold), Chinese-friendly font and a 香港 · 1989 badge for nostalgia */
+html[data-theme="hongkong"]{--bg:#0a0a14;--panel:#14121f;--text:#F6ECD8;--text2:#FFE3B3;--muted:#8a90b5;--border:#FF2D6B;--border2:#00E5FF;
+ --glass:linear-gradient(160deg,rgba(40,10,42,.72),rgba(10,10,26,.86));--shadow:0 0 0 1px rgba(255,45,107,.45),0 0 22px rgba(255,45,107,.30),0 12px 34px rgba(0,0,0,.62);--hover:rgba(255,45,107,.16);
+ --gold:#FFC531;--gold-ink:#FFD75E;--win:#00E5A0;--win-ink:#5affc7;--out:#6b7398;--lose-ink:#FF4D6D;--g1:rgba(255,45,107,.30);--g2:rgba(0,229,255,.22);--g3:rgba(255,197,49,.20);
+ --blue:#00E5FF;--purple:#C77DFF;--pink:#FF2D6B;--orange:#FF7A1A;--green:#00E5A0;--teal:#00E5FF;
+ --grad:linear-gradient(120deg,#FF2D6B,#FFC531,#00E5A0);
+ --radius:14px;--radius-sm:10px;--fs:16px;--lh:1.55;--ls:.01em;--fstack:"PingFang HK","Hiragino Sans GB","Microsoft JhengHei","Noto Sans HK","Segoe UI",system-ui,sans-serif;}
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 html{scroll-behavior:smooth;scroll-padding-top:24px}
 body{font-family:var(--fstack);font-size:var(--fs);line-height:var(--lh);letter-spacing:var(--ls);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative;min-height:100vh}
@@ -891,6 +898,20 @@ html[data-theme="doodle"] h1,html[data-theme="doodle"] h2,html[data-theme="doodl
 html[data-theme="doodle"] a{color:#3b5a78;text-decoration:underline wavy}
 html[data-theme="doodle"] img,html[data-theme="doodle"] .flag{filter:grayscale(1) contrast(1.15) brightness(.98)}
 html[data-theme="doodle"] .orb,html[data-theme="doodle"] .pill.live .dot,html[data-theme="doodle"] .rf-dot{filter:grayscale(1)}
+/* ---- Fun · Hong Kong 1989 look — neon-noir Kowloon night, glowing signage, bilingual 香港 badge ---- */
+html[data-theme="hongkong"] body::before{display:none}
+html[data-theme="hongkong"] body{background-color:#0a0a14;background-image:radial-gradient(circle at 12% 16%,rgba(255,45,107,.22),transparent 40%),radial-gradient(circle at 86% 24%,rgba(0,229,255,.16),transparent 42%),radial-gradient(circle at 70% 82%,rgba(255,197,49,.14),transparent 44%),radial-gradient(circle at 24% 80%,rgba(0,229,160,.14),transparent 44%),repeating-linear-gradient(90deg,transparent 0 40px,rgba(255,255,255,.02) 40px 41px)}
+html[data-theme="hongkong"] .glass{backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(255,45,107,.5)}
+html[data-theme="hongkong"] h1,html[data-theme="hongkong"] h2,html[data-theme="hongkong"] .story-title,html[data-theme="hongkong"] .hero h1,html[data-theme="hongkong"] .shead h2{background:none;color:#fff;-webkit-text-fill-color:#fff;text-shadow:0 0 3px #fff,0 0 9px #FF2D6B,0 0 20px #FF2D6B,0 0 40px rgba(255,45,107,.65);font-weight:800;letter-spacing:.02em}
+html[data-theme="hongkong"] .eyebrow{color:#00E5FF;text-shadow:0 0 6px rgba(0,229,255,.85)}
+html[data-theme="hongkong"] a{color:#00E5FF;text-shadow:0 0 6px rgba(0,229,255,.7)}
+html[data-theme="hongkong"] .modes button,html[data-theme="hongkong"] .fun-btn,html[data-theme="hongkong"] .chip,html[data-theme="hongkong"] .seg button{border:1px solid rgba(0,229,255,.35);background:rgba(255,255,255,.03);color:var(--text)}
+html[data-theme="hongkong"] .modes button.on,html[data-theme="hongkong"] .fun-btn.on,html[data-theme="hongkong"] .fun-menu button.on,html[data-theme="hongkong"] .seg button.on{background:#FF2D6B;color:#0a0a14;border-color:#FF2D6B;box-shadow:0 0 12px rgba(255,45,107,.8)}
+html[data-theme="hongkong"] .team{border:1px solid rgba(0,229,255,.30)}
+html[data-theme="hongkong"] .orb{background:var(--grad);box-shadow:0 0 10px #FF2D6B,0 0 22px rgba(255,45,107,.55)}
+html[data-theme="hongkong"] .pill.live .dot,html[data-theme="hongkong"] .rf-dot{box-shadow:0 0 8px currentColor,0 0 16px rgba(0,229,160,.6)}
+html[data-theme="hongkong"] .brand>div{position:relative}
+html[data-theme="hongkong"] .brand>div::after{content:"香港 · 1989 · HONG KONG";display:block;margin-top:3px;font-size:.7rem;font-weight:800;letter-spacing:.14em;color:#FF2D6B;text-shadow:0 0 6px rgba(255,45,107,.9),0 0 14px rgba(255,45,107,.55)}
 """
 
 JS=r"""
@@ -898,7 +919,7 @@ JS=r"""
  var root=document.documentElement,LS=window.localStorage;
  var KTHEME='wcb.theme',KFAV='wcb.favs',KFO='wcb.favonly',KSC='wcb.scores.v3';
  function setTheme(t){root.setAttribute('data-theme',t);document.querySelectorAll('.modes button').forEach(function(b){if(b.dataset.mode)b.classList.toggle('on',b.dataset.mode===t)});if(funBtn)funBtn.classList.toggle('on',!!FUN[t]);try{LS.setItem(KTHEME,t)}catch(e){}closeFun();if(window.__drawConn)setTimeout(window.__drawConn,80);}
- var FUN={geocities:1,minecraft:1,winxp:1,doodle:1};
+ var FUN={geocities:1,minecraft:1,winxp:1,doodle:1,hongkong:1};
  var funWrap=document.getElementById('funWrap'),funBtn=document.getElementById('funBtn');
  function closeFun(){if(funWrap){funWrap.classList.remove('open');if(funBtn)funBtn.setAttribute('aria-expanded','false');}}
  document.querySelectorAll('.modes button').forEach(function(b){if(b.dataset.mode)b.addEventListener('click',function(){setTheme(b.dataset.mode)})});
@@ -1023,6 +1044,7 @@ f'<div class="refreshed glass" id="topRefreshed" title="When live results were l
 '<button data-mode="minecraft" role="menuitem" title="Blocky stone-and-grass — pixelated panels, drop-shadow text, sky-blue world"><span class="fm-em">⛏️</span> Minecraft</button>'
 '<button data-mode="winxp" role="menuitem" title="Windows XP — Luna blue, Bliss green-hills desktop, cream dialogs, rounded blue title bars, Tahoma"><span class="fm-em">🪟</span> Windows XP</button>'
 '<button data-mode="doodle" role="menuitem" title="Hand-drawn pencil sketch — warm paper with faint ruled lines, graphite wobbly borders, handwriting font, grayscale flags"><span class="fm-em">✏️</span> Doodle</button>'
+'<button data-mode="hongkong" role="menuitem" title="Hong Kong 1989 — neon-noir Kowloon nightscape, glowing neon-sign colours, bilingual 香港 · 1989 badge"><span class="fm-em">🌃</span> Hong Kong 1989</button>'
 '</div></div></div></div>'
 '<div class="shell"><nav class="rail glass" id="rail">'
 '<button class="navtoggle" id="navToggle" aria-expanded="false" aria-controls="railLinks">📑 Contents ☰</button>'
