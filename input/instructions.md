@@ -715,6 +715,18 @@ html[data-theme="minecraft"]{--bg:#79A6FF;--panel:#565656;--text:#FFFFFF;--text2
  --gold:#FCDB05;--gold-ink:#FFE94D;--win:#5AAE3A;--win-ink:#8CE05A;--out:#8a8a8a;--lose-ink:#FF6B6B;--g1:rgba(0,0,0,0);--g2:rgba(0,0,0,0);--g3:rgba(0,0,0,0);
  --blue:#5AAE3A;--purple:#7B5B31;--pink:#C1440E;--orange:#D07B1E;--green:#5AAE3A;--teal:#4C7A34;--grad:linear-gradient(180deg,#6AA84F,#4C7A34);
  --radius:0;--radius-sm:0;--fs:15px;--lh:1.55;--ls:.02em;--fstack:ui-monospace,"Consolas","Lucida Console","Courier New",monospace;}
+/* Fun · Windows 98 — silver 3D chrome, teal desktop, navy title bars, Tahoma, hard bevels, square corners */
+html[data-theme="win98"]{--bg:#008080;--panel:#C0C0C0;--text:#000000;--text2:#0a0a0a;--muted:#404040;--border:#808080;--border2:#FFFFFF;
+ --glass:#C0C0C0;--shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #FFF,inset -2px -2px 0 #808080,inset 2px 2px 0 #DFDFDF;--hover:#D9D5CD;
+ --gold:#000080;--gold-ink:#000080;--win:#008000;--win-ink:#006400;--out:#808080;--lose-ink:#AA0000;--g1:rgba(0,0,128,.06);--g2:rgba(0,128,128,.05);--g3:rgba(0,0,0,0);
+ --blue:#000080;--purple:#000080;--pink:#800080;--green:#008000;--teal:#008080;--grad:linear-gradient(90deg,#000080,#1084d0);
+ --radius:0;--radius-sm:0;--fs:15px;--lh:1.5;--ls:0em;--fstack:"Tahoma","MS Sans Serif","Segoe UI",sans-serif;}
+/* Fun · Clash of Clans — grassy village, parchment panels, thick gold borders, chunky green buttons, bold outlined headers */
+html[data-theme="clash"]{--bg:#5B8F3A;--panel:#EBD6A6;--text:#4A2F14;--text2:#5A3A1A;--muted:#7A5A34;--border:#B8860B;--border2:#F5C542;
+ --glass:linear-gradient(180deg,#F1DDB0,#E4C88E);--shadow:0 6px 0 rgba(90,58,26,.30),0 12px 26px rgba(0,0,0,.28);--hover:rgba(184,134,11,.16);
+ --gold:#F5C542;--gold-ink:#9A6B0B;--win:#6DA544;--win-ink:#4C7A2F;--out:#9a8a6a;--lose-ink:#C1440E;--g1:rgba(245,197,66,.20);--g2:rgba(109,165,68,.18);--g3:rgba(184,134,11,.14);
+ --blue:#6DA544;--purple:#C1440E;--pink:#E0A020;--orange:#E0A020;--green:#6DA544;--teal:#4C7A2F;--grad:linear-gradient(180deg,#F5C542,#E0A020);
+ --radius:16px;--radius-sm:12px;--fs:16px;--lh:1.5;--ls:.01em;--fstack:"Trebuchet MS","Segoe UI",Verdana,system-ui,sans-serif;}
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 html{scroll-behavior:smooth;scroll-padding-top:24px}
 body{font-family:var(--fstack);font-size:var(--fs);line-height:var(--lh);letter-spacing:var(--ls);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative;min-height:100vh}
@@ -1019,6 +1031,25 @@ html[data-theme="minecraft"] .modes button,html[data-theme="minecraft"] .fun-btn
 html[data-theme="minecraft"] .modes button.on,html[data-theme="minecraft"] .fun-btn.on,html[data-theme="minecraft"] .fun-menu button.on{background:linear-gradient(180deg,#6AA84F,#4C7A34);color:#fff}
 html[data-theme="minecraft"] .team{border:2px solid #2b2b2b}
 html[data-theme="minecraft"] .orb{background:linear-gradient(180deg,#6AA84F,#4C7A34);box-shadow:inset -2px -2px 0 rgba(0,0,0,.4)}
+/* ---- Fun · Windows 98 look ---- */
+html[data-theme="win98"] *{border-radius:0 !important}
+html[data-theme="win98"] body::before{display:none}
+html[data-theme="win98"] body{background:#008080}
+html[data-theme="win98"] .glass{background:#C0C0C0;backdrop-filter:none;-webkit-backdrop-filter:none;border:2px solid;border-color:#DFDFDF #000 #000 #DFDFDF;box-shadow:inset -1px -1px 0 #808080,inset 1px 1px 0 #FFF}
+html[data-theme="win98"] .modes button,html[data-theme="win98"] .fun-btn,html[data-theme="win98"] .chip,html[data-theme="win98"] .seg button{background:#C0C0C0;color:#000;border:2px solid;border-color:#FFF #000 #000 #FFF;box-shadow:inset -1px -1px 0 #808080,inset 1px 1px 0 #DFDFDF}
+html[data-theme="win98"] .modes button.on,html[data-theme="win98"] .fun-btn.on,html[data-theme="win98"] .fun-menu button.on{background:#000080;color:#FFF;border-color:#000 #FFF #FFF #000}
+html[data-theme="win98"] .shead h2,html[data-theme="win98"] .hero h1,html[data-theme="win98"] .story-title{background:linear-gradient(90deg,#000080,#1084d0);color:#FFF;padding:2px 8px;display:inline-block}
+html[data-theme="win98"] a{color:#0000EE}
+html[data-theme="win98"] .team{background:#C0C0C0;color:#000;border:2px solid;border-color:#FFF #808080 #808080 #FFF}
+/* ---- Fun · Clash of Clans look ---- */
+html[data-theme="clash"] body::before{display:none}
+html[data-theme="clash"] body{background-color:#5B8F3A;background-image:radial-gradient(circle at 30% 20%,rgba(255,255,255,.10),transparent 40%),radial-gradient(circle at 80% 70%,rgba(0,0,0,.10),transparent 45%),repeating-linear-gradient(45deg,rgba(0,0,0,.04) 0 14px,rgba(255,255,255,.04) 14px 28px)}
+html[data-theme="clash"] .glass{backdrop-filter:none;-webkit-backdrop-filter:none;border:3px solid #B8860B;box-shadow:0 6px 0 rgba(90,58,26,.30),0 12px 26px rgba(0,0,0,.28),inset 0 2px 0 rgba(255,255,255,.5)}
+html[data-theme="clash"] h1,html[data-theme="clash"] h2,html[data-theme="clash"] .story-title,html[data-theme="clash"] .hero h1{color:#FCE9A8;text-shadow:0 2px 0 #7a4a12,-1px -1px 0 #7a4a12,1px -1px 0 #7a4a12,-1px 1px 0 #7a4a12,1px 1px 0 #7a4a12;font-weight:800}
+html[data-theme="clash"] .modes button,html[data-theme="clash"] .fun-btn,html[data-theme="clash"] .chip,html[data-theme="clash"] .seg button{background:linear-gradient(180deg,#F3D68A,#E2B85C);color:#4A2F14;border:2px solid #9A6B0B;box-shadow:0 3px 0 #9A6B0B;font-weight:700}
+html[data-theme="clash"] .modes button.on,html[data-theme="clash"] .fun-btn.on,html[data-theme="clash"] .fun-menu button.on{background:linear-gradient(180deg,#8BD24F,#5E9A2E);color:#FFF;border-color:#3E6B1E;box-shadow:0 3px 0 #3E6B1E;text-shadow:0 1px 0 rgba(0,0,0,.35)}
+html[data-theme="clash"] .team{border:2px solid #B8860B}
+html[data-theme="clash"] .orb{background:linear-gradient(180deg,#8BD24F,#5E9A2E);box-shadow:0 3px 0 #3E6B1E}
 """
 
 JS=r"""
@@ -1026,7 +1057,7 @@ JS=r"""
  var root=document.documentElement,LS=window.localStorage;
  var KTHEME='wcb.theme',KFAV='wcb.favs',KFO='wcb.favonly',KSC='wcb.scores.v3';
  function setTheme(t){root.setAttribute('data-theme',t);document.querySelectorAll('.modes button').forEach(function(b){if(b.dataset.mode)b.classList.toggle('on',b.dataset.mode===t)});if(funBtn)funBtn.classList.toggle('on',!!FUN[t]);try{LS.setItem(KTHEME,t)}catch(e){}closeFun();if(window.__drawConn)setTimeout(window.__drawConn,80);}
- var FUN={geocities:1,minecraft:1};
+ var FUN={geocities:1,minecraft:1,win98:1,clash:1};
  var funWrap=document.getElementById('funWrap'),funBtn=document.getElementById('funBtn');
  function closeFun(){if(funWrap){funWrap.classList.remove('open');if(funBtn)funBtn.setAttribute('aria-expanded','false');}}
  document.querySelectorAll('.modes button').forEach(function(b){if(b.dataset.mode)b.addEventListener('click',function(){setTheme(b.dataset.mode)})});
@@ -1149,6 +1180,8 @@ f'<div class="refreshed glass" id="topRefreshed" title="When live results were l
 '<div class="fun-menu glass" id="funMenu" role="menu">'
 '<button data-mode="geocities" role="menuitem" title="90s web nostalgia — neon, rainbow headers, Comic Sans, tiled starfield"><span class="fm-em">🌐</span> GeoCities</button>'
 '<button data-mode="minecraft" role="menuitem" title="Blocky stone-and-grass — pixelated panels, drop-shadow text, sky-blue world"><span class="fm-em">⛏️</span> Minecraft</button>'
+'<button data-mode="win98" role="menuitem" title="Windows 98 — silver 3D chrome, teal desktop, navy title bars, Tahoma"><span class="fm-em">🪟</span> Windows 98</button>'
+'<button data-mode="clash" role="menuitem" title="Clash of Clans — grassy village, parchment panels, gold borders, chunky buttons"><span class="fm-em">⚔️</span> Clash of Clans</button>'
 '</div></div></div></div>'
 '<div class="shell"><nav class="rail glass" id="rail">'
 '<button class="navtoggle" id="navToggle" aria-expanded="false" aria-controls="railLinks">📑 Contents ☰</button>'
