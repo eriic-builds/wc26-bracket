@@ -157,17 +157,6 @@ for (label,short,pts,ms) in rounds[1:]:
 ATTAIN=CONF+LIVE
 assert CONF+OUT+LIVE==POINTS_MAX, (CONF,OUT,LIVE)
 
-# Rob's OPTIONAL upset bonus: +2 for correctly picking a group runner-up (2X) or 3rd-place team to win in R32
-def bonus_eligible(team):
-    sd=SEED.get(team,"")
-    return sd=="3rd" or (len(sd)==2 and sd[0]=="2")
-BONUS_CONF=0; BONUS_POT=0; bonus_won=[]; bonus_pend=[]
-for (mc,dt,a,b,pk) in R32:
-    if bonus_eligible(pk):
-        s=pick_status("r32",pk,mc)
-        if s=="won": BONUS_CONF+=2; bonus_won.append(f"{pk} ({SEED.get(pk,'')})")
-        elif s=="pending": BONUS_POT+=2; bonus_pend.append(f"{pk} ({SEED.get(pk,'')})")
-ADJ=CONF+BONUS_CONF
 # ---- derived copy (computed from data — NO scenario text hardcoded) ----
 N_R32=len(R32); R32_DONE=sum(1 for m in R32 if m[0] in RES); REMAIN_R32=N_R32-R32_DONE
 CHAMP_ALIVE = CHAMP not in ELIM
@@ -312,7 +301,6 @@ def build_scorecard():
                 detail=f'lost to {esc(w)} {gA}{DASH}{gB}{(" ("+note+")") if note else ""}'
         else:
             detail=f'vs {esc(b if pk==a else a)} · {esc(UPCOMING.get(mc,dt))}'
-        if bonus_eligible(pk): detail+=' <span class="ubtag">+2 upset</span>'
         rows.append(scrow(pid,"r32",1,pk,detail,st,a,b))
     for (label,short,pts,ms) in rounds[1:]:
         for i,(a,b,w) in enumerate(ms):
@@ -787,14 +775,6 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .dab{position:fixed;right:24px;bottom:24px;width:54px;height:54px;border-radius:50%;border:0;cursor:pointer;background:var(--grad);box-shadow:0 8px 24px rgba(0,151,244,.45);z-index:60;display:grid;place-items:center;font-size:1.3rem;color:#fff;transition:.18s}
 .dab:hover{transform:translateY(-2px) scale(1.04)}
 .dab::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:var(--grad);filter:blur(14px);opacity:.5;z-index:-1}
-.ubtag{font-size:.58rem;font-weight:700;color:var(--gold-ink);background:color-mix(in srgb,var(--gold) 16%,transparent);border-radius:6px;padding:1px 6px;margin-left:6px;white-space:nowrap}
-.bonusbox{display:flex;gap:20px;align-items:center;justify-content:space-between;padding:18px 22px;margin:var(--gap) 0;flex-wrap:wrap;border-left:3px solid var(--gold)}
-.bb-l{flex:1;min-width:260px}.bb-h{font-weight:700;margin-bottom:6px}
-.bb-tag{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold-ink);background:color-mix(in srgb,var(--gold) 16%,transparent);border-radius:6px;padding:2px 7px;margin-left:8px}
-.bb-txt{font-size:.86rem;color:var(--text2);line-height:1.55}
-.bb-r{text-align:right;min-width:150px}.bb-big{font-size:2rem;font-weight:800;color:var(--gold-ink);line-height:1}
-.bb-cap{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:2px}
-.bb-sub{font-size:.74rem;color:var(--muted);margin-top:4px}
 .rr-t{display:block;font-size:.68rem;color:var(--muted);font-weight:600;margin-top:1px}
 .ufbox{padding:8px 18px}
 .uf{display:grid;grid-template-columns:44px 1fr 210px 132px;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px solid var(--border)}
@@ -962,7 +942,6 @@ f'with <b>{CONF} points</b> banked and <b>{LIVE}</b> still live. Your champion p
 f'<span class="pill live"><span class="dot"></span>{CONF} pts confirmed</span>'
 f'<span class="pill"><span class="dot"></span>R32 {r32_correct}/{r32_decided}</span>'
 f'<span class="pill"><span class="dot"></span>Max attainable {ATTAIN}</span>'
-f'<span class="pill"><span class="dot"></span>+{BONUS_CONF} upset bonus (optional)</span>'
 f'<span class="pill"><span class="dot"></span>{esc(CHAMP)} alive</span></div>'
 '<div class="composer"><span class="corb"></span><span class="plus">+</span>'
 '<input id="search" type="text" placeholder="Track a team through the bracket — try England, Morocco, Paraguay…" autocomplete="off">'
@@ -980,14 +959,6 @@ f'The Round of 32 is <b>{R32_DONE} of {N_R32} games</b> final — you sit on <b>
 + build_scorebar()
 + f'<div class="glass">{build_scorecard()}</div>'
 '<div style="text-align:right;margin-top:10px"><button class="chip" id="scReset" style="cursor:pointer">↺ Reset to live results</button></div>'
-'<div class="glass bonusbox">'
-'<div class="bb-l"><div class="bb-h">Optional upset bonus<span class="bb-tag">host\'s choice</span></div>'
-'<div class="bb-txt">Rob\'s rule awards <b>+2</b> for correctly picking a group runner-up or third-place team to win in the Round of 32. '
-f'You\'ve hit <b>{len(bonus_won)}</b> so far — {esc(", ".join(bonus_won))} — for <b>+{BONUS_CONF}</b>'
-+ (f', and {esc(", ".join(bonus_pend))} can add up to +{BONUS_POT} more.' if bonus_pend else '.')
-+ ' It is Rob\'s discretion whether the bonus applies and whether the Canada freebie counts.</div></div>'
-f'<div class="bb-r"><div class="bb-big">{ADJ}</div><div class="bb-cap">unofficial adjusted total</div>'
-f'<div class="bb-sub">{CONF} base + {BONUS_CONF} bonus</div></div></div>'
 '<div class="shead" id="sec-r32"><span class="tile">⚽</span><h2>Round of 32 results</h2>'+f'<span class="cap">{R32_DONE} final · {REMAIN_R32} to play</span></div>'
 f'{build_results_panel()}'
 '<div class="shead" id="sec-r16"><span class="tile">🏆</span><h2>Knockout rounds — live</h2><span class="cap">R16 · QF · SF · Final</span></div>'
@@ -1020,7 +991,7 @@ f'<div class="stages" style="grid-template-columns:1fr;padding:0;gap:8px">{build
 '<div class="glass foot"><b>Sources.</b> Your picks, scoring, tiebreaker and any host bonus rule from your <b>SLED World Cup 2026 bracket workbook</b> and the challenge instructions. '
 'Match results, scores and kickoff times from <b>FIFA official match records</b> (fifa.com), corroborated by NBC Sports, CBS Sports, ESPN and Sporting News, for the 2026 FIFA World Cup. Kickoff times anchored to ET, converted to CT/PT. Hover-card country pedigree (titles, best finish) from public FIFA World Cup historical records.'
 f'<div class="src"><b>Status.</b> Round of 32 is {R32_DONE} of {N_R32} games final; {REMAIN_R32} still to play, and every later round is pending. '
-f'You have <b>{CONF} points</b> confirmed ({ADJ} with the optional upset bonus), <b>{LIVE}</b> live, max attainable <b>{ATTAIN}</b>. '
+f'You have <b>{CONF} points</b> confirmed, <b>{LIVE}</b> live, max attainable <b>{ATTAIN}</b>. '
 f'This is your personal, <b>unofficial</b> tally for Rob to review — his scoring is authoritative. Champion {esc(CHAMP)} · runner-up {esc(RUNNER)}.</div>'
 f'<div class="src">Live results as of <b>{REFRESHED}</b> · reading mode, favorites and any manual score edits are saved on this device.</div>'
 '<div class="src">🏆 Thank you to <b>Rob Brautigam</b> for hosting the 2026 FIFA World Cup bracket challenge for SLED.</div>'
