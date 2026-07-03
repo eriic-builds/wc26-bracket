@@ -497,6 +497,95 @@ def _trailed_at_half(goals, win_side) -> bool:
     return wh < lh
 
 
+def _card_emoji(note, goals, win_side, margin, star_n, comeback) -> str:
+    """Pick a fun, story-relevant emoji for a winning card.
+
+    Priority reflects what made the game memorable: shootout, hat-trick, comeback,
+    brace, late drama, then a blowout, else a plain goal. Works with or without
+    goal data (falls back to margin-only cues).
+    """
+    if "pens" in note:
+        return "\U0001f3af"          # dartboard - shootout nerves
+    if star_n >= 3:
+        return "\U0001f3a9"          # top hat - hat-trick
+    if comeback:
+        return "\U0001f504"          # arrows - come-from-behind
+    if star_n >= 2:
+        return "\u26a1"              # high voltage - brace
+    if margin == 1 and goals:        # late winner in a one-goal game
+        last = max((g.get("min_n", 0) for g in goals
+                    if g.get("side") == win_side and g.get("kind") in ("goal", "pen")),
+                   default=0)
+        if last >= 80:
+            return "\u23f1\ufe0f"    # stopwatch - late drama
+    if margin >= 3:
+        return "\U0001f4a5"          # collision - rout
+    return "\u26bd"                  # soccer ball - default
+
+
+# Fun team-nickname emojis (e.g. England = Three Lions). Anything not listed
+# falls back to its national flag via _TEAM_ISO2 below.
+_TEAM_NICK = {
+    "England": "\U0001f981",            # lion - Three Lions
+    "France": "\U0001f413",             # rooster - Les Bleus / Gallic rooster
+    "Netherlands": "\U0001f7e0",        # orange circle - Oranje
+    "Belgium": "\U0001f608",            # devil - Red Devils
+    "Germany": "\U0001f985",            # eagle - Die Mannschaft
+    "Spain": "\U0001f402",              # bull - La Furia Roja
+    "Australia": "\U0001f998",          # kangaroo - Socceroos
+    "Canada": "\U0001f341",             # maple leaf
+    "Ivory Coast": "\U0001f418",        # elephant - Les Elephants
+    "DR Congo": "\U0001f406",           # leopard - Leopards
+    "South Korea": "\U0001f42f",        # tiger - Taeguk Warriors
+    "Japan": "\u2694\ufe0f",            # crossed swords - Samurai Blue
+    "Mexico": "\U0001f335",             # cactus - El Tri
+    "United States": "\U0001f5fd",      # statue of liberty
+    "New Zealand": "\U0001f95d",        # kiwifruit - All Whites
+    "Algeria": "\U0001f98a",            # fox - Desert Foxes
+    "Colombia": "\u2615",               # coffee - Los Cafeteros
+    "Cape Verde": "\U0001f988",         # shark - Blue Sharks
+    "Bosnia & Herz.": "\U0001f409",     # dragon - Zmajevi
+    "Ghana": "\u2b50",                  # star - Black Stars
+    "T\u00fcrkiye": "\U0001f43a",       # wolf - Crescent-Stars
+    "Qatar": "\U0001f40e",              # horse - The Maroons
+    "Brazil": "\U0001f49b",             # yellow heart - Selecao
+    "Argentina": "\U0001f499",          # blue heart - Albiceleste
+    "Egypt": "\U0001f3fa",              # amphora - Pharaohs
+    "Scotland": "\U0001f3f4\U000e0067\U000e0062\U000e0073\U000e0063\U000e0074\U000e007f",  # Scotland flag
+}
+
+# ISO 3166-1 alpha-2 codes for a national-flag fallback (nations without a fun
+# nickname above). England/Scotland use subdivision flags handled in _TEAM_NICK.
+_TEAM_ISO2 = {
+    "Argentina": "AR", "Australia": "AU", "Austria": "AT", "Belgium": "BE",
+    "Bosnia & Herz.": "BA", "Brazil": "BR", "Canada": "CA", "Cape Verde": "CV",
+    "Colombia": "CO", "Croatia": "HR", "Cura\u00e7ao": "CW", "Czechia": "CZ",
+    "DR Congo": "CD", "Ecuador": "EC", "Egypt": "EG", "France": "FR",
+    "Germany": "DE", "Ghana": "GH", "Haiti": "HT", "IR Iran": "IR", "Iraq": "IQ",
+    "Ivory Coast": "CI", "Japan": "JP", "Jordan": "JO", "Mexico": "MX",
+    "Morocco": "MA", "Netherlands": "NL", "New Zealand": "NZ", "Norway": "NO",
+    "Panama": "PA", "Paraguay": "PY", "Portugal": "PT", "Qatar": "QA",
+    "Saudi Arabia": "SA", "Senegal": "SN", "South Africa": "ZA",
+    "South Korea": "KR", "Spain": "ES", "Sweden": "SE", "Switzerland": "CH",
+    "Tunisia": "TN", "T\u00fcrkiye": "TR", "United States": "US",
+    "Uruguay": "UY", "Uzbekistan": "UZ", "Algeria": "DZ",
+}
+
+
+def _flag(iso2: str) -> str:
+    """ISO2 country code -> regional-indicator flag emoji ('' if invalid)."""
+    if not iso2 or len(iso2) != 2 or not iso2.isalpha():
+        return ""
+    return "".join(chr(0x1F1E6 + ord(c) - ord("A")) for c in iso2.upper())
+
+
+def _team_emoji(name: str) -> str:
+    """A fun, team-relevant emoji: nickname if we have one, else national flag."""
+    if name in _TEAM_NICK:
+        return _TEAM_NICK[name]
+    return _flag(_TEAM_ISO2.get(name, ""))
+
+
 def build_auto_hl(feed, limit=6):
     """Newest-first highlight cards for the most recent finished games.
 
@@ -530,7 +619,8 @@ def build_auto_hl(feed, limit=6):
         goals = f.get("goals") or []
 
         if not w or note == "draw":  # genuine draw
-            emoji = "\u2694\ufe0f"
+            he, ae = _team_emoji(home), _team_emoji(away)
+            emoji = (he + "\U0001f91d" + ae) if (he and ae) else "\U0001f91d"
             headline = _headline(w, "", home, away, gh, ga, note)
             hs = _scorer_phrase(goals, "home")
             as_ = _scorer_phrase(goals, "away")
@@ -547,9 +637,20 @@ def build_auto_hl(feed, limit=6):
         win_side = "home" if w == home else "away"
         loser = away if w == home else home
         wg, lg = (gh, ga) if w == home else (ga, gh)
+        margin = abs(gh - ga)
         star, n = _winner_star(goals, win_side)
         comeback = _trailed_at_half(goals, win_side)
         wphrase = _scorer_phrase(goals, win_side)
+
+        # Lead with the winner's team emoji (Three Lions etc.), then a story emoji.
+        story = _card_emoji(note, goals, win_side, margin, n, comeback)
+        team = _team_emoji(w)
+        if team and story == "\u26bd":   # avoid a redundant plain-ball tag
+            emoji = team
+        elif team:
+            emoji = team + story
+        else:
+            emoji = story
 
         # Headline: prefer a scorer story, then comeback, then plain fact.
         if star and n >= 3:
@@ -563,23 +664,15 @@ def build_auto_hl(feed, limit=6):
 
         prefix = "Down at the break, " if comeback else ""
         if "pens" in note:
-            emoji = "\U0001f945"
-            if wphrase or _scorer_phrase(goals, "away" if win_side == "home" else "home"):
-                body = (f"{w} beat {loser} on penalties ({note}) after a "
-                        f"{gh}\u2013{ga} {label} draw.")
-            else:
-                body = (f"{w} beat {loser} on penalties ({note}) after a "
-                        f"{gh}\u2013{ga} draw in the {label}.")
+            body = (f"{w} beat {loser} on penalties ({note}) after a "
+                    f"{gh}\u2013{ga} {label} draw.")
         elif wphrase:
-            emoji = "\u26bd"
             tail = " after extra time" if note == "AET" else ""
             body = (f"{prefix}{wphrase} scored as {w} beat {loser} "
                     f"{wg}\u2013{lg}{tail} in the {label}.")
         elif note == "AET":
-            emoji = "\u26bd"
             body = f"{w} beat {loser} {wg}\u2013{lg} after extra time in the {label}."
         else:
-            emoji = "\u26bd"
             body = f"{w} beat {loser} {wg}\u2013{lg} in the {label}."
         entries.append((emoji, headline, title, when, body))
         if len(entries) >= limit:
