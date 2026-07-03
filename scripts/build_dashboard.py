@@ -539,6 +539,19 @@ html[data-theme="easy"]{--bg:#F6F1E6;--panel:#FCFAF3;--text:#2b2a30;--text2:#333
  --glass:linear-gradient(160deg,rgba(255,255,255,.92),rgba(255,255,255,.66));--shadow:0 8px 22px rgba(40,40,30,.10);--hover:rgba(0,0,0,.03);
  --gold:#C98A00;--gold-ink:#8f6300;--win:#0a7d54;--win-ink:#0a6b49;--out:#8a8790;--lose-ink:#A63A2E;--g1:rgba(0,151,244,.10);--g2:rgba(0,178,145,.08);--g3:rgba(0,178,145,.08);
  --fs:18px;--lh:1.8;--ls:.03em;--radius:22px;--radius-sm:15px;--gap:22px;--fstack:"Verdana","Tahoma","Trebuchet MS","Segoe UI",system-ui,sans-serif;}
+/* Fun · GeoCities — 90s web nostalgia: neon on midnight, rainbow headers, Comic Sans, ridge borders, tiled starfield */
+html[data-theme="geocities"]{--bg:#000018;--panel:#1a0038;--text:#FFFF66;--text2:#7CFC00;--muted:#41E0E0;--border:#FF00FF;--border2:#00FFFF;
+ --glass:linear-gradient(160deg,#2b005f,#12002f);--shadow:0 0 0 2px #00FFFF,0 6px 0 #FF00FF;--hover:rgba(255,0,255,.28);
+ --gold:#FFD700;--gold-ink:#FFE94D;--win:#39FF14;--win-ink:#7CFC00;--out:#9aa0c8;--lose-ink:#FF3131;--g1:rgba(255,0,255,.28);--g2:rgba(0,255,255,.22);--g3:rgba(255,255,0,.18);
+ --blue:#FF00FF;--purple:#00FFFF;--pink:#FFFF00;--orange:#FF7F00;--green:#39FF14;--teal:#00FFFF;
+ --grad:linear-gradient(90deg,#FF0000,#FF7F00,#FFFF00,#00FF00,#00BFFF,#8B00FF);
+ --radius:0;--radius-sm:0;--fs:16px;--lh:1.5;--ls:0em;--fstack:"Comic Sans MS","Comic Sans","Chalkboard SE","Marker Felt",cursive;}
+/* Fun · Minecraft — blocky stone-and-grass: dark stone panels, white text with drop shadow, grass-green accents, sky-blue world, no rounded corners, pixelated */
+html[data-theme="minecraft"]{--bg:#79A6FF;--panel:#565656;--text:#FFFFFF;--text2:#EDEDED;--muted:#C2C2C2;--border:#2b2b2b;--border2:#1d1d1d;
+ --glass:linear-gradient(180deg,#6b6b6b,#4e4e4e);--shadow:inset -3px -3px 0 rgba(0,0,0,.45),inset 3px 3px 0 rgba(255,255,255,.16),0 4px 0 rgba(0,0,0,.35);--hover:rgba(255,255,255,.14);
+ --gold:#FCDB05;--gold-ink:#FFE94D;--win:#5AAE3A;--win-ink:#8CE05A;--out:#8a8a8a;--lose-ink:#FF6B6B;--g1:rgba(0,0,0,0);--g2:rgba(0,0,0,0);--g3:rgba(0,0,0,0);
+ --blue:#5AAE3A;--purple:#7B5B31;--pink:#C1440E;--orange:#D07B1E;--green:#5AAE3A;--teal:#4C7A34;--grad:linear-gradient(180deg,#6AA84F,#4C7A34);
+ --radius:0;--radius-sm:0;--fs:15px;--lh:1.55;--ls:.02em;--fstack:ui-monospace,"Consolas","Lucida Console","Courier New",monospace;}
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 html{scroll-behavior:smooth;scroll-padding-top:24px}
 body{font-family:var(--fstack);font-size:var(--fs);line-height:var(--lh);letter-spacing:var(--ls);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative;min-height:100vh}
@@ -553,6 +566,18 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .modes button{font-family:inherit;font-size:.82rem;font-weight:600;color:var(--muted);background:transparent;border:0;padding:7px 15px;border-radius:999px;cursor:pointer;transition:.16s}
 .modes button:hover{color:var(--text);background:var(--hover)}
 .modes button.on{color:#fff;background:var(--blue);box-shadow:0 4px 14px rgba(0,151,244,.4)}
+.fun-wrap{position:relative;display:inline-flex}
+.fun-btn{font-family:inherit;font-size:.82rem;font-weight:600;color:var(--muted);background:transparent;border:0;padding:7px 13px;border-radius:999px;cursor:pointer;transition:.16s;display:inline-flex;align-items:center;gap:5px}
+.fun-btn:hover{color:var(--text);background:var(--hover)}
+.fun-btn.on{color:#fff;background:var(--blue);box-shadow:0 4px 14px rgba(0,151,244,.4)}
+.fun-car{font-size:.7em;transition:transform .16s}
+.fun-wrap.open .fun-car{transform:rotate(180deg)}
+.fun-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:176px;display:none;flex-direction:column;gap:3px;padding:8px;border-radius:14px;z-index:60}
+.fun-wrap.open .fun-menu{display:flex}
+.fun-menu button{font-family:inherit;font-size:.9rem;font-weight:600;color:var(--text);background:transparent;border:0;padding:9px 12px;border-radius:10px;cursor:pointer;text-align:left;transition:.14s;white-space:nowrap;display:flex;align-items:center;gap:9px}
+.fun-menu button:hover{background:var(--hover)}
+.fun-menu button.on{background:var(--blue);color:#fff}
+.fun-menu .fm-em{font-size:1.05em;line-height:1}
 .refreshed{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;font-size:.76rem;font-weight:600;color:var(--text2)}
 .refreshed .rf-dot{width:8px;height:8px;border-radius:50%;background:var(--win);box-shadow:0 0 8px var(--win);flex:0 0 auto;animation:rfpulse 2.4s ease-in-out infinite}
 @keyframes rfpulse{0%,100%{opacity:.45}50%{opacity:1}}
@@ -809,14 +834,43 @@ html[data-theme="easy"] .pill.live .dot{animation:none}
 html[data-theme="easy"] .g3{grid-template-columns:repeat(2,1fr)}
 html[data-theme="easy"] .hero p.sub,html[data-theme="easy"] .note,html[data-theme="easy"] .story-body,html[data-theme="easy"] .bb-txt,html[data-theme="easy"] .foot,html[data-theme="easy"] .kpi-n{max-width:66ch;text-align:left}
 @media(max-width:1000px){html[data-theme="easy"] .g3{grid-template-columns:1fr}}
+/* ---- Fun · GeoCities look ---- */
+html[data-theme="geocities"] body::before{display:none}
+html[data-theme="geocities"] body{background-color:#000018;background-image:radial-gradient(1.5px 1.5px at 18% 22%,#fff,transparent),radial-gradient(1.5px 1.5px at 72% 38%,#fff,transparent),radial-gradient(1px 1px at 42% 72%,#FFFF66,transparent),radial-gradient(1.5px 1.5px at 88% 82%,#00FFFF,transparent),radial-gradient(1px 1px at 8% 88%,#FF66FF,transparent),repeating-linear-gradient(0deg,transparent 0 44px,rgba(255,255,255,.035) 44px 45px),repeating-linear-gradient(90deg,transparent 0 44px,rgba(255,255,255,.035) 44px 45px)}
+html[data-theme="geocities"] .glass{backdrop-filter:none;-webkit-backdrop-filter:none;border:3px ridge #FF00FF}
+html[data-theme="geocities"] h1,html[data-theme="geocities"] h2,html[data-theme="geocities"] .story-title,html[data-theme="geocities"] .hero h1{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;text-shadow:none;font-weight:800}
+html[data-theme="geocities"] a{color:#00FFFF;text-decoration:underline}
+html[data-theme="geocities"] a:visited{color:#FF66FF}
+html[data-theme="geocities"] .modes,html[data-theme="geocities"] .fun-menu{border:2px ridge #00FFFF}
+html[data-theme="geocities"] .modes button,html[data-theme="geocities"] .fun-btn,html[data-theme="geocities"] .chip,html[data-theme="geocities"] .seg button{border:3px outset #FF00FF;background:#2b005f;color:#FFFF66}
+html[data-theme="geocities"] .modes button.on,html[data-theme="geocities"] .fun-btn.on,html[data-theme="geocities"] .fun-menu button.on{background:#FF00FF;color:#000;border-style:inset}
+html[data-theme="geocities"] .team{border:2px ridge #00FFFF}
+html[data-theme="geocities"] .pill.live .dot,html[data-theme="geocities"] .rf-dot,html[data-theme="geocities"] .orb{animation:gc-blink 1.1s steps(1) infinite}
+@keyframes gc-blink{50%{opacity:.25}}
+/* ---- Fun · Minecraft look ---- */
+html[data-theme="minecraft"] *{image-rendering:pixelated;border-radius:0 !important}
+html[data-theme="minecraft"] body::before{display:none}
+html[data-theme="minecraft"] body{background-color:#79A6FF;background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.05) 0 24px,rgba(255,255,255,.05) 24px 48px),repeating-linear-gradient(90deg,rgba(0,0,0,.04) 0 24px,rgba(255,255,255,.04) 24px 48px)}
+html[data-theme="minecraft"] .glass{backdrop-filter:none;-webkit-backdrop-filter:none;border:3px solid #2b2b2b}
+html[data-theme="minecraft"] h1,html[data-theme="minecraft"] h2,html[data-theme="minecraft"] .story-title,html[data-theme="minecraft"] .hero h1,html[data-theme="minecraft"] .tname,html[data-theme="minecraft"] .kpi-v,html[data-theme="minecraft"] .sb-big{text-shadow:2px 2px 0 rgba(0,0,0,.55)}
+html[data-theme="minecraft"] .modes button,html[data-theme="minecraft"] .fun-btn,html[data-theme="minecraft"] .chip,html[data-theme="minecraft"] .seg button{border:2px solid #1d1d1d;background:linear-gradient(180deg,#7c7c7c,#616161);color:#fff;box-shadow:inset -2px -2px 0 rgba(0,0,0,.4),inset 2px 2px 0 rgba(255,255,255,.15)}
+html[data-theme="minecraft"] .modes button.on,html[data-theme="minecraft"] .fun-btn.on,html[data-theme="minecraft"] .fun-menu button.on{background:linear-gradient(180deg,#6AA84F,#4C7A34);color:#fff}
+html[data-theme="minecraft"] .team{border:2px solid #2b2b2b}
+html[data-theme="minecraft"] .orb{background:linear-gradient(180deg,#6AA84F,#4C7A34);box-shadow:inset -2px -2px 0 rgba(0,0,0,.4)}
 """
 
 JS=r"""
 (function(){
  var root=document.documentElement,LS=window.localStorage;
  var KTHEME='wcb.theme',KFAV='wcb.favs',KFO='wcb.favonly',KSC='wcb.scores.v3';
- function setTheme(t){root.setAttribute('data-theme',t);document.querySelectorAll('.modes button').forEach(function(b){b.classList.toggle('on',b.dataset.mode===t)});try{LS.setItem(KTHEME,t)}catch(e){}if(window.__drawConn)setTimeout(window.__drawConn,80);}
- document.querySelectorAll('.modes button').forEach(function(b){b.addEventListener('click',function(){setTheme(b.dataset.mode)})});
+ function setTheme(t){root.setAttribute('data-theme',t);document.querySelectorAll('.modes button').forEach(function(b){if(b.dataset.mode)b.classList.toggle('on',b.dataset.mode===t)});if(funBtn)funBtn.classList.toggle('on',!!FUN[t]);try{LS.setItem(KTHEME,t)}catch(e){}closeFun();if(window.__drawConn)setTimeout(window.__drawConn,80);}
+ var FUN={geocities:1,minecraft:1};
+ var funWrap=document.getElementById('funWrap'),funBtn=document.getElementById('funBtn');
+ function closeFun(){if(funWrap){funWrap.classList.remove('open');if(funBtn)funBtn.setAttribute('aria-expanded','false');}}
+ document.querySelectorAll('.modes button').forEach(function(b){if(b.dataset.mode)b.addEventListener('click',function(){setTheme(b.dataset.mode)})});
+ if(funBtn){funBtn.addEventListener('click',function(e){e.stopPropagation();var open=funWrap.classList.toggle('open');funBtn.setAttribute('aria-expanded',open?'true':'false');});}
+ document.addEventListener('click',function(e){if(funWrap&&!funWrap.contains(e.target))closeFun();});
+ document.addEventListener('keydown',function(e){if(e.key==='Escape')closeFun();});
  var t0;try{t0=LS.getItem(KTHEME)}catch(e){}setTheme(t0||'dark');
  var favs={};try{favs=JSON.parse(LS.getItem(KFAV)||'{}')||{}}catch(e){favs={}}
  function saveFav(){try{LS.setItem(KFAV,JSON.stringify(favs))}catch(e){}}
@@ -928,7 +982,12 @@ f'<meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc
 '<div class="topbar"><div class="brand"><span class="orb"></span><div>2026 FIFA World Cup - Bracket Dashboard - MSFT SLED<small>Live results vs your picks</small></div></div>'
 f'<div class="refreshed glass" id="topRefreshed" title="When live results were last synced"><span class="rf-dot"></span>Updated {REFRESHED}</div>'
 '<div class="modes glass"><button data-mode="dark" class="on">Dark</button><button data-mode="light">Light</button>'
-'<button data-mode="easy" title="Reading mode — a highly legible font, larger text, extra line and letter spacing, sentence case (no all-caps), left-aligned text and a soft, glare-free background">Easy</button></div></div>'
+'<button data-mode="easy" title="Reading mode — a highly legible font, larger text, extra line and letter spacing, sentence case (no all-caps), left-aligned text and a soft, glare-free background">Easy</button>'
+'<div class="fun-wrap" id="funWrap"><button class="fun-btn" id="funBtn" aria-haspopup="true" aria-expanded="false" title="Fun themes">Fun <span class="fun-car">▾</span></button>'
+'<div class="fun-menu glass" id="funMenu" role="menu">'
+'<button data-mode="geocities" role="menuitem" title="90s web nostalgia — neon, rainbow headers, Comic Sans, tiled starfield"><span class="fm-em">🌐</span> GeoCities</button>'
+'<button data-mode="minecraft" role="menuitem" title="Blocky stone-and-grass — pixelated panels, drop-shadow text, sky-blue world"><span class="fm-em">⛏️</span> Minecraft</button>'
+'</div></div></div></div>'
 '<div class="shell"><nav class="rail glass" id="rail">'
 '<button class="navtoggle" id="navToggle" aria-expanded="false" aria-controls="railLinks">📑 Contents ☰</button>'
 '<div class="links" id="railLinks"><div class="rt">On this page</div>'
