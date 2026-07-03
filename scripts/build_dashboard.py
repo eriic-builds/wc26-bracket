@@ -16,7 +16,7 @@ import html, json, re
 #  exact dashboard design / UI / format. Do not restyle, re-order, or add to it.
 # ══════════════════════════════════════════════════════════════════════════════
 ENTRANT="Eric Lam"; TIEBREAKER=4
-REFRESHED="July 2, 2026 · 5:16 PM PT"
+REFRESHED="July 2, 2026 · 7:5 PM PT"
 CREDIT="Built With Cowork — Imagined by Eric Lam"  # tiny footer signature (personalise per entrant)
 
 SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa":"2A","Canada":"2B",
@@ -56,8 +56,9 @@ RES={"M73":(0,1,"Canada",""),
  "M80":(2,1,"England",""),
  "M81":(2,0,"United States",""),
  "M82":(3,2,"Belgium",""),
+ "M83":(2,1,"Portugal",""),
  "M84":(3,0,"Spain","")}
-UPCOMING={"M83":"Thu Jul 2","M85":"Thu Jul 2","M86":"Fri Jul 3","M87":"Fri Jul 3","M88":"Fri Jul 3"}
+UPCOMING={"M85":"Thu Jul 2","M86":"Fri Jul 3","M87":"Fri Jul 3","M88":"Fri Jul 3"}
 
 R16_WIN=["France","Morocco","Spain","United States","Japan","England","Argentina","Colombia"]
 QF_WIN=["France","Spain","England","Argentina"]; SF_WIN=["France","England"]
@@ -443,12 +444,12 @@ def build_results_panel():
 #    want pinned above the auto cards; leave it empty to show only the live last-six.
 FEATURED=[]
 AUTO_HL=[
+ ("🇵🇹","Portugal edge Croatia","Portugal 2–1 Croatia","Thu Jul 2 · Toronto","Heartbreak for Croatia — Portugal nicked it 2–1 late in the Round of 32, Ronaldo (68' pen) and Ramos (90'+4') on target."),
  ("🐂","Oyarzabal's brace sinks Austria","Spain 3–0 Austria","Thu Jul 2 · Los Angeles","Oyarzabal struck twice (36', 89') as Spain beat Austria 3–0 in the Round of 32, with Porro (66') also on the mark."),
  ("🗽","United States beat Bosnia & Herz.","United States 2–0 Bosnia & Herz.","Thu Jul 2 · San Francisco Bay Area","Job done for United States, a composed 2–0 win over Bosnia & Herz. in the Round of 32 with Balogun (45') and Tillman (82')."),
  ("😈","Tielemans's brace sinks Senegal","Belgium 3–2 Senegal","Wed Jul 1 · Seattle","Backs to the wall, Belgium rallied to see off Senegal 3–2 in the Round of 32 — Lukaku (86') and Tielemans (89', 120'+5' pen) turning it around."),
  ("🦁","Kane's brace sinks DR Congo","England 2–1 DR Congo","Wed Jul 1 · Atlanta","Backs to the wall, England rallied to see off DR Congo 2–1 in the Round of 32 — Kane (75', 86') turning it around."),
  ("🌵","Mexico beat Ecuador","Mexico 2–0 Ecuador","Wed Jul 1 · Mexico City","Quinones (22') and Jimenez (31') on target as Mexico saw off Ecuador 2–0 in the Round of 32."),
- ("🐓","Mbappe's brace sinks Sweden","France 3–0 Sweden","Tue Jun 30 · New Jersey","Mbappe struck twice (45', 74') to settle France's 3–0 win over Sweden in the Round of 32, with Barcola (53') also on the mark."),
 ]  # AUTO — maintained by the sync engine; the last six finished games. Do not hand-edit.
 HIGHLIGHTS=FEATURED+AUTO_HL
 def build_highlights():
