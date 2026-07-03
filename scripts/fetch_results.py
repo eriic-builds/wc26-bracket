@@ -497,30 +497,136 @@ def _trailed_at_half(goals, win_side) -> bool:
     return wh < lh
 
 
-def _card_emoji(note, goals, win_side, margin, star_n, comeback) -> str:
-    """Pick a fun, story-relevant emoji for a winning card.
+def _stable_idx(seed: str, n: int) -> int:
+    """Deterministic 0..n-1 pick from a string (varies wording without RNG so the
+    Action stays reproducible)."""
+    if n <= 0:
+        return 0
+    return sum(seed.encode("utf-8")) % n
 
-    Priority reflects what made the game memorable: shootout, hat-trick, comeback,
-    brace, late drama, then a blowout, else a plain goal. Works with or without
-    goal data (falls back to margin-only cues).
-    """
+
+def _count_word(k: int) -> str:
+    return {2: "twice", 3: "a hat-trick", 4: "four times"}.get(k, f"{k} times")
+
+
+def _star_clause(star, goals, win_side) -> str:
+    """A characterful clause for a multi-goal hero, e.g.
+    'Kane struck twice after the break (75', 86')'. '' if not a 2+ goal game."""
+    gs = [g for g in goals if g.get("side") == win_side
+          and g.get("kind") in ("goal", "pen") and g.get("name") == star]
+    gs.sort(key=lambda g: g.get("min_n", 0))
+    if len(gs) < 2:
+        return ""
+    mins = []
+    for g in gs:
+        t = g.get("minute", "")
+        if g.get("kind") == "pen":
+            t = (t + " pen").strip()
+        if t:
+            mins.append(t)
+    halves = {g.get("half") for g in gs}
+    timing = " after the break" if halves == {"2H"} else \
+             " in the first half" if halves == {"1H"} else ""
+    verb = "fired" if len(gs) >= 3 else "struck"
+    return f"{star} {verb} {_count_word(len(gs))}{timing} ({', '.join(mins)})"
+
+
+def _others_phrase(goals, win_side, star) -> str:
+    """Winner's other scorers (excluding the star's own goals from play)."""
+    rest = [g for g in goals if not (g.get("side") == win_side
+            and g.get("name") == star and g.get("kind") in ("goal", "pen"))]
+    return _scorer_phrase(rest, win_side)
+
+
+def _recap_win(home, away, w, loser, gh, ga, wg, lg, margin, label, note,
+               goals, win_side, star, n, comeback, wphrase, seed) -> str:
+    """A fun, varied one-sentence recap of a win. Deterministic wording so the
+    same game always renders the same card. Falls back gracefully when no scorer
+    data is available."""
+    score = f"{wg}\u2013{lg}"
+    starcl = _star_clause(star, goals, win_side) if star and n >= 2 else ""
+    others = _others_phrase(goals, win_side, star) if star and n >= 2 else ""
+    otail = f", with {others} also on the mark" if others else ""
+    late = bool(margin == 1 and goals and max(
+        (g.get("min_n", 0) for g in goals if g.get("side") == win_side
+         and g.get("kind") in ("goal", "pen")), default=0) >= 80)
+
     if "pens" in note:
-        return "\U0001f3af"          # dartboard - shootout nerves
-    if star_n >= 3:
-        return "\U0001f3a9"          # top hat - hat-trick
-    if comeback:
-        return "\U0001f504"          # arrows - come-from-behind
-    if star_n >= 2:
-        return "\u26a1"              # high voltage - brace
-    if margin == 1 and goals:        # late winner in a one-goal game
-        last = max((g.get("min_n", 0) for g in goals
-                    if g.get("side") == win_side and g.get("kind") in ("goal", "pen")),
-                   default=0)
-        if last >= 80:
-            return "\u23f1\ufe0f"    # stopwatch - late drama
-    if margin >= 3:
-        return "\U0001f4a5"          # collision - rout
-    return "\u26bd"                  # soccer ball - default
+        opts = [
+            f"{w} held their nerve, edging {loser} on penalties ({note}) after a {gh}\u2013{ga} {label} deadlock.",
+            f"Shootout drama: {w} outlasted {loser} {note} following a {gh}\u2013{ga} stalemate in the {label}.",
+            f"Ice-cold from twelve yards, {w} saw off {loser} on penalties ({note}) after {gh}\u2013{ga} in the {label}.",
+        ]
+    elif comeback:
+        tl = f" \u2014 {wphrase} turning it around" if wphrase else ""
+        opts = [
+            f"Down at the break, {w} roared back to beat {loser} {score} in the {label}{tl}.",
+            f"{w} flipped the script after falling behind, completing a {score} comeback against {loser} in the {label}{tl}.",
+            f"Backs to the wall, {w} rallied to see off {loser} {score} in the {label}{tl}.",
+        ]
+    elif n >= 3:
+        hero = starcl or f"{star} grabbed a hat-trick"
+        opts = [
+            f"Match ball secured \u2014 {hero} to fire {w} past {loser} {score} in the {label}{otail}.",
+            f"The {star} show: {hero} powering {w} to a {score} win over {loser} in the {label}{otail}.",
+        ]
+    elif n >= 2:
+        hero = starcl or f"{star} bagged a brace"
+        opts = [
+            f"{hero} as {w} beat {loser} {score} in the {label}{otail}.",
+            f"{hero} to settle {w}'s {score} win over {loser} in the {label}{otail}.",
+        ]
+    elif note == "AET":
+        tl = f" \u2014 {wphrase} decisive" if wphrase else ""
+        opts = [
+            f"It took extra time, but {w} got there, beating {loser} {score} in the {label}{tl}.",
+            f"{w} needed the extra 30, edging {loser} {score} after extra time in the {label}{tl}.",
+        ]
+    elif margin >= 3:
+        tl = f" \u2014 {wphrase} on the scoresheet" if wphrase else ""
+        opts = [
+            f"{w} ran riot, sweeping {loser} aside {score} in the {label}{tl}.",
+            f"No contest: {w} cruised past {loser} {score} in the {label}{tl}.",
+            f"{w} put on a show, romping to a {score} win over {loser} in the {label}{tl}.",
+        ]
+    elif late:
+        opts = [
+            f"{w} left it late, snatching a {score} {label} squeaker past {loser}" + (f" ({wphrase})" if wphrase else "") + ".",
+            f"Heartbreak for {loser} \u2014 {w} nicked it {score} late in the {label}" + (f", {wphrase} on target" if wphrase else "") + ".",
+        ]
+    elif margin == 1:
+        opts = [
+            f"{w} edged a tight one {score} against {loser} in the {label}" + (f", {wphrase} making the difference" if wphrase else "") + ".",
+            f"Nervy but enough: {w} saw off {loser} {score} in the {label}" + (f" thanks to {wphrase}" if wphrase else "") + ".",
+        ]
+    else:
+        opts = [
+            (f"{wphrase} on target as " if wphrase else "") + f"{w} saw off {loser} {score} in the {label}.",
+            f"{w} had too much for {loser}, running out {score} winners in the {label}" + (f" \u2014 {wphrase} scoring" if wphrase else "") + ".",
+            f"Job done for {w}, a composed {score} win over {loser} in the {label}" + (f" with {wphrase}" if wphrase else "") + ".",
+        ]
+    return opts[_stable_idx(seed, len(opts))]
+
+
+def _recap_draw(home, away, gh, ga, label, goals, seed) -> str:
+    """A fun, varied one-sentence recap of a draw."""
+    score = f"{gh}\u2013{ga}"
+    hs = _scorer_phrase(goals, "home")
+    as_ = _scorer_phrase(goals, "away")
+    if hs and as_:
+        opts = [
+            f"{home} and {away} couldn't be separated in a {score} {label} draw \u2014 {hs} for {home}, {as_} for {away}.",
+            f"Honours even: {home} {score} {away} in the {label}, {hs} and {as_} trading goals.",
+            f"End to end but level, {home} and {away} shared a {score} {label} draw ({hs}; {as_}).",
+        ]
+    else:
+        opts = [
+            f"{home} and {away} played out a goalless {label} stalemate." if gh == 0 else
+            f"{home} and {away} shared the points in a {score} {label} draw.",
+            f"Nothing between them: {home} {score} {away} in the {label}.",
+            f"Points shared as {home} and {away} finished {score} in the {label}.",
+        ]
+    return opts[_stable_idx(seed, len(opts))]
 
 
 # Fun team-nickname emojis (e.g. England = Three Lions). Anything not listed
@@ -619,16 +725,9 @@ def build_auto_hl(feed, limit=6):
         goals = f.get("goals") or []
 
         if not w or note == "draw":  # genuine draw
-            he, ae = _team_emoji(home), _team_emoji(away)
-            emoji = (he + "\U0001f91d" + ae) if (he and ae) else "\U0001f91d"
+            emoji = _team_emoji(home) or _team_emoji(away) or "\U0001f91d"
             headline = _headline(w, "", home, away, gh, ga, note)
-            hs = _scorer_phrase(goals, "home")
-            as_ = _scorer_phrase(goals, "away")
-            if hs and as_:
-                body = (f"{hs} for {home} and {as_} for {away} in a {gh}\u2013{ga} "
-                        f"{label} draw.")
-            else:
-                body = f"{home} and {away} drew {gh}\u2013{ga} in the {label}."
+            body = _recap_draw(home, away, gh, ga, label, goals, title)
             entries.append((emoji, headline, title, when, body))
             if len(entries) >= limit:
                 break
@@ -642,15 +741,8 @@ def build_auto_hl(feed, limit=6):
         comeback = _trailed_at_half(goals, win_side)
         wphrase = _scorer_phrase(goals, win_side)
 
-        # Lead with the winner's team emoji (Three Lions etc.), then a story emoji.
-        story = _card_emoji(note, goals, win_side, margin, n, comeback)
-        team = _team_emoji(w)
-        if team and story == "\u26bd":   # avoid a redundant plain-ball tag
-            emoji = team
-        elif team:
-            emoji = team + story
-        else:
-            emoji = story
+        # One emoji: the winner's nickname (Three Lions etc.), else its country flag.
+        emoji = _team_emoji(w) or "\u26bd"
 
         # Headline: prefer a scorer story, then comeback, then plain fact.
         if star and n >= 3:
@@ -662,18 +754,8 @@ def build_auto_hl(feed, limit=6):
         else:
             headline = _headline(w, loser, home, away, gh, ga, note)
 
-        prefix = "Down at the break, " if comeback else ""
-        if "pens" in note:
-            body = (f"{w} beat {loser} on penalties ({note}) after a "
-                    f"{gh}\u2013{ga} {label} draw.")
-        elif wphrase:
-            tail = " after extra time" if note == "AET" else ""
-            body = (f"{prefix}{wphrase} scored as {w} beat {loser} "
-                    f"{wg}\u2013{lg}{tail} in the {label}.")
-        elif note == "AET":
-            body = f"{w} beat {loser} {wg}\u2013{lg} after extra time in the {label}."
-        else:
-            body = f"{w} beat {loser} {wg}\u2013{lg} in the {label}."
+        body = _recap_win(home, away, w, loser, gh, ga, wg, lg, margin, label,
+                          note, goals, win_side, star, n, comeback, wphrase, title)
         entries.append((emoji, headline, title, when, body))
         if len(entries) >= limit:
             break
