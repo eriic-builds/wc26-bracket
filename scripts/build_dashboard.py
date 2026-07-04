@@ -686,7 +686,7 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .shead .tile{width:30px;height:30px;border-radius:9px;background:var(--grad);display:grid;place-items:center;font-size:.95rem;flex:0 0 auto;box-shadow:0 4px 14px rgba(0,151,244,.3)}
 .shead h2{font-size:1.16rem;margin:0;font-weight:700;letter-spacing:-.01em}
 .shead .cap{margin-left:auto;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
-.sec-toggle{flex:0 0 auto;width:26px;height:26px;margin-left:8px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--muted);cursor:pointer;font-size:.85rem;line-height:1;transition:.16s;display:grid;place-items:center}
+.sec-toggle{flex:0 0 auto;width:26px;height:26px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--muted);cursor:pointer;font-size:.85rem;line-height:1;transition:.16s;display:grid;place-items:center}
 .sec-toggle:hover{color:var(--text);background:var(--hover)}
 .sec-toggle[aria-expanded="false"]{transform:rotate(-90deg)}
 .sec-body{overflow:hidden}
@@ -1080,9 +1080,10 @@ def shead(sid, icon, title, cap):
     """Section header + the opening tag of its collapsible body. Every collapsible
     section is shead(...) + <content> + '</div>' (closing div.sec-body) — the toggle
     arrow just shows/hides that one wrapper via CSS/JS, nothing else changes."""
-    return (f'<div class="shead" id="{sid}"><span class="tile">{icon}</span><h2>{title}</h2>'
-            f'<span class="cap">{cap}</span>'
-            f'<button class="sec-toggle" type="button" aria-expanded="true" aria-controls="{sid}-body" aria-label="Collapse section">▾</button></div>'
+    return (f'<div class="shead" id="{sid}">'
+            f'<button class="sec-toggle" type="button" aria-expanded="true" aria-controls="{sid}-body" aria-label="Collapse section">▾</button>'
+            f'<span class="tile">{icon}</span><h2>{title}</h2>'
+            f'<span class="cap">{cap}</span></div>'
             f'<div class="sec-body" id="{sid}-body">')
 
 HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf-8">'
