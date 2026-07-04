@@ -23,7 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      # Fixed URL rather than a step output: it's the same regardless of which
+      # deploy attempt below actually succeeds.
+      url: https://eriic-builds.github.io/Eric-fifa26-wc-bracket-dashboard/
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
@@ -36,6 +38,32 @@ jobs:
         with:
           path: ./docs
 
-      - name: Deploy to GitHub Pages
-        id: deployment
+      # GitHub's Pages deployment backend intermittently answers a freshly
+      # created deployment with "Deployment failed, try again later." even
+      # when nothing is wrong with the artifact or config (seen on runs #3
+      # and #6). actions/deploy-pages treats that as terminal and doesn't
+      # retry itself, so we retry the deploy step here, reusing the artifact
+      # already uploaded above -- up to 3 attempts with a short backoff.
+      - name: Deploy to GitHub Pages (attempt 1)
+        id: deploy1
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+
+      - name: Wait before retry 1
+        if: steps.deploy1.outcome == 'failure'
+        run: sleep 20
+
+      - name: Deploy to GitHub Pages (attempt 2)
+        id: deploy2
+        if: steps.deploy1.outcome == 'failure'
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+
+      - name: Wait before retry 2
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        run: sleep 45
+
+      - name: Deploy to GitHub Pages (attempt 3)
+        id: deploy3
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
         uses: actions/deploy-pages@v5
