@@ -863,6 +863,13 @@ def main() -> int:
         if out_text != gen_text:
             with open(GEN, "w", encoding="utf-8") as fh:
                 fh.write(out_text)
+            # Keep docs/index.html in lock-step with the source: the REFRESHED
+            # stamp lives in build_dashboard.py, so the HTML must be rebuilt or
+            # the two files drift (source shows the new time, HTML the old one).
+            if not args.no_build:
+                env = dict(os.environ, PYTHONIOENCODING="utf-8")
+                subprocess.run([sys.executable, GEN], check=True, env=env)
+                print("Regenerated docs/index.html.")
         print(f"Source: {src}. No new finished games \u2014 refreshed sync time to {stamp}.")
         return 0
 

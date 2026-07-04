@@ -39,6 +39,13 @@ jobs:
         # only if you prefer that source instead.
         run: python scripts/fetch_results.py
 
+      - name: Rebuild HTML so docs/index.html always matches the source
+        # Safety net: the REFRESHED stamp and all data live in build_dashboard.py,
+        # so the generated HTML must be rebuilt from it. Running the generator
+        # unconditionally guarantees the two never drift, even if fetch logic
+        # changes. It is idempotent — no diff when already current.
+        run: python scripts/build_dashboard.py
+
       - name: Commit and push if the dashboard changed
         run: |
           if [[ -n "$(git status --porcelain docs/index.html scripts/build_dashboard.py)" ]]; then
