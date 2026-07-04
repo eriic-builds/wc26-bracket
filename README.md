@@ -114,9 +114,10 @@ Because the dashboard is a single static file, hosting is trivial:
    Treat `scripts/build_dashboard.py` as the source of truth for styles/layout — if you
    hand-edit `docs/index.html`, mirror the same change in the generator and rebuild, or the
    next sync/theme regeneration will overwrite it.
-2. In the repo: **Settings → Pages → Deploy from a branch → `main`, `/docs`**.
-   Keep the committed **`docs/.nojekyll`** marker file in place so Pages serves the
-   generated dashboard as a plain static site instead of running Jekyll's default theme build.
+2. This repo's **`.github/workflows/deploy-pages.yml`** uploads the already-built `docs/`
+   folder straight to Pages. In **Settings → Pages**, set **Source** to **GitHub Actions**.
+   Keep the committed **`docs/.nojekyll`** marker file in place as a harmless fallback if you
+   ever temporarily switch back to branch-based serving.
 3. It goes live at `https://eriic-builds.github.io/Eric-fifa26-wc-bracket-dashboard/`
    (rebuilds within ~1 minute of any push that changes `docs/`).
 
@@ -313,10 +314,11 @@ git push
 
 ### 6. Turn on GitHub Pages
 
-Repo **Settings → Pages → Build and deployment → Deploy from a branch → `main` / `/docs` →
-Save**. Leave the committed **`docs/.nojekyll`** file in place so GitHub Pages serves the
-generated HTML as-is instead of trying to rebuild it with Jekyll. Within ~1 minute it's live
-at `https://<you>.github.io/my-wc2026-bracket/`.
+Commit the included **`.github/workflows/deploy-pages.yml`** file, then in
+**Settings → Pages → Build and deployment → Source** choose **GitHub Actions**.
+Leave the committed **`docs/.nojekyll`** file in place as a harmless fallback if you ever
+temporarily switch back to branch-based serving. Within ~1 minute it's live at
+`https://<you>.github.io/my-wc2026-bracket/`.
 
 ### 7. Results source — nothing to configure
 
@@ -352,8 +354,8 @@ runs, edit the `cron` lines in `.github/workflows/sync-results.yml` (times are *
 3. **Verified my picks against the Excel "My Bracket" tab** — all Round-of-32 picks, the
    R16/QF/SF winners, `CHAMP` (England), `RUNNER` (France) and the tiebreaker (4) matched — then
    personalized `ENTRANT` and the refresh timestamp.
-4. Generated the dashboard, enabled GitHub Pages from `/docs`, and confirmed it served (HTTP
-   200).
+4. Generated the dashboard, enabled GitHub Pages, and confirmed the repo-served site came up
+   (HTTP 200).
 5. Added the Phase 2 sync script, team map, and workflow; verified the update logic with a mock
    feed (including a penalty shootout) and a live workflow run.
 6. **Kit v7:** added a sticky left side-navigation rail (with scrollspy) and a top "last refreshed"
@@ -400,8 +402,6 @@ Honest analysis of what could make this better, roughly by value vs. effort:
   single outage a non-event.
 - **Unit tests** for `fetch_results.py` (name normalization, team-pair matching, draw handling)
   using a committed sample feed under `tests/`.
-- **Deploy via GitHub Pages Actions** (instead of branch-based) to make the redeploy explicit and
-  add a build check.
 
 **Nice to have**
 - **Multi-entrant support** — the generator already isolates `DATA` per person; a small wrapper

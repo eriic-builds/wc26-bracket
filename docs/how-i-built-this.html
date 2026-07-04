@@ -289,10 +289,10 @@ git push</code></pre>
         <p class="lead">This is the free hosting. One setting, and your page is live on the internet.</p>
         <ol>
           <li>In your repo on github.com, open <b>Settings → Pages</b>.</li>
-          <li>Under <b>Build and deployment → Source</b>, choose <b>Deploy from a branch</b>.</li>
-          <li>Pick branch <b>main</b> and folder <b>/docs</b>. Click <b>Save</b>.</li>
+          <li>This repo already includes <code>.github/workflows/deploy-pages.yml</code>.</li>
+          <li>Under <b>Build and deployment → Source</b>, choose <b>GitHub Actions</b>.</li>
         </ol>
-        <p>Leave the committed <code>docs/.nojekyll</code> file in place so GitHub Pages serves the generated dashboard directly instead of trying to apply Jekyll's default theme.</p>
+        <p>Leave the committed <code>docs/.nojekyll</code> file in place as a harmless fallback if you ever temporarily switch back to branch-based Pages serving.</p>
         <p>Within about a minute it's live at:</p>
         <pre><code>https://&lt;you&gt;.github.io/my-wc2026-bracket/</code></pre>
         <p>Every time a push changes <code>docs/</code>, Pages re-deploys automatically. That single fact is what makes the automation in the next steps "just work."</p>
@@ -461,8 +461,9 @@ git add .
 git commit -m <span class="tok-s">"Initial dashboard"</span>
 git push
 
-<span class="tok-c"># 4. on github.com: Settings → Pages → main / /docs → Save</span>
-<span class="tok-c">#    leave docs/.nojekyll committed so Pages serves the static HTML as-is</span>
+<span class="tok-c"># 4. commit .github/workflows/deploy-pages.yml, then on github.com:</span>
+<span class="tok-c">#    Settings → Pages → Source → GitHub Actions</span>
+<span class="tok-c">#    (keeping docs/.nojekyll committed is still a harmless fallback)</span>
 <span class="tok-c"># 5. get a free token at football-data.org, then add it as the</span>
 <span class="tok-c">#    FOOTBALL_DATA_TOKEN repository secret</span>
 <span class="tok-c"># 6. Actions → Sync World Cup results → Run workflow  (test it)</span>
