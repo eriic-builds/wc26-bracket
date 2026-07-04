@@ -111,6 +111,9 @@ and marks eliminated teams automatically.
 Because the dashboard is a single static file, hosting is trivial:
 
 1. The generated dashboard lives at **`docs/index.html`**.
+   Treat `scripts/build_dashboard.py` as the source of truth for styles/layout — if you
+   hand-edit `docs/index.html`, mirror the same change in the generator and rebuild, or the
+   next sync/theme regeneration will overwrite it.
 2. In the repo: **Settings → Pages → Deploy from a branch → `main`, `/docs`**.
    Keep the committed **`docs/.nojekyll`** marker file in place so Pages serves the
    generated dashboard as a plain static site instead of running Jekyll's default theme build.
