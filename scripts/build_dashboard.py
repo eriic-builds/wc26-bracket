@@ -16,7 +16,7 @@ import html, json, re
 #  exact dashboard design / UI / format. Do not restyle, re-order, or add to it.
 # ══════════════════════════════════════════════════════════════════════════════
 ENTRANT="Eric Lam"; TIEBREAKER=4
-REFRESHED="July 3, 2026 · 9:59 PM PT"
+REFRESHED="July 4, 2026 · 1:25 AM PT"
 CREDIT="Built With Cowork — Imagined by Eric Lam"  # tiny footer signature (personalise per entrant)
 
 SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa":"2A","Canada":"2B",
