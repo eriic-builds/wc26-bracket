@@ -431,9 +431,48 @@ def build_results_panel():
             up.append(f'<div class="rr up"><div class="rr-m">{esc(mc)}</div>'
                 f'<div class="rr-s">{esc(a)} vs {esc(b)}<span class="rr-t">{d} · {ptz} PT · {ct} CT · {et} ET</span></div>'
                 f'<div class="rr-p"><span class="res-soon">your pick: {esc(pk)}</span></div></div>')
-    return ('<div class="glass rrbox"><div class="rr-h">Final results · your pick '
+    return ('<div class="glass rrbox res-panel" data-round="r32"><div class="rr-h">Round of 32 results · your pick '
             f'<b>{r32_correct}/{r32_decided}</b></div>'+''.join(rows)+
             '<div class="rr-h" style="margin-top:12px">Still to play</div>'+''.join(up)+'</div>')
+
+# Toggleable results panels for the later knockout rounds (Round of 16 = "round of 16",
+# Quarterfinals = "round of 8", Semifinals = "round of 4"), built from the exact same
+# live topology (KO_FEED/RES/PICK_BY_CODE/ELIM) as the bracket map and knockout scoring
+# above, so the match list, scores and pick badges can never drift out of sync with it.
+def build_round_results_panel(label, short, codes):
+    r16day={mc:(day,et,ct,ptz) for (mc,day,a,b,et,ct,ptz) in R16_FIX}
+    rows=[]; done=0; dec=0; corr=0
+    for mc in codes:
+        fa,fb=KO_FEED[mc]
+        a=RES[fa][2] if fa in RES else None
+        b=RES[fb][2] if fb in RES else None
+        pk=PICK_BY_CODE.get(mc)
+        if mc in RES:
+            done+=1; dec+=1
+            gA,gB,w,note=RES[mc]
+            an=a or "?"; bn=b or "?"
+            if pk==w: badge='<span class="res-ok">✓ you</span>'; corr+=1
+            elif pk in ELIM: badge='<span class="res-no">✕ pick out</span>'
+            else: badge='<span class="res-no">✕ you</span>'
+            sc=(f'<b class="{"w" if w==an else "l"}">{esc(an)}</b> {gA}{DASH}{gB} '
+                f'<b class="{"w" if w==bn else "l"}">{esc(bn)}</b>'+((' <i>'+esc(note)+'</i>') if note else ''))
+            rows.append(f'<div class="rr"><div class="rr-m">{esc(mc)}</div>'
+                f'<div class="rr-s">{sc}</div><div class="rr-p">{badge}</div></div>')
+        else:
+            if short=="r16" and mc in r16day:
+                day,et,ct,ptz=r16day[mc]; when=f'{day} · {ptz} PT · {ct} CT · {et} ET'
+            else: when=KO_DATES[short]
+            ta=a or ("Winner "+fa); tb=b or ("Winner "+fb)
+            if pk and pk in ELIM: pkt=f'<span class="res-no">pick {esc(pk)} out</span>'
+            elif pk: pkt=f'<span class="res-soon">your pick: {esc(pk)}</span>'
+            else: pkt=''
+            rows.append(f'<div class="rr up"><div class="rr-m">{esc(mc)}</div>'
+                f'<div class="rr-s">{esc(ta)} vs {esc(tb)}<span class="rr-t">{when}</span></div>'
+                f'<div class="rr-p">{pkt}</div></div>')
+    acc=f'{corr}/{dec}' if dec else '—'
+    return (f'<div class="glass rrbox res-panel" data-round="{short}">'
+            f'<div class="rr-h">{esc(label)} results · your pick <b>{acc}</b> · {done}/{len(codes)} final</div>'
+            +''.join(rows)+'</div>')
 
 # ── GAME FACTS — the last six finished games, newest first, shown as highlight cards.
 #    Each card is (emoji, headline, scoreline, "day · venue", one-sentence recap).
@@ -474,45 +513,13 @@ def build_upcoming():
 # Live knockout board — Round of 16, Quarterfinals, Semifinals, Final. Actual teams and
 # scores come from RES (kept current by the sync engine); teams for each match are the
 # winners of its two feeder matches (KO_FEED). Pending matches show the known/So-far teams.
+# Rendered as toggleable result panels alongside the Round of 32 panel (see RESULTS_ROUNDS
+# below) rather than a second always-visible grid, so viewing every round needs no extra
+# scrolling.
 KO_DATES={"r16":"Jul 4–7","qf":"Jul 9–11","sf":"Jul 14–15","final":"Sun Jul 19 · MetLife"}
 KO_ROUND_ORDER=[("Round of 16","r16",[f"M{n}" for n in range(89,97)]),
  ("Quarterfinals","qf",[f"M{n}" for n in range(97,101)]),
  ("Semifinals","sf",["M101","M102"]),("Final","final",["M104"])]
-def build_knockouts():
-    r16day={mc:(day,et,ct,ptz) for (mc,day,a,b,et,ct,ptz) in R16_FIX}
-    blocks=[]
-    for (label,short,codes) in KO_ROUND_ORDER:
-        rows=[]; done=0
-        for mc in codes:
-            fa,fb=KO_FEED[mc]
-            a=RES[fa][2] if fa in RES else None
-            b=RES[fb][2] if fb in RES else None
-            pk=PICK_BY_CODE.get(mc)
-            if mc in RES:
-                done+=1; gA,gB,w,note=RES[mc]
-                an=a or "?"; bn=b or "?"
-                if pk is None: badge=''
-                elif pk==w: badge='<span class="res-ok">✓ you</span>'
-                elif pk in ELIM: badge='<span class="res-no">✕ pick out</span>'
-                else: badge='<span class="res-no">✕ you</span>'
-                sc=(f'<b class="{"w" if w==an else "l"}">{esc(an)}</b> {gA}{DASH}{gB} '
-                    f'<b class="{"w" if w==bn else "l"}">{esc(bn)}</b>'+((' <i>'+esc(note)+'</i>') if note else ''))
-                rows.append(f'<div class="rr"><div class="rr-m">{esc(mc)}</div>'
-                    f'<div class="rr-s">{sc}</div><div class="rr-p">{badge}</div></div>')
-            else:
-                if short=="r16" and mc in r16day:
-                    day,et,ct,ptz=r16day[mc]; when=f'{day} · {ptz} PT · {ct} CT · {et} ET'
-                else: when=KO_DATES[short]
-                ta=a or ("Winner "+fa); tb=b or ("Winner "+fb)
-                if pk and pk in ELIM: pkt=f'<span class="res-no">pick {esc(pk)} out</span>'
-                elif pk: pkt=f'<span class="res-soon">your pick: {esc(pk)}</span>'
-                else: pkt=''
-                rows.append(f'<div class="rr up"><div class="rr-m">{esc(mc)}</div>'
-                    f'<div class="rr-s">{esc(ta)} vs {esc(tb)}<span class="rr-t">{when}</span></div>'
-                    f'<div class="rr-p">{pkt}</div></div>')
-        blocks.append('<div class="glass rrbox ko-block">'
-            f'<div class="rr-h">{esc(label)} · {done}/{len(codes)} final</div>'+''.join(rows)+'</div>')
-    return '<div class="g2 kogrid">'+''.join(blocks)+'</div>'
 
 def build_legend():
     items=[
@@ -690,12 +697,19 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .bracket{display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;padding:14px 8px;align-items:stretch;scrollbar-width:none;-ms-overflow-style:none;position:relative}
 .bracket::-webkit-scrollbar{display:none}
 .bksvg{position:absolute;top:0;left:0;pointer-events:none;z-index:0;overflow:visible}
-.brk-toggle{display:inline-flex;gap:6px;padding:5px;border-radius:999px;margin-bottom:12px;background:var(--panel);border:1px solid var(--border)}
-.brk-toggle button{font-family:inherit;font-size:.8rem;font-weight:600;color:var(--muted);background:transparent;border:0;padding:7px 16px;border-radius:999px;cursor:pointer;transition:.16s}
-.brk-toggle button:hover{color:var(--text);background:var(--hover)}
-.brk-toggle button.on{color:#fff;background:var(--blue);box-shadow:0 4px 14px rgba(0,151,244,.35)}
+.brk-toggle,.res-toggle{display:inline-flex;gap:6px;padding:5px;border-radius:999px;margin-bottom:12px;background:var(--panel);border:1px solid var(--border)}
+.brk-toggle button,.res-toggle button{font-family:inherit;font-size:.8rem;font-weight:600;color:var(--muted);background:transparent;border:0;padding:7px 16px;border-radius:999px;cursor:pointer;transition:.16s}
+.brk-toggle button:hover,.res-toggle button:hover{color:var(--text);background:var(--hover)}
+.brk-toggle button.on,.res-toggle button.on{color:#fff;background:var(--blue);box-shadow:0 4px 14px rgba(0,151,244,.35)}
 .brk-wrap[data-view="actual"] .bracket.mode-picked{display:none}
 .brk-wrap[data-view="picked"] .bracket.mode-actual{display:none}
+.res-toggle{flex-wrap:wrap}
+.res-wrap .res-panel{display:none}
+.res-wrap[data-view="r32"] .res-panel[data-round="r32"]{display:block}
+.res-wrap[data-view="r16"] .res-panel[data-round="r16"]{display:block}
+.res-wrap[data-view="qf"] .res-panel[data-round="qf"]{display:block}
+.res-wrap[data-view="sf"] .res-panel[data-round="sf"]{display:block}
+.res-wrap[data-view="final"] .res-panel[data-round="final"]{display:block}
 .round{flex:1 1 0;min-width:150px;display:flex;flex-direction:column;position:relative;z-index:1}
 .conn{fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
 .conn.c-won{stroke:var(--win)}
@@ -998,6 +1012,7 @@ JS=r"""
  }
  window.__drawConn=drawConnectors;
  document.querySelectorAll('.brk-toggle button').forEach(function(bt){bt.addEventListener('click',function(){var w=document.querySelector('.brk-wrap');w.setAttribute('data-view',bt.dataset.view);document.querySelectorAll('.brk-toggle button').forEach(function(x){x.classList.toggle('on',x===bt);});setTimeout(drawConnectors,60);});});
+ document.querySelectorAll('.res-toggle button').forEach(function(bt){bt.addEventListener('click',function(){var w=document.querySelector('.res-wrap');w.setAttribute('data-view',bt.dataset.view);document.querySelectorAll('.res-toggle button').forEach(function(x){x.classList.toggle('on',x===bt);});});});
  var _rt;window.addEventListener('resize',function(){clearTimeout(_rt);_rt=setTimeout(drawConnectors,120);});
  window.addEventListener('load',function(){setTimeout(drawConnectors,60);});
  // ---- hover: quick World Cup stat card on each team box ----
@@ -1056,8 +1071,7 @@ f'<div class="refreshed glass" id="topRefreshed" title="When live results were l
 '<a href="#intro"><span class="ic">🔎</span> Overview</a>'
 '<a href="#sec-standing"><span class="ic">📊</span> Live standing</a>'
 '<a href="#sec-scorecard"><span class="ic">🧮</span> Scorecard</a>'
-'<a href="#sec-r32"><span class="ic">⚽</span> Round of 32</a>'
-'<a href="#sec-r16"><span class="ic">🏆</span> Knockouts</a>'
+'<a href="#sec-r32"><span class="ic">⚽</span> Round-by-round results</a>'
 '<a href="#sec-news"><span class="ic">📰</span> Game facts</a>'
 '<a href="#sec-bracket"><span class="ic">🗺️</span> Bracket map</a>'
 '<a href="#sec-finalfour"><span class="ic">🏅</span> Final four</a>'
@@ -1089,10 +1103,14 @@ f'The Round of 32 is <b>{R32_DONE} of {N_R32} games</b> final — you sit on <b>
 + build_scorebar()
 + f'<div class="glass">{build_scorecard()}</div>'
 '<div style="text-align:right;margin-top:10px"><button class="chip" id="scReset" style="cursor:pointer">↺ Reset to live results</button></div>'
-'<div class="shead" id="sec-r32"><span class="tile">⚽</span><h2>Round of 32 results</h2>'+f'<span class="cap">{R32_DONE} final · {REMAIN_R32} to play</span></div>'
-f'{build_results_panel()}'
-'<div class="shead" id="sec-r16"><span class="tile">🏆</span><h2>Knockout rounds — live</h2><span class="cap">R16 · QF · SF · Final</span></div>'
-f'{build_knockouts()}'
+'<div class="shead" id="sec-r32"><span class="tile">⚽</span><h2>Round-by-round results</h2>'+f'<span class="cap">{R32_DONE} of {N_R32} R32 final · {REMAIN_R32} to play</span></div>'
+'<div class="res-toggle">'
++'<button data-view="r32" class="on">Round of 32</button>'
++''.join(f'<button data-view="{short}">{esc(label)}</button>' for (label,short,codes) in KO_ROUND_ORDER)
++'</div>'
+f'<div class="res-wrap" data-view="r32">{build_results_panel()}'
++''.join(build_round_results_panel(label,short,codes) for (label,short,codes) in KO_ROUND_ORDER)
++'</div>'
 '<div class="shead" id="sec-news"><span class="tile">📰</span><h2>Game facts — recent games</h2><span class="cap">newest first</span></div>'
 f'<div class="g3">{build_highlights()}</div>'
 '<div class="shead" id="sec-bracket"><span class="tile">🗺️</span><h2>Your bracket, marked up</h2><span class="cap">✓ hit · ✕ miss · ▲ who went through</span></div>'
