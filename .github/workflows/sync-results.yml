@@ -13,9 +13,11 @@ on:
     - cron: "0 6 * * *"    # 2:00 AM ET  - after the late-night games (8-11pm ET kickoffs)
   workflow_dispatch: {}      # manual "Run workflow" button
 
-# Let the job commit the refreshed dashboard back to the repo.
+# Let the job commit the refreshed dashboard back to the repo and kick off the
+# Pages deploy afterwards.
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: sync-results
@@ -47,18 +49,27 @@ jobs:
         run: python scripts/build_dashboard.py
 
       - name: Commit and push if the dashboard changed
+        id: commit
         run: |
           if [[ -n "$(git status --porcelain docs/index.html scripts/build_dashboard.py)" ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add docs/index.html scripts/build_dashboard.py
-            # No "[skip ci]" here: this push must trigger the Deploy GitHub Pages
-            # workflow (it watches docs/**) so the live site actually picks up the
-            # new results. Skipping CI on this commit would silently leave the
-            # published site stale after every sync.
             git commit -m "chore: auto-sync World Cup results"
             git push
             echo "Pushed updated results."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "No changes — dashboard already current."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Trigger Pages deploy
+        # Pushes made with the built-in GITHUB_TOKEN never fire other workflows'
+        # push triggers (GitHub's anti-recursion safeguard), so the commit above
+        # would never kick off deploy-pages.yml on its own. Dispatch it explicitly
+        # instead -- an explicit workflow_dispatch call IS allowed to trigger a run.
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-pages.yml --ref "${{ github.ref_name }}"
