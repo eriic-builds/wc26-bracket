@@ -16,7 +16,7 @@ import html, json, re
 #  exact dashboard design / UI / format. Do not restyle, re-order, or add to it.
 # ══════════════════════════════════════════════════════════════════════════════
 ENTRANT="Eric Lam"; TIEBREAKER=4
-REFRESHED="July 5, 2026 · 1:41 AM PT"
+REFRESHED="July 5, 2026 · 4:08 PM PT"
 CREDIT="Built With Cowork — Imagined by Eric Lam"  # tiny footer signature (personalise per entrant)
 
 SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa":"2A","Canada":"2B",
@@ -63,7 +63,8 @@ RES={"M73":(0,1,"Canada",""),
  "M87":(1,0,"Colombia",""),
  "M88":(1,1,"Egypt","4–2 pens"),
  "M89":(0,1,"France",""),
- "M90":(0,3,"Morocco","")}
+ "M90":(0,3,"Morocco",""),
+ "M91":(1,2,"Norway","")}
 UPCOMING={}
 
 R16_WIN=["France","Morocco","Spain","United States","Japan","England","Argentina","Colombia"]
@@ -533,12 +534,12 @@ def build_round_results_panel(label, short, codes):
 #    want pinned above the auto cards; leave it empty to show only the live last-six.
 FEATURED=[]
 AUTO_HL=[
+ ("🇳🇴","Haaland's brace sinks Brazil","Brazil 1–2 Norway","Sun Jul 5 · New Jersey","Haaland struck twice after the break (79', 90') as Norway beat Brazil 2–1 in the Round of 16."),
  ("🐓","France edge Paraguay","Paraguay 0–1 France","Sat Jul 4 · Philadelphia","Nervy but enough: France saw off Paraguay 1–0 in the Round of 16 thanks to Mbappe (70' pen)."),
  ("🇲🇦","Ounahi's brace sinks Canada","Canada 0–3 Morocco","Sat Jul 4 · Houston","Ounahi struck twice after the break (50', 82') as Morocco beat Canada 3–0 in the Round of 16, with Rahimi (90'+8') also on the mark."),
  ("☕","Colombia edge Ghana","Colombia 1–0 Ghana","Sat Jul 4 · Kansas City","Nervy but enough: Colombia saw off Ghana 1–0 in the Round of 32 thanks to Arias (14')."),
  ("💙","Argentina edge Cape Verde","Argentina 3–2 Cape Verde","Fri Jul 3 · Miami","Argentina left it late, snatching a 3–2 Round of 32 squeaker past Cape Verde (Messi (29'), Martinez (92') and Borges OG (111'))."),
  ("🏺","Egypt win on penalties","Australia 1–1 Egypt","Fri Jul 3 · Dallas","Egypt held their nerve, edging Australia on penalties (4–2 pens) after a 1–1 Round of 32 deadlock."),
- ("🇨🇭","Switzerland beat Algeria","Switzerland 2–0 Algeria","Fri Jul 3 · Vancouver","Job done for Switzerland, a composed 2–0 win over Algeria in the Round of 32 with Embolo (10') and Ndoye (46')."),
 ]  # AUTO — maintained by the sync engine; the last six finished games. Do not hand-edit.
 HIGHLIGHTS=FEATURED+AUTO_HL
 def build_highlights():
