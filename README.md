@@ -4,7 +4,7 @@
 > bracket-challenge picks against real results — and visualizes the whole knockout bracket.
 > It builds itself from my picks and keeps itself up to date after games finish.
 
-**Live dashboard:** https://eriic-builds.github.io/Eric-fifa26-wc-bracket-dashboard/
+**Live dashboard:** https://eriic-builds.github.io/wc26-bracket/
 
 ---
 
@@ -118,7 +118,7 @@ Because the dashboard is a single static file, hosting is trivial:
    folder straight to Pages. In **Settings → Pages**, set **Source** to **GitHub Actions**.
    Keep the committed **`docs/.nojekyll`** marker file in place as a harmless fallback if you
    ever temporarily switch back to branch-based serving.
-3. It goes live at `https://eriic-builds.github.io/Eric-fifa26-wc-bracket-dashboard/`
+3. It goes live at `https://eriic-builds.github.io/wc26-bracket/`
    (rebuilds within ~1 minute of any push that changes `docs/`).
 
 ---

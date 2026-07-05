@@ -25,7 +25,7 @@ jobs:
       name: github-pages
       # Fixed URL rather than a step output: it's the same regardless of which
       # deploy attempt below actually succeeds.
-      url: https://eriic-builds.github.io/Eric-fifa26-wc-bracket-dashboard/
+      url: https://eriic-builds.github.io/wc26-bracket/
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
