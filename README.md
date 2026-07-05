@@ -29,10 +29,15 @@
 ## What it does
 
 - **Knockout tree** with colored connectors showing the path from the Round of 32 to the Final.
+- **Round-by-round results toggle** — one segmented control to view any stage (Round of 32 / 16 /
+  QF / SF / Final) without extra scrolling.
 - **Live scoring** of my picks against actual results as games finish (confirmed points, points
-  still live, points lost, and maximum attainable).
+  still live, points lost, and maximum attainable), with a "where the tournament stands" tracker
+  that advances itself as rounds complete.
 - **"Actual vs my picks" toggle** — flip between how the tournament really went and what I
   predicted.
+- **Collapsible sections** — a chevron on each header shows/hides that section to keep the page
+  compact.
 - **Hover-for-country-stats** cards (titles, best finish) on each team.
 - **Interactive scorecard** you can hand-adjust in the browser (stored locally) to play out
   "what if" scenarios.
@@ -368,6 +373,17 @@ runs, edit the `cron` lines in `.github/workflows/sync-results.yml` (times are *
 7. **Kit v8:** added a live knockout board (R16/QF/SF/Final) that scores from real results via a
    shared bracket topology (`KO_FEED`) and derived per-round picks, extended the sync to resolve
    every knockout round, and made it auto-append factual game-fact highlights.
+8. **Round-by-round results toggle:** replaced the always-visible knockout grid with a segmented
+   toggle (Round of 32 / 16 / QF / SF / Final) so any round can be inspected without extra
+   scrolling, and made the "where the tournament stands" tracker compute its stage live from
+   match-completion data instead of a hardcoded value.
+9. **Collapsible sections:** added a drop-down chevron (placed to the left of each header) so every
+   major section can be shown/hidden, keeping the page compact on both desktop and phone.
+10. **Housekeeping:** added an MIT `LICENSE`, and hardened the Pages pipeline — a dedicated
+    `deploy-pages.yml` with a 3-attempt retry (to ride out transient Pages backend errors) plus an
+    explicit deploy trigger after each results sync.
+11. **Renamed the repo** to `wc26-bracket` for a shorter live URL, with a redirect left at the old
+    address so previously shared links still work.
 
 ---
 
