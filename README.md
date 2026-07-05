@@ -19,6 +19,7 @@
 - [Refreshing results manually](#refreshing-results-manually)
 - [Repo layout](#repo-layout)
 - [Replicate this yourself (from zero)](#replicate-this-yourself-from-zero)
+- [How this repo was built (history)](#how-this-repo-was-built-history)
 - [Troubleshooting & FAQ](#troubleshooting--faq)
 - [Ideas & how to improve](#ideas--how-to-improve)
 - [Credits & disclaimer](#credits--disclaimer)
@@ -234,7 +235,10 @@ Then commit and push — Pages redeploys in about a minute.
 | `scripts/fetch_results.py` | Web/offline results sync that updates `DATA` and rebuilds. |
 | `scripts/team_map.json` | Source-name → bracket-name mapping (16 known variants). |
 | `docs/index.html` | The generated, self-contained dashboard (served by Pages). |
+| `docs/how-i-built-this.html` | A companion "making-of" page linked from the dashboard. |
+| `.github/workflows/deploy-pages.yml` | Builds & deploys `docs/` to GitHub Pages (with retry). |
 | `.github/workflows/sync-results.yml` | The scheduled auto-sync workflow. |
+| `LICENSE` | MIT license. |
 | `README.md` | This file. |
 | `.gitignore` | Ignores Python/editor/secret cruft. |
 
@@ -244,7 +248,7 @@ Then commit and push — Pages redeploys in about a minute.
 
 Want your own copy — for your picks, or a friend's? Follow these steps end to end. You'll go from
 an empty repo to a live, self-updating dashboard. Commands are shown for **Windows PowerShell**;
-macOS/Linux users can drop the `.exe`/`py` differences.
+macOS/Linux users can swap backslash path separators (`\`) for forward slashes (`/`).
 
 ### 0. Prerequisites (one-time, on your machine)
 
@@ -389,7 +393,6 @@ runs, edit the `cron` lines in `.github/workflows/sync-results.yml` (times are *
 Honest analysis of what could make this better, roughly by value vs. effort:
 
 **High value, low effort**
-- **Add a `LICENSE`** (e.g. MIT) so others can reuse the generator cleanly.
 - **Timezone accuracy for the timestamp.** `REFRESHED` currently assumes summer PDT (UTC−7); it
   should compute the offset (or label UTC) so it stays correct year-round.
 - **Skip empty commits in CI.** Already handled (commit only on change) — worth keeping an eye on
