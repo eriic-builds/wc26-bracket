@@ -434,6 +434,32 @@ def _build_stages_list():
             stages.append((label,dates,"up"))
     return stages
 STAGES=_build_stages_list()
+
+# Default the round-by-round results view to whichever round the tournament is
+# actually in right now: the first round that isn't fully final (the same "active"
+# round the stage tracker highlights). This makes the dashboard follow the
+# tournament on its own — once the Round of 32 is complete the results panel
+# defaults to the Round of 16, then the Quarterfinals, and so on; once the Final
+# is played it stays there. Recomputed on every build, so each auto-sync that
+# finishes a round advances the default with no manual edit.
+_ROUND_TAGS={"r32":"R32","r16":"R16","qf":"QF","sf":"SF","final":"Final"}
+def _current_round():
+    for (label,short,dates,done,total) in _STAGE_ROUNDS:
+        if total==0 or done<total:
+            return short
+    return _STAGE_ROUNDS[-1][1]
+CURRENT_ROUND=_current_round()
+_CUR=next((r for r in _STAGE_ROUNDS if r[1]==CURRENT_ROUND), _STAGE_ROUNDS[0])
+CUR_LABEL,CUR_DONE,CUR_TOTAL=_CUR[0],_CUR[3],_CUR[4]
+CUR_REMAIN=CUR_TOTAL-CUR_DONE
+def _round_subtitle():
+    tag=_ROUND_TAGS.get(CURRENT_ROUND,CUR_LABEL)
+    if CUR_TOTAL and CUR_DONE>=CUR_TOTAL:
+        return f"All {CUR_TOTAL} {tag} final"
+    if CUR_DONE==0:
+        return f"{tag} up next · {CUR_TOTAL} to play"
+    return f"{CUR_DONE} of {CUR_TOTAL} {tag} final · {CUR_REMAIN} to play"
+CUR_SUBTITLE=_round_subtitle()
 def build_stages():
     return ''.join(f'<div class="stage s-{st}"><span class="sdot">{ {"done":"●","active":"◉","up":"○"}[st] }</span>'
         f'<div><div class="sname">{esc(n)}</div><div class="sdate">{esc(d)}</div></div></div>' for n,d,st in STAGES)
@@ -1141,12 +1167,12 @@ HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf
 + f'<div class="glass">{build_scorecard()}</div>'
 + '<div style="text-align:right;margin-top:10px"><button class="chip" id="scReset" style="cursor:pointer">↺ Reset to live results</button></div>'
 + '</div>'
-+ shead("sec-r32","⚽","Round-by-round results",f"{R32_DONE} of {N_R32} R32 final · {REMAIN_R32} to play")
++ shead("sec-r32","⚽","Round-by-round results",CUR_SUBTITLE)
 + '<div class="res-toggle">'
-+'<button data-view="r32" class="on">Round of 32</button>'
-+''.join(f'<button data-view="{short}">{esc(label)}</button>' for (label,short,codes) in KO_ROUND_ORDER)
++f'<button data-view="r32" class="{"on" if CURRENT_ROUND=="r32" else ""}">Round of 32</button>'
++''.join(f'<button data-view="{short}" class="{"on" if short==CURRENT_ROUND else ""}">{esc(label)}</button>' for (label,short,codes) in KO_ROUND_ORDER)
 +'</div>'
-+f'<div class="res-wrap" data-view="r32">{build_results_panel()}'
++f'<div class="res-wrap" data-view="{CURRENT_ROUND}">{build_results_panel()}'
 +''.join(build_round_results_panel(label,short,codes) for (label,short,codes) in KO_ROUND_ORDER)
 +'</div>'
 + '</div>'
