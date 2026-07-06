@@ -1,4 +1,4 @@
-# World Cup 2026 Bracket Dashboard — build kit (v8)
+# World Cup 2026 Bracket Dashboard — build kit (v10)
 
 **How to use this:** open **Microsoft Cowork**, paste in this entire file (or upload it) and say
 **"follow this"**, then hand over your filled-in bracket Excel when asked. Cowork does the rest —
@@ -19,6 +19,24 @@ everyone gets the identical design (bracket, connectors, Actual/My-picks toggle,
 modes, and the hover-over country stat cards) — only the picks and the name differ.
 
 ---
+
+## What's new in v10
+
+- **New home** — the dashboard moved to its own repo, **`wc26-bracket`** (live at
+  `eriic-builds.github.io/wc26-bracket`). The generator, sync engine, and workflows all came along;
+  the picks, scoring, and data model are unchanged.
+- **Round-aware results** — the results view now opens on the **current tournament round** instead of
+  always starting at the Round of 32, so the live board shows what matters right now.
+- **Self-healing knockout board** — the bracket map no longer drops teams that actually advanced, and
+  the "How it played out" recap is **auto-derived from live results** and trimmed to the three most
+  recent finished games.
+- **Always-in-sync timestamp** — every sync (even one with no new games) refreshes the "last updated"
+  time **and rebuilds the HTML**, and the workflow rebuilds the page unconditionally, so the published
+  dashboard can never drift behind the source.
+- **Sturdier publishing** — a dedicated Pages deploy workflow retries on transient backend failures,
+  and a new **"How I built this"** page documents the project.
+- **Core modes only** — this shareable kit ships the **Dark / Light / Easy** modes, keeping it clean
+  and self-contained. Nothing about the picks, scoring, or data model changed.
 
 ## What's new in v8
 
@@ -702,31 +720,6 @@ html[data-theme="easy"]{--bg:#F6F1E6;--panel:#FCFAF3;--text:#2b2a30;--text2:#333
  --glass:linear-gradient(160deg,rgba(255,255,255,.92),rgba(255,255,255,.66));--shadow:0 8px 22px rgba(40,40,30,.10);--hover:rgba(0,0,0,.03);
  --gold:#C98A00;--gold-ink:#8f6300;--win:#0a7d54;--win-ink:#0a6b49;--out:#8a8790;--lose-ink:#A63A2E;--g1:rgba(0,151,244,.10);--g2:rgba(0,178,145,.08);--g3:rgba(0,178,145,.08);
  --fs:18px;--lh:1.8;--ls:.03em;--radius:22px;--radius-sm:15px;--gap:22px;--fstack:"Verdana","Tahoma","Trebuchet MS","Segoe UI",system-ui,sans-serif;}
-/* Fun · GeoCities — 90s web nostalgia: neon on midnight, rainbow headers, Comic Sans, ridge borders, tiled starfield */
-html[data-theme="geocities"]{--bg:#000018;--panel:#1a0038;--text:#FFFF66;--text2:#7CFC00;--muted:#41E0E0;--border:#FF00FF;--border2:#00FFFF;
- --glass:linear-gradient(160deg,#2b005f,#12002f);--shadow:0 0 0 2px #00FFFF,0 6px 0 #FF00FF;--hover:rgba(255,0,255,.28);
- --gold:#FFD700;--gold-ink:#FFE94D;--win:#39FF14;--win-ink:#7CFC00;--out:#9aa0c8;--lose-ink:#FF3131;--g1:rgba(255,0,255,.28);--g2:rgba(0,255,255,.22);--g3:rgba(255,255,0,.18);
- --blue:#FF00FF;--purple:#00FFFF;--pink:#FFFF00;--orange:#FF7F00;--green:#39FF14;--teal:#00FFFF;
- --grad:linear-gradient(90deg,#FF0000,#FF7F00,#FFFF00,#00FF00,#00BFFF,#8B00FF);
- --radius:0;--radius-sm:0;--fs:16px;--lh:1.5;--ls:0em;--fstack:"Comic Sans MS","Comic Sans","Chalkboard SE","Marker Felt",cursive;}
-/* Fun · Minecraft — blocky stone-and-grass: dark stone panels, white text with drop shadow, grass-green accents, sky-blue world, no rounded corners, pixelated */
-html[data-theme="minecraft"]{--bg:#79A6FF;--panel:#565656;--text:#FFFFFF;--text2:#EDEDED;--muted:#C2C2C2;--border:#2b2b2b;--border2:#1d1d1d;
- --glass:linear-gradient(180deg,#6b6b6b,#4e4e4e);--shadow:inset -3px -3px 0 rgba(0,0,0,.45),inset 3px 3px 0 rgba(255,255,255,.16),0 4px 0 rgba(0,0,0,.35);--hover:rgba(255,255,255,.14);
- --gold:#FCDB05;--gold-ink:#FFE94D;--win:#5AAE3A;--win-ink:#8CE05A;--out:#8a8a8a;--lose-ink:#FF6B6B;--g1:rgba(0,0,0,0);--g2:rgba(0,0,0,0);--g3:rgba(0,0,0,0);
- --blue:#5AAE3A;--purple:#7B5B31;--pink:#C1440E;--orange:#D07B1E;--green:#5AAE3A;--teal:#4C7A34;--grad:linear-gradient(180deg,#6AA84F,#4C7A34);
- --radius:0;--radius-sm:0;--fs:15px;--lh:1.55;--ls:.02em;--fstack:ui-monospace,"Consolas","Lucida Console","Courier New",monospace;}
-/* Fun · Windows XP — Luna blue, Bliss green-hills desktop, cream dialogs, rounded blue title bars, Tahoma */
-html[data-theme="winxp"]{--bg:#5B9BD5;--panel:#ECE9D8;--text:#000000;--text2:#10161f;--muted:#404b56;--border:#7A96DF;--border2:#FFFFFF;
- --glass:#ECE9D8;--shadow:0 6px 18px rgba(10,36,106,.28);--hover:#D8E5F8;
- --gold:#2A5BDA;--gold-ink:#0A246A;--win:#3B9E1F;--win-ink:#2E7D18;--out:#8a94a0;--lose-ink:#C4262E;--g1:rgba(42,91,218,.10);--g2:rgba(59,158,31,.10);--g3:rgba(255,255,255,.10);
- --blue:#2A5BDA;--purple:#0A246A;--pink:#C4262E;--green:#3B9E1F;--teal:#245EDB;--grad:linear-gradient(180deg,#3D95FF,#0A3FC0);
- --radius:6px;--radius-sm:4px;--fs:15px;--lh:1.5;--ls:0em;--fstack:"Tahoma","Franklin Gothic","Segoe UI",sans-serif;}
-/* Fun · Doodle — hand-drawn pencil sketch on paper: warm off-white paper with faint ruled lines and grain, graphite strokes, wobbly hand-drawn borders, handwriting font, grayscale (penciled) flags */
-html[data-theme="doodle"]{--bg:#F4EFE1;--panel:#FBF7EC;--text:#333029;--text2:#4b473e;--muted:#8b857a;--border:#3a362f;--border2:#6f6a60;
- --glass:#FBF7EC;--shadow:2px 3px 0 rgba(58,54,47,.16);--hover:#efe7d3;
- --gold:#b1892f;--gold-ink:#8a6a20;--win:#5f7d40;--win-ink:#48602f;--out:#9a948a;--lose-ink:#a6453b;--g1:rgba(58,54,47,.05);--g2:rgba(58,54,47,.04);--g3:rgba(58,54,47,.03);
- --blue:#3b5a78;--purple:#5b4a6b;--pink:#a6453b;--orange:#b1732f;--green:#5f7d40;--teal:#3f6b64;--grad:linear-gradient(90deg,#4a463d,#6f6a60);
- --radius:14px;--radius-sm:10px;--fs:16px;--lh:1.55;--ls:.01em;--fstack:"Segoe Print","Bradley Hand","Comic Sans MS","Chalkboard SE",cursive;}
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 html{scroll-behavior:smooth;scroll-padding-top:24px}
 body{font-family:var(--fstack);font-size:var(--fs);line-height:var(--lh);letter-spacing:var(--ls);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative;min-height:100vh}
@@ -741,18 +734,6 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .modes button{font-family:inherit;font-size:.82rem;font-weight:600;color:var(--muted);background:transparent;border:0;padding:7px 15px;border-radius:999px;cursor:pointer;transition:.16s}
 .modes button:hover{color:var(--text);background:var(--hover)}
 .modes button.on{color:#fff;background:var(--blue);box-shadow:0 4px 14px rgba(0,151,244,.4)}
-.fun-wrap{position:relative;display:inline-flex}
-.fun-btn{font-family:inherit;font-size:.82rem;font-weight:600;color:var(--muted);background:transparent;border:0;padding:7px 13px;border-radius:999px;cursor:pointer;transition:.16s;display:inline-flex;align-items:center;gap:5px}
-.fun-btn:hover{color:var(--text);background:var(--hover)}
-.fun-btn.on{color:#fff;background:var(--blue);box-shadow:0 4px 14px rgba(0,151,244,.4)}
-.fun-car{font-size:.7em;transition:transform .16s}
-.fun-wrap.open .fun-car{transform:rotate(180deg)}
-.fun-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:176px;display:none;flex-direction:column;gap:3px;padding:8px;border-radius:14px;z-index:60}
-.fun-wrap.open .fun-menu{display:flex}
-.fun-menu button{font-family:inherit;font-size:.9rem;font-weight:600;color:var(--text);background:transparent;border:0;padding:9px 12px;border-radius:10px;cursor:pointer;text-align:left;transition:.14s;white-space:nowrap;display:flex;align-items:center;gap:9px}
-.fun-menu button:hover{background:var(--hover)}
-.fun-menu button.on{background:var(--blue);color:#fff}
-.fun-menu .fm-em{font-size:1.05em;line-height:1}
 .refreshed{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;font-size:.76rem;font-weight:600;color:var(--text2)}
 .refreshed .rf-dot{width:8px;height:8px;border-radius:50%;background:var(--win);box-shadow:0 0 8px var(--win);flex:0 0 auto;animation:rfpulse 2.4s ease-in-out infinite}
 @keyframes rfpulse{0%,100%{opacity:.45}50%{opacity:1}}
@@ -1008,65 +989,14 @@ html[data-theme="easy"] .pill.live .dot{animation:none}
 html[data-theme="easy"] .g3{grid-template-columns:repeat(2,1fr)}
 html[data-theme="easy"] .hero p.sub,html[data-theme="easy"] .note,html[data-theme="easy"] .story-body,html[data-theme="easy"] .bb-txt,html[data-theme="easy"] .foot,html[data-theme="easy"] .kpi-n{max-width:66ch;text-align:left}
 @media(max-width:1000px){html[data-theme="easy"] .g3{grid-template-columns:1fr}}
-/* ---- Fun · GeoCities look ---- */
-html[data-theme="geocities"] body::before{display:none}
-html[data-theme="geocities"] body{background-color:#000018;background-image:radial-gradient(1.5px 1.5px at 18% 22%,#fff,transparent),radial-gradient(1.5px 1.5px at 72% 38%,#fff,transparent),radial-gradient(1px 1px at 42% 72%,#FFFF66,transparent),radial-gradient(1.5px 1.5px at 88% 82%,#00FFFF,transparent),radial-gradient(1px 1px at 8% 88%,#FF66FF,transparent),repeating-linear-gradient(0deg,transparent 0 44px,rgba(255,255,255,.035) 44px 45px),repeating-linear-gradient(90deg,transparent 0 44px,rgba(255,255,255,.035) 44px 45px)}
-html[data-theme="geocities"] .glass{backdrop-filter:none;-webkit-backdrop-filter:none;border:3px ridge #FF00FF}
-html[data-theme="geocities"] h1,html[data-theme="geocities"] h2,html[data-theme="geocities"] .story-title,html[data-theme="geocities"] .hero h1{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;text-shadow:none;font-weight:800}
-html[data-theme="geocities"] a{color:#00FFFF;text-decoration:underline}
-html[data-theme="geocities"] a:visited{color:#FF66FF}
-html[data-theme="geocities"] .modes,html[data-theme="geocities"] .fun-menu{border:2px ridge #00FFFF}
-html[data-theme="geocities"] .modes button,html[data-theme="geocities"] .fun-btn,html[data-theme="geocities"] .chip,html[data-theme="geocities"] .seg button{border:3px outset #FF00FF;background:#2b005f;color:#FFFF66}
-html[data-theme="geocities"] .modes button.on,html[data-theme="geocities"] .fun-btn.on,html[data-theme="geocities"] .fun-menu button.on{background:#FF00FF;color:#000;border-style:inset}
-html[data-theme="geocities"] .team{border:2px ridge #00FFFF}
-html[data-theme="geocities"] .pill.live .dot,html[data-theme="geocities"] .rf-dot,html[data-theme="geocities"] .orb{animation:gc-blink 1.1s steps(1) infinite}
-@keyframes gc-blink{50%{opacity:.25}}
-/* ---- Fun · Minecraft look ---- */
-html[data-theme="minecraft"] *{image-rendering:pixelated;border-radius:0 !important}
-html[data-theme="minecraft"] body::before{display:none}
-html[data-theme="minecraft"] body{background-color:#79A6FF;background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.05) 0 24px,rgba(255,255,255,.05) 24px 48px),repeating-linear-gradient(90deg,rgba(0,0,0,.04) 0 24px,rgba(255,255,255,.04) 24px 48px)}
-html[data-theme="minecraft"] .glass{backdrop-filter:none;-webkit-backdrop-filter:none;border:3px solid #2b2b2b}
-html[data-theme="minecraft"] h1,html[data-theme="minecraft"] h2,html[data-theme="minecraft"] .story-title,html[data-theme="minecraft"] .hero h1,html[data-theme="minecraft"] .tname,html[data-theme="minecraft"] .kpi-v,html[data-theme="minecraft"] .sb-big{text-shadow:2px 2px 0 rgba(0,0,0,.55)}
-html[data-theme="minecraft"] .modes button,html[data-theme="minecraft"] .fun-btn,html[data-theme="minecraft"] .chip,html[data-theme="minecraft"] .seg button{border:2px solid #1d1d1d;background:linear-gradient(180deg,#7c7c7c,#616161);color:#fff;box-shadow:inset -2px -2px 0 rgba(0,0,0,.4),inset 2px 2px 0 rgba(255,255,255,.15)}
-html[data-theme="minecraft"] .modes button.on,html[data-theme="minecraft"] .fun-btn.on,html[data-theme="minecraft"] .fun-menu button.on{background:linear-gradient(180deg,#6AA84F,#4C7A34);color:#fff}
-html[data-theme="minecraft"] .team{border:2px solid #2b2b2b}
-html[data-theme="minecraft"] .orb{background:linear-gradient(180deg,#6AA84F,#4C7A34);box-shadow:inset -2px -2px 0 rgba(0,0,0,.4)}
-/* ---- Fun · Windows XP look ---- */
-html[data-theme="winxp"] body::before{display:none}
-html[data-theme="winxp"] body{background:linear-gradient(180deg,#4d8fd6 0%,#6aa8e0 34%,#8fc36a 46%,#6bab4e 62%,#4f9440 100%)}
-html[data-theme="winxp"] .glass{background:#ECE9D8;backdrop-filter:none;-webkit-backdrop-filter:none;border:1px solid #0A246A;border-radius:8px 8px 6px 6px;box-shadow:0 6px 18px rgba(10,36,106,.28)}
-html[data-theme="winxp"] .modes,html[data-theme="winxp"] .fun-menu{border:1px solid #0A246A}
-html[data-theme="winxp"] .modes button,html[data-theme="winxp"] .fun-btn,html[data-theme="winxp"] .chip,html[data-theme="winxp"] .seg button{background:linear-gradient(180deg,#FDFDFD,#E4E4D8);color:#000;border:1px solid #7A96DF;border-radius:4px}
-html[data-theme="winxp"] .modes button:hover,html[data-theme="winxp"] .fun-btn:hover{border-color:#2A5BDA;color:#000}
-html[data-theme="winxp"] .modes button.on,html[data-theme="winxp"] .fun-btn.on,html[data-theme="winxp"] .fun-menu button.on{background:linear-gradient(180deg,#3D95FF,#0A3FC0);color:#FFF;border-color:#0A246A}
-html[data-theme="winxp"] .shead h2,html[data-theme="winxp"] .hero h1,html[data-theme="winxp"] .story-title{background:linear-gradient(180deg,#2F8AF0,#0A3FC0);color:#FFF;padding:3px 10px;border-radius:6px 6px 0 0;display:inline-block;text-shadow:0 1px 1px rgba(0,0,0,.35)}
-html[data-theme="winxp"] a{color:#0A3FC0}
-html[data-theme="winxp"] .team{background:#FFFFFF;color:#000;border:1px solid #7A96DF;border-radius:4px}
-/* Fun · Doodle decorative — paper texture (faint ruled lines + red margin + grain), wobbly hand-drawn borders, wavy underlines, grayscale flags */
-html[data-theme="doodle"] body::before{display:none}
-html[data-theme="doodle"] body{background-color:#F4EFE1;background-image:repeating-linear-gradient(0deg,transparent 0 27px,rgba(90,120,160,.10) 27px 28px),linear-gradient(90deg,transparent 46px,rgba(200,90,80,.20) 46px 47px,transparent 48px),radial-gradient(circle at 18% 26%,rgba(0,0,0,.022),transparent 55%),radial-gradient(circle at 82% 72%,rgba(0,0,0,.022),transparent 55%)}
-html[data-theme="doodle"] *{text-shadow:none}
-html[data-theme="doodle"] .glass{background:var(--panel);backdrop-filter:none;-webkit-backdrop-filter:none;border:2px solid var(--border);border-radius:255px 12px 225px 15px/15px 225px 18px 255px;box-shadow:2px 2px 0 rgba(58,54,47,.14),-1px 1px 0 rgba(58,54,47,.10)}
-html[data-theme="doodle"] .card,html[data-theme="doodle"] .team,html[data-theme="doodle"] .chip,html[data-theme="doodle"] .modes button,html[data-theme="doodle"] .fun-btn,html[data-theme="doodle"] .seg button,html[data-theme="doodle"] .pill{border:2px solid var(--border);border-radius:225px 15px 235px 15px/15px 235px 15px 225px;background:var(--panel)}
-html[data-theme="doodle"] .modes button.on,html[data-theme="doodle"] .fun-btn.on,html[data-theme="doodle"] .fun-menu button.on,html[data-theme="doodle"] .seg button.on{background:#e9e0cc;color:var(--text);box-shadow:inset 1px 1px 0 rgba(58,54,47,.22)}
-html[data-theme="doodle"] h1,html[data-theme="doodle"] h2,html[data-theme="doodle"] .story-title,html[data-theme="doodle"] .hero h1{background:none;color:var(--text);-webkit-text-fill-color:currentColor;text-shadow:none;text-decoration:underline wavy rgba(58,54,47,.5);text-underline-offset:6px}
-html[data-theme="doodle"] a{color:#3b5a78;text-decoration:underline wavy}
-html[data-theme="doodle"] img,html[data-theme="doodle"] .flag{filter:grayscale(1) contrast(1.15) brightness(.98)}
-html[data-theme="doodle"] .orb,html[data-theme="doodle"] .pill.live .dot,html[data-theme="doodle"] .rf-dot{filter:grayscale(1)}
 """
 
 JS=r"""
 (function(){
  var root=document.documentElement,LS=window.localStorage;
  var KTHEME='wcb.theme',KFAV='wcb.favs',KFO='wcb.favonly',KSC='wcb.scores.v3';
- function setTheme(t){root.setAttribute('data-theme',t);document.querySelectorAll('.modes button').forEach(function(b){if(b.dataset.mode)b.classList.toggle('on',b.dataset.mode===t)});if(funBtn)funBtn.classList.toggle('on',!!FUN[t]);try{LS.setItem(KTHEME,t)}catch(e){}closeFun();if(window.__drawConn)setTimeout(window.__drawConn,80);}
- var FUN={geocities:1,minecraft:1,winxp:1,doodle:1};
- var funWrap=document.getElementById('funWrap'),funBtn=document.getElementById('funBtn');
- function closeFun(){if(funWrap){funWrap.classList.remove('open');if(funBtn)funBtn.setAttribute('aria-expanded','false');}}
+ function setTheme(t){root.setAttribute('data-theme',t);document.querySelectorAll('.modes button').forEach(function(b){if(b.dataset.mode)b.classList.toggle('on',b.dataset.mode===t)});try{LS.setItem(KTHEME,t)}catch(e){}if(window.__drawConn)setTimeout(window.__drawConn,80);}
  document.querySelectorAll('.modes button').forEach(function(b){if(b.dataset.mode)b.addEventListener('click',function(){setTheme(b.dataset.mode)})});
- if(funBtn){funBtn.addEventListener('click',function(e){e.stopPropagation();var open=funWrap.classList.toggle('open');funBtn.setAttribute('aria-expanded',open?'true':'false');});}
- document.addEventListener('click',function(e){if(funWrap&&!funWrap.contains(e.target))closeFun();});
- document.addEventListener('keydown',function(e){if(e.key==='Escape')closeFun();});
  var t0;try{t0=LS.getItem(KTHEME)}catch(e){}setTheme(t0||'dark');
  var favs={};try{favs=JSON.parse(LS.getItem(KFAV)||'{}')||{}}catch(e){favs={}}
  function saveFav(){try{LS.setItem(KFAV,JSON.stringify(favs))}catch(e){}}
@@ -1179,13 +1109,7 @@ f'<meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc
 f'<div class="refreshed glass" id="topRefreshed" title="When live results were last synced"><span class="rf-dot"></span>Updated {REFRESHED}</div>'
 '<div class="modes glass"><button data-mode="dark" class="on">Dark</button><button data-mode="light">Light</button>'
 '<button data-mode="easy" title="Reading mode — a highly legible font, larger text, extra line and letter spacing, sentence case (no all-caps), left-aligned text and a soft, glare-free background">Easy</button>'
-'<div class="fun-wrap" id="funWrap"><button class="fun-btn" id="funBtn" aria-haspopup="true" aria-expanded="false" title="Fun themes">Fun <span class="fun-car">▾</span></button>'
-'<div class="fun-menu glass" id="funMenu" role="menu">'
-'<button data-mode="geocities" role="menuitem" title="90s web nostalgia — neon, rainbow headers, Comic Sans, tiled starfield"><span class="fm-em">🌐</span> GeoCities</button>'
-'<button data-mode="minecraft" role="menuitem" title="Blocky stone-and-grass — pixelated panels, drop-shadow text, sky-blue world"><span class="fm-em">⛏️</span> Minecraft</button>'
-'<button data-mode="winxp" role="menuitem" title="Windows XP — Luna blue, Bliss green-hills desktop, cream dialogs, rounded blue title bars, Tahoma"><span class="fm-em">🪟</span> Windows XP</button>'
-'<button data-mode="doodle" role="menuitem" title="Hand-drawn pencil sketch — warm paper with faint ruled lines, graphite wobbly borders, handwriting font, grayscale flags"><span class="fm-em">✏️</span> Doodle</button>'
-'</div></div></div></div>'
+'</div></div>'
 '<div class="shell"><nav class="rail glass" id="rail">'
 '<button class="navtoggle" id="navToggle" aria-expanded="false" aria-controls="railLinks">📑 Contents ☰</button>'
 '<div class="links" id="railLinks"><div class="rt">On this page</div>'
