@@ -134,6 +134,19 @@ for _mc,(_fa,_fb) in KO_FEED.items():
 KO_WINNERS_BY_ROUND={}
 for _mc in KO_FEED:
     if _mc in RES: KO_WINNERS_BY_ROUND.setdefault(KO_ROUND[_mc],set()).add(RES[_mc][2])
+_PREV_ROUND={"r16":"r32","qf":"r16","sf":"qf","final":"sf"}
+def actual_advancer(short, team):
+    """The team that ACTUALLY occupies this bracket slot — the real winner of the
+    previous-round match the entrant had ``team`` winning. Returns None while that
+    feeder match is still unplayed. Unlike a plain 'is it eliminated?' test, this keeps
+    surfacing a team that reached this round even after it has since been knocked out,
+    so no actually-advanced team ever drops off the bracket map in a later column."""
+    prev=_PREV_ROUND.get(short)
+    if not prev: return None
+    if prev=="r32": return r32_pick_actual.get(team)
+    code=CODE_OF_PICK.get((prev,team))
+    if code and code in RES: return RES[code][2]
+    return None
 def reach_status(team, short):
     """Did this team actually reach (win into) the round this column represents?"""
     if team in ELIM: return "lost"
@@ -262,11 +275,20 @@ def later_cell(team, picked, short, champ=False, actual=None, mode="actual"):
         return _pick_box(team, picked, short, champ, reach_status(team, short))
     # Actual mode: prune eliminated picks; carry the real advancer up (blue) where known.
     if team in ELIM:
-        if actual and actual not in ELIM:
+        if actual:
             sd=seed_of(actual); sh=f'<span class="seed">{esc(sd)}</span>' if sd else ''
-            return (f'<div class="team st-actual" data-team="{esc(actual)}" data-round="{short}" tabindex="0">'
+            gone=actual in ELIM
+            cls="team st-actual"+(" gone" if gone else "")
+            rnd={"r16":"Round of 16","qf":"Quarterfinal","sf":"Semifinal","final":"Final"}.get(short,"this round")
+            if actual==team:
+                tip=f"{actual} reached the {rnd}"+(", but is now out" if gone else "")
+            elif gone:
+                tip=f"{actual} advanced in your {team} pick's place, but is now out"
+            else:
+                tip=f"actually advanced — you picked {team}"
+            return (f'<div class="{cls}" data-team="{esc(actual)}" data-round="{short}" tabindex="0">'
                     f'<span class="fav-bar"></span>{sh}<span class="tname">{esc(actual)}</span>'
-                    f'<span class="rb up" title="actually advanced — you picked '+esc(team)+'">▲</span></div>')
+                    f'<span class="rb up" title="{esc(tip)}">▲</span></div>')
         return '<div class="team blank"><span class="tname">&nbsp;</span></div>'
     return _pick_box(team, picked, short, champ, reach_status(team, short))
 
@@ -294,8 +316,8 @@ def build_bracket(mode="actual"):
         codes=round_codes.get(short,[])
         for j,(a,b,w) in enumerate(ms):
             isf=(label=="Final")
-            aa=r32_pick_actual.get(a) if short=="r16" else None
-            ab=r32_pick_actual.get(b) if short=="r16" else None
+            aa=actual_advancer(short,a)
+            ab=actual_advancer(short,b)
             code=codes[j] if j<len(codes) else ""
             when=r16_day.get(code,"")
             lab=(esc(code)+(' · '+esc(when) if when else '')) if code else ""
@@ -401,18 +423,99 @@ def build_finalfour():
                    f'<span class="ff-name">{esc(tm)}</span><span class="ff-role">{role} · {dot}</span></div>')
     return ''.join(out)
 
-STORY=[
- ("✅","Holding strong",f"{r32_correct} of {r32_decided} in the Round of 32",
-  "Canada, Morocco, France, Norway, Mexico, England, USA and Belgium all delivered. Only two of your opened games missed."),
- ("🇵🇾","Busted branch #1","Germany fell to Paraguay",
-  "Your 1E pick crashed out on penalties (1–1, 4–3). You had France beating Germany in the R16 anyway, so France just meets Paraguay instead — your France pick lives."),
- ("🇧🇷","Busted branch #2","Brazil ended Japan",
-  "Your boldest call didn’t land — Martinelli’s 95th-minute winner sent Japan out 2–1. That also voids your Japan Round-of-16 pick (2 pts)."),
-]
+# ── "How it played out" — fully DERIVED from the live data (picks + RES + topology),
+#    so every auto-sync/rebuild refreshes it on its own with nothing hand-written to go
+#    stale. It emits: a running Round-of-32 scoreline, one card for every branch that
+#    actually busted (a pick that played its own match and lost) in round order, and a
+#    champion outlook. Team emoji reuse the same nickname/flag scheme as the sync engine.
+_STORY_NICK={"England":"\U0001f981","France":"\U0001f413","Netherlands":"\U0001f7e0",
+ "Belgium":"\U0001f608","Germany":"\U0001f985","Spain":"\U0001f402","Australia":"\U0001f998",
+ "Canada":"\U0001f341","Ivory Coast":"\U0001f418","DR Congo":"\U0001f406","Japan":"\u2694\ufe0f",
+ "Mexico":"\U0001f335","United States":"\U0001f5fd","Algeria":"\U0001f98a","Colombia":"\u2615",
+ "Cape Verde":"\U0001f988","Bosnia & Herz.":"\U0001f409","Ghana":"\u2b50","Brazil":"\U0001f49b",
+ "Argentina":"\U0001f499","Egypt":"\U0001f3fa"}
+_STORY_ISO2={"Argentina":"AR","Australia":"AU","Austria":"AT","Belgium":"BE","Bosnia & Herz.":"BA",
+ "Brazil":"BR","Canada":"CA","Cape Verde":"CV","Colombia":"CO","Croatia":"HR","DR Congo":"CD",
+ "Ecuador":"EC","Egypt":"EG","France":"FR","Germany":"DE","Ghana":"GH","Ivory Coast":"CI","Japan":"JP",
+ "Mexico":"MX","Morocco":"MA","Netherlands":"NL","Norway":"NO","Paraguay":"PY","Portugal":"PT",
+ "Senegal":"SN","South Africa":"ZA","Spain":"ES","Sweden":"SE","Switzerland":"CH","United States":"US",
+ "Algeria":"DZ"}
+def _story_flag(iso2):
+    if not iso2 or len(iso2)!=2 or not iso2.isalpha(): return ""
+    return "".join(chr(0x1F1E6+ord(c)-ord("A")) for c in iso2.upper())
+def team_emoji(name):
+    return _STORY_NICK.get(name) or _story_flag(_STORY_ISO2.get(name,"")) or "\u26bd"
+
+_STORY_ROUND_NAME={0:"Round of 32",1:"Round of 16",2:"Quarterfinal",3:"Semifinal",4:"Final"}
+_STORY_LEVEL_PTS=[1,2,4,8,16]
+_STORY_KO_LEVEL={"r16":1,"qf":2,"sf":3,"final":4}
+def _levels_picked(team):
+    lv=[0]  # every branch begins as a Round-of-32 pick
+    if team in R16_WIN: lv.append(1)
+    if team in QF_WIN: lv.append(2)
+    if team in SF_WIN: lv.append(3)
+    if team==CHAMP: lv.append(4)
+    return lv
+def _forfeited(team, elim_level):
+    return sum(_STORY_LEVEL_PTS[l] for l in _levels_picked(team) if l>=elim_level)
+
+def story_cards():
+    cards=[]
+    # 1) running Round-of-32 scoreline
+    delivered=[pk for (mc,dt,a,b,pk) in R32 if mc in RES and RES[mc][2]==pk]
+    misses=r32_decided-r32_correct
+    if r32_decided==0:
+        cards.append(("\u26bd","Round of 32","Kicking off",
+            "No games are final yet — your first results land here as they finish."))
+    else:
+        head="Perfect start" if misses==0 else ("Holding strong" if r32_correct>=misses else "Bumpy round")
+        dl=", ".join(delivered)
+        body=(f"{dl} came through for you. " if dl else "")
+        body+=("You've got every finished game right so far." if misses==0
+               else f"{misses} of your {r32_decided} decided Round-of-32 games missed.")
+        cards.append(("\u2705" if misses==0 else "\U0001f4ca",
+            f"{r32_correct} of {r32_decided} in the Round of 32",head,body))
+    # 2) busted branches — a pick that actually played its match and lost, in round order
+    busts=[]
+    for (mc,dt,a,b,pk) in R32:
+        if mc in RES:
+            gA,gB,w,note=RES[mc]
+            if pk!=w: busts.append((0,int(mc[1:]),mc,pk,w,a,b,gA,gB,note))
+    for code,(fa,fb) in KO_FEED.items():
+        if code in RES:
+            wa=RES[fa][2] if fa in RES else None
+            wb=RES[fb][2] if fb in RES else None
+            pk=PICK_BY_CODE.get(code); gA,gB,w,note=RES[code]
+            lvl=_STORY_KO_LEVEL[KO_ROUND[code]]
+            if pk and pk in (wa,wb) and pk!=w:
+                busts.append((lvl,int(code[1:]),code,pk,w,wa,wb,gA,gB,note))
+    busts.sort(key=lambda x:(x[0],x[1]))
+    for (lvl,_n,code,pk,w,a,b,gA,gB,note) in busts:
+        rd=_STORY_ROUND_NAME[lvl]
+        sc=f"{a} {gA}{DASH}{gB} {b}"+(f" ({note})" if note else "")
+        forfeit=_forfeited(pk,lvl)
+        voided=[_STORY_ROUND_NAME[l] for l in _levels_picked(pk) if l>=lvl]
+        lead=(f"{w} knocked out your {pk} pick {sc}." if lvl==0
+              else f"{w} ended your {pk} run in the {rd} — {sc}.")
+        if forfeit and voided:
+            tail=f" That wipes {forfeit} point{'s' if forfeit!=1 else ''} you had riding on {pk} ({', '.join(voided)})."
+        else:
+            tail=f" {pk} had already banked its earlier points, so nothing more is lost here."
+        cards.append((team_emoji(w),f"Busted branch — {rd}",f"{w} over {pk}",lead+tail))
+    # 3) champion outlook
+    ce=team_emoji(CHAMP)
+    if CHAMP in ELIM:
+        cards.append((ce,"Your champion",f"{CHAMP} is out",
+            f"The title pick you built the bracket around is gone, so the Champion’s 16 points are off the board."))
+    else:
+        ff=", ".join(QF_WIN)
+        cards.append((ce,"Your champion",f"{CHAMP} still standing",
+            f"{CHAMP} is still alive, with {FF_ALIVE} of your final four ({ff}) still in it."))
+    return cards
 def build_story():
     return ''.join(f'<div class="glass story"><div class="story-ic">{ic}</div>'
         f'<div class="story-tag">{esc(tag)}</div><div class="story-title">{esc(ti)}</div>'
-        f'<div class="story-body">{esc(bd)}</div></div>' for ic,tag,ti,bd in STORY)
+        f'<div class="story-body">{esc(bd)}</div></div>' for ic,tag,ti,bd in story_cards())
 
 # Tournament-stage tracker — "done"/"active"/"up" is derived from actual match counts
 # (not hand-set), so it advances correctly on its own as each round finishes: the first
@@ -774,6 +877,8 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .team.st-actual{border-color:color-mix(in srgb,var(--blue) 45%,var(--border));opacity:.9}
 .team.st-actual .tname{color:var(--muted)}
 .team.st-actual .rb.up{color:var(--blue)}
+.team.st-actual.gone{opacity:.62}
+.team.st-actual.gone .tname{text-decoration:line-through}
 .team[data-team]{cursor:help}
 .statcard{position:fixed;z-index:80;min-width:212px;max-width:250px;padding:13px 15px;border-radius:14px;
   background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border2);
