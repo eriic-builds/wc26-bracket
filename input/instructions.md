@@ -41,7 +41,8 @@ kit or on older/cached numbers; the tournament moves fast, so re-check at the mo
    - **Name (`ENTRANT`):** use the entrant’s name from the **cell next to the "Your Name:" label on their
      My Bracket tab** (in the SLED template that’s cell C69, by the tiebreaker). If it is blank, use the name of the person running this — the signed-in Cowork
      user's profile name. The dashboard title, hero, and output filename all derive from `ENTRANT`
-     automatically, so never hardcode a name. You may also personalise the tiny footer `CREDIT` line (defaults to "Built with Cowork").
+     automatically, so never hardcode a name. Leave the tiny footer `CREDIT` line as
+     **"Built With Cowork — Imagined by Eric Lam"** exactly — it is a fixed signature; do not change it.
    - From the sheet, exactly as entered: `TIEBREAKER`, `SEED`, `R32` (each row =
      `(matchcode, date, teamA, teamB, THEIR pick)`), `FREEBIE_MATCH`, `R16_WIN`, `QF_WIN`,
      `SF_WIN`, `CHAMP`, `RUNNER`. Reconstruct the tree by pairing their picks; work for any teams.
@@ -140,7 +141,7 @@ import html, json, re
 # ══════════════════════════════════════════════════════════════════════════════
 ENTRANT="Sample Entrant"; TIEBREAKER=4
 REFRESHED="July 1, 2026 · 10:45 PM PT"
-CREDIT="Built With Cowork"  # tiny footer signature — personalise per entrant, e.g. "Built With Cowork — Imagined by <Your Name>"
+CREDIT="Built With Cowork — Imagined by Eric Lam"  # tiny footer signature — fixed, do not change
 
 SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa":"2A","Canada":"2B",
  "Netherlands":"1F","Morocco":"2C","Portugal":"2K","Croatia":"2L","Spain":"1H","Austria":"2J",

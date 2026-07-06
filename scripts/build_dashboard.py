@@ -17,7 +17,7 @@ import html, json, re
 # ══════════════════════════════════════════════════════════════════════════════
 ENTRANT="Eric Lam"; TIEBREAKER=4
 REFRESHED="July 6, 2026 · 2:57 AM PT"
-CREDIT="Built With Cowork — Imagined by Eric Lam"  # tiny footer signature (personalise per entrant)
+CREDIT="Built With Cowork — Imagined by Eric Lam"  # tiny footer signature — fixed, do not change
 
 SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa":"2A","Canada":"2B",
  "Netherlands":"1F","Morocco":"2C","Portugal":"2K","Croatia":"2L","Spain":"1H","Austria":"2J",
