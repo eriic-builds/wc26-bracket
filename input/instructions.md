@@ -294,6 +294,7 @@ for (label,short,pts,ms) in rounds[1:]:
         elif st=="lost": OUT+=pts
         else: LIVE+=pts
 ATTAIN=CONF+LIVE
+DECIDED=CONF+OUT   # points already settled (won + lost) — the "so far" denominator
 assert CONF+OUT+LIVE==POINTS_MAX, (CONF,OUT,LIVE)
 
 # ---- derived copy (computed from data — NO scenario text hardcoded) ----
@@ -513,7 +514,7 @@ def scrow(pid,short,pts,pick,detail,default,a,b):
 def build_scorebar():
     return ('<div class="scorebar glass" id="scorebar"><div class="sb-main">'
       f'<div class="sb-big"><span id="scConfirmed">{CONF}</span><span class="sb-slash">/ {POINTS_MAX}</span></div>'
-      '<div class="sb-cap">points confirmed</div>'
+      '<div class="sb-cap">points confirmed · <b id="scSoFar">'+f'{CONF}/{DECIDED}'+'</b> so far</div>'
       f'<div class="sb-track"><i id="scBar" style="width:{int(CONF/POINTS_MAX*100)}%"></i></div></div>'
       '<div class="sb-stats">'
       f'<div class="sb-stat s-win"><b id="scConfirmed2">{CONF}</b><span>confirmed</span></div>'
@@ -1196,7 +1197,7 @@ JS=r"""
    r.querySelectorAll('.seg button').forEach(function(b){b.classList.toggle('on',b.dataset.set===st)});
    if(st==='won')conf+=pts;else if(st==='lost')out+=pts;else live+=pts;});
   function set(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
-  set('scConfirmed',conf);set('scConfirmed2',conf);set('scLive',live);set('scOut',out);set('scMax',conf+live);
+  set('scConfirmed',conf);set('scConfirmed2',conf);set('scLive',live);set('scOut',out);set('scMax',conf+live);set('scSoFar',conf+'/'+(conf+out));
   set('kpiConfirmed',conf);set('kpiLive',live);
   var bar=document.getElementById('scBar');if(bar)bar.style.width=Math.round(conf/MAXP*100)+'%';}
  rows.forEach(function(r){r.querySelectorAll('.seg button').forEach(function(b){b.addEventListener('click',function(){var id=r.dataset.pick,s=b.dataset.set;if(s===r.dataset.default)delete scores[id];else scores[id]=s;saveScores();recalc();});});});
