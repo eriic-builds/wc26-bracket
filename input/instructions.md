@@ -27,9 +27,12 @@ modes, and the hover-over country stat cards) — only the picks and the name di
   the picks, scoring, and data model are unchanged.
 - **Round-aware results** — the results view now opens on the **current tournament round** instead of
   always starting at the Round of 32, so the live board shows what matters right now.
-- **Self-healing knockout board** — the bracket map no longer drops teams that actually advanced, and
-  the "How it played out" recap is **auto-derived from live results** and trimmed to the three most
-  recent finished games.
+- **Self-healing knockout board** — the bracket map's **actual path now renders in full**: a team that
+  advanced and was later knocked out stays on the board (dimmed and struck through) instead of dropping
+  out, and the real advancer is carried forward through every knockout round. The "How it played out"
+  recap is **auto-derived from live results** and trimmed to the three most recent finished games.
+- **Collapsible sections** — every section has a ▾ toggle in its header, so you can fold away the parts
+  you're done with and keep the board focused.
 - **Always-in-sync timestamp** — every sync (even one with no new games) refreshes the "last updated"
   time **and rebuilds the HTML**, and the workflow rebuilds the page unconditionally, so the published
   dashboard can never drift behind the source.
@@ -252,6 +255,10 @@ KO_FEED={"M89":("M74","M77"),"M90":("M73","M75"),"M91":("M76","M78"),"M92":("M79
  "M93":("M83","M84"),"M94":("M81","M82"),"M95":("M86","M88"),"M96":("M85","M87"),
  "M97":("M89","M90"),"M98":("M93","M94"),"M99":("M91","M92"),"M100":("M95","M96"),
  "M101":("M97","M98"),"M102":("M99","M100"),"M104":("M101","M102")}
+KO_DATES={"r16":"Jul 4–7","qf":"Jul 9–11","sf":"Jul 14–15","final":"Sun Jul 19 · MetLife"}
+KO_ROUND_ORDER=[("Round of 16","r16",[f"M{n}" for n in range(89,97)]),
+ ("Quarterfinals","qf",[f"M{n}" for n in range(97,101)]),
+ ("Semifinals","sf",["M101","M102"]),("Final","final",["M104"])]
 # Derive each round's per-match pick (by code) from the entrant's tree picks + topology,
 # so no extra per-match data entry is needed. Tree slot i in a round pairs the two prior
 # matches (2i, 2i+1); the code is looked up from KO_FEED.
@@ -303,6 +310,19 @@ for _mc,(_fa,_fb) in KO_FEED.items():
 KO_WINNERS_BY_ROUND={}
 for _mc in KO_FEED:
     if _mc in RES: KO_WINNERS_BY_ROUND.setdefault(KO_ROUND[_mc],set()).add(RES[_mc][2])
+_PREV_ROUND={"r16":"r32","qf":"r16","sf":"qf","final":"sf"}
+def actual_advancer(short, team):
+    """The team that ACTUALLY occupies this bracket slot — the real winner of the
+    previous-round match the entrant had ``team`` winning. Returns None while that
+    feeder match is still unplayed. Unlike a plain 'is it eliminated?' test, this keeps
+    surfacing a team that reached this round even after it has since been knocked out,
+    so no actually-advanced team ever drops off the bracket map in a later column."""
+    prev=_PREV_ROUND.get(short)
+    if not prev: return None
+    if prev=="r32": return r32_pick_actual.get(team)
+    code=CODE_OF_PICK.get((prev,team))
+    if code and code in RES: return RES[code][2]
+    return None
 def reach_status(team, short):
     """Did this team actually reach (win into) the round this column represents?"""
     if team in ELIM: return "lost"
@@ -342,7 +362,17 @@ assert CONF+OUT+LIVE==POINTS_MAX, (CONF,OUT,LIVE)
 N_R32=len(R32); R32_DONE=sum(1 for m in R32 if m[0] in RES); REMAIN_R32=N_R32-R32_DONE
 CHAMP_ALIVE = CHAMP not in ELIM
 CHAMP_STATUS = "still alive" if CHAMP_ALIVE else "out"
-BUSTED=[m[4] for m in R32 if m[0] in RES and m[4] in ELIM]
+# Genuine "busted branches" = the entrant's own picks that lost a match they were picked
+# to win (an R32 miss, or a later-round pick that reached its match and lost) — NOT a
+# correct pick that fell to another of your picks. Keeps the KPI note in step with the
+# scoring (OUT points) and the "How it played out" story.
+BUSTED=[m[4] for m in R32 if m[0] in RES and RES[m[0]][2]!=m[4]]
+for _code,(_fa,_fb) in KO_FEED.items():
+    if _code in RES:
+        _pk=PICK_BY_CODE.get(_code)
+        _wa=RES[_fa][2] if _fa in RES else None
+        _wb=RES[_fb][2] if _fb in RES else None
+        if _pk and _pk in (_wa,_wb) and _pk!=RES[_code][2]: BUSTED.append(_pk)
 BUSTED_TXT=" & ".join(BUSTED) if BUSTED else ""
 BUSTED_PHRASE=("; busted so far: "+BUSTED_TXT) if BUSTED else ""
 BUSTED_NOTE=(BUSTED_TXT+" branch"+("es" if len(BUSTED)>1 else "")) if BUSTED else "none yet"
@@ -431,11 +461,20 @@ def later_cell(team, picked, short, champ=False, actual=None, mode="actual"):
         return _pick_box(team, picked, short, champ, reach_status(team, short))
     # Actual mode: prune eliminated picks; carry the real advancer up (blue) where known.
     if team in ELIM:
-        if actual and actual not in ELIM:
+        if actual:
             sd=seed_of(actual); sh=f'<span class="seed">{esc(sd)}</span>' if sd else ''
-            return (f'<div class="team st-actual" data-team="{esc(actual)}" data-round="{short}" tabindex="0">'
+            gone=actual in ELIM
+            cls="team st-actual"+(" gone" if gone else "")
+            rnd={"r16":"Round of 16","qf":"Quarterfinal","sf":"Semifinal","final":"Final"}.get(short,"this round")
+            if actual==team:
+                tip=f"{actual} reached the {rnd}"+(", but is now out" if gone else "")
+            elif gone:
+                tip=f"{actual} advanced in your {team} pick's place, but is now out"
+            else:
+                tip=f"actually advanced — you picked {team}"
+            return (f'<div class="{cls}" data-team="{esc(actual)}" data-round="{short}" tabindex="0">'
                     f'<span class="fav-bar"></span>{sh}<span class="tname">{esc(actual)}</span>'
-                    f'<span class="rb up" title="actually advanced — you picked '+esc(team)+'">▲</span></div>')
+                    f'<span class="rb up" title="{esc(tip)}">▲</span></div>')
         return '<div class="team blank"><span class="tname">&nbsp;</span></div>'
     return _pick_box(team, picked, short, champ, reach_status(team, short))
 
@@ -456,13 +495,20 @@ def build_bracket(mode="actual"):
     cols.append('<div class="round"><div class="rhead">Round of 32<span>'+f'{R32_DONE} of {N_R32} final'+'</span></div><div class="matches">'+''.join(cells)+'</div></div>')
     meta=[("Round of 16","r16","Jul 4–7",rounds[1][3]),("Quarterfinals","qf","Jul 9–11",rounds[2][3]),
           ("Semifinals","sf","Jul 14–15",rounds[3][3]),("Final","final","Jul 19",rounds[4][3])]
+    round_codes={"r16":_r16codes,"qf":_qfcodes,"sf":_sfcodes,"final":_finalcodes}
+    r16_day={mc:day for (mc,day,a,b,et,ct,ptz) in R16_FIX}
     for label,short,sub,ms in meta:
         cc=[]
-        for (a,b,w) in ms:
+        codes=round_codes.get(short,[])
+        for j,(a,b,w) in enumerate(ms):
             isf=(label=="Final")
-            aa=r32_pick_actual.get(a) if short=="r16" else None
-            ab=r32_pick_actual.get(b) if short=="r16" else None
-            cc.append('<div class="match">'+later_cell(a,w==a,short,champ=(isf and w==a),actual=aa,mode=mode)+later_cell(b,w==b,short,champ=(isf and w==b),actual=ab,mode=mode)+'</div>')
+            aa=actual_advancer(short,a)
+            ab=actual_advancer(short,b)
+            code=codes[j] if j<len(codes) else ""
+            when=r16_day.get(code,"")
+            lab=(esc(code)+(' · '+esc(when) if when else '')) if code else ""
+            mlab=f'<div class="mlabel up">{lab}</div>' if lab else ""
+            cc.append('<div class="match">'+mlab+later_cell(a,w==a,short,champ=(isf and w==a),actual=aa,mode=mode)+later_cell(b,w==b,short,champ=(isf and w==b),actual=ab,mode=mode)+'</div>')
         cols.append(f'<div class="round"><div class="rhead">{esc(label)}<span>{esc(sub)}</span></div><div class="matches">'+''.join(cc)+'</div></div>')
     cols.append('<div class="round champcol"><div class="rhead">Champion<span>your pick</span></div><div class="matches">'
         '<div class="match">'+later_cell(CHAMP,True,"champion",champ=True,mode=mode)+
@@ -538,47 +584,216 @@ def build_scorebar():
       f'<div class="sb-stat s-max"><b id="scMax" data-max="{POINTS_MAX}">{ATTAIN}</b><span>still attainable</span></div>'
       '</div></div>')
 
-KPIS=[
- ("Confirmed points", f"<span id='kpiConfirmed'>{CONF}</span><span class='kunit'>/ {POINTS_MAX}</span>","✅","teal",f"{r32_correct} of {r32_decided} R32 picks right"),
- ("Round of 32", f"{r32_correct}<span class='kunit'>/ {r32_decided}</span>","⚽","blue",f"{REMAIN_R32} games left"),
- ("Still live", f"<span id='kpiLive'>{LIVE}</span>","⚡","blue","across your open picks"),
- ("Max attainable", f"{ATTAIN}","🎯","green","if your path holds"),
- ("Champion pick", CHAMP,"🏆","gold",CHAMP_STATUS),
- ("Points lost", f"{OUT}","🚫","red",BUSTED_NOTE),
-]
+KPIS=None  # KPIs are built live in build_kpis() so they can follow the current round
 def build_kpis():
+    rnd_full=_ROUND_FULL.get(CURRENT_ROUND,CUR_LABEL)
+    if CUR_REMAIN: rnd_note=f"{CUR_REMAIN} game{'s' if CUR_REMAIN!=1 else ''} left"
+    elif NEXT_LABEL: rnd_note=f"{NEXT_LABEL} next"
+    else: rnd_note="round complete"
+    kpis=[
+     ("Confirmed points", f"<span id='kpiConfirmed'>{CONF}</span><span class='kunit'>/ {POINTS_MAX}</span>","✅","teal",f"{r32_correct} of {r32_decided} R32 picks right"),
+     (rnd_full, f"{CUR_CORR}<span class='kunit'>/ {CUR_DEC}</span>","⚽","blue",rnd_note),
+     ("Still live", f"<span id='kpiLive'>{LIVE}</span>","⚡","blue","across your open picks"),
+     ("Max attainable", f"{ATTAIN}","🎯","green","if your path holds"),
+     ("Champion pick", CHAMP,"🏆","gold",CHAMP_STATUS),
+     ("Points lost", f"{OUT}","🚫","red",BUSTED_NOTE),
+    ]
     return ''.join(f'<div class="glass kpi t-{t}"><div class="kpi-ic">{ic}</div>'
         f'<div class="kpi-l">{esc(l)}</div><div class="kpi-v">{v}</div><div class="kpi-n">{esc(n)}</div></div>'
-        for l,v,ic,t,n in KPIS)
+        for l,v,ic,t,n in kpis)
 
 def build_finalfour():
     out=[]
     for tm in QF_WIN:
         role="Champion" if tm==CHAMP else ("Runner-up" if tm==RUNNER else "Semifinalist")
         alive = tm not in ELIM
-        state = ("won R32" if tm in [RES[m][2] for m in RES] else "R32 Jul 2–3")
         cls="ff-champ" if tm==CHAMP else ("ff-run" if tm==RUNNER else "")
         dot = '<span class="ff-live">● alive</span>' if alive else '<span class="ff-dead">✕ out</span>'
         out.append(f'<div class="ff {cls}" data-team="{esc(tm)}"><span class="ff-seed">{esc(seed_of(tm))}</span>'
                    f'<span class="ff-name">{esc(tm)}</span><span class="ff-role">{role} · {dot}</span></div>')
     return ''.join(out)
 
-STORY=[
- ("✅","Holding strong",f"{r32_correct} of {r32_decided} in the Round of 32",
-  "Canada, Morocco, France, Norway, Mexico, England, USA and Belgium all delivered. Only two of your opened games missed."),
- ("🇵🇾","Busted branch #1","Germany fell to Paraguay",
-  "Your 1E pick crashed out on penalties (1–1, 4–3). You had France beating Germany in the R16 anyway, so France just meets Paraguay instead — your France pick lives."),
- ("🇧🇷","Busted branch #2","Brazil ended Japan",
-  "Your boldest call didn’t land — Martinelli’s 95th-minute winner sent Japan out 2–1. That also voids your Japan Round-of-16 pick (2 pts)."),
-]
+# ── "How it played out" — fully DERIVED from the live data (picks + RES + topology),
+#    so every auto-sync/rebuild refreshes it on its own with nothing hand-written to go
+#    stale. It emits: a running Round-of-32 scoreline, one card for every branch that
+#    actually busted (a pick that played its own match and lost) in round order, and a
+#    champion outlook. Team emoji reuse the same nickname/flag scheme as the sync engine.
+_STORY_NICK={"England":"\U0001f981","France":"\U0001f413","Netherlands":"\U0001f7e0",
+ "Belgium":"\U0001f608","Germany":"\U0001f985","Spain":"\U0001f402","Australia":"\U0001f998",
+ "Canada":"\U0001f341","Ivory Coast":"\U0001f418","DR Congo":"\U0001f406","Japan":"\u2694\ufe0f",
+ "Mexico":"\U0001f335","United States":"\U0001f5fd","Algeria":"\U0001f98a","Colombia":"\u2615",
+ "Cape Verde":"\U0001f988","Bosnia & Herz.":"\U0001f409","Ghana":"\u2b50","Brazil":"\U0001f49b",
+ "Argentina":"\U0001f499","Egypt":"\U0001f3fa"}
+_STORY_ISO2={"Argentina":"AR","Australia":"AU","Austria":"AT","Belgium":"BE","Bosnia & Herz.":"BA",
+ "Brazil":"BR","Canada":"CA","Cape Verde":"CV","Colombia":"CO","Croatia":"HR","DR Congo":"CD",
+ "Ecuador":"EC","Egypt":"EG","France":"FR","Germany":"DE","Ghana":"GH","Ivory Coast":"CI","Japan":"JP",
+ "Mexico":"MX","Morocco":"MA","Netherlands":"NL","Norway":"NO","Paraguay":"PY","Portugal":"PT",
+ "Senegal":"SN","South Africa":"ZA","Spain":"ES","Sweden":"SE","Switzerland":"CH","United States":"US",
+ "Algeria":"DZ"}
+def _story_flag(iso2):
+    if not iso2 or len(iso2)!=2 or not iso2.isalpha(): return ""
+    return "".join(chr(0x1F1E6+ord(c)-ord("A")) for c in iso2.upper())
+def team_emoji(name):
+    return _STORY_NICK.get(name) or _story_flag(_STORY_ISO2.get(name,"")) or "\u26bd"
+
+_STORY_ROUND_NAME={0:"Round of 32",1:"Round of 16",2:"Quarterfinal",3:"Semifinal",4:"Final"}
+_STORY_LEVEL_PTS=[1,2,4,8,16]
+_STORY_KO_LEVEL={"r16":1,"qf":2,"sf":3,"final":4}
+def _levels_picked(team):
+    lv=[0]  # every branch begins as a Round-of-32 pick
+    if team in R16_WIN: lv.append(1)
+    if team in QF_WIN: lv.append(2)
+    if team in SF_WIN: lv.append(3)
+    if team==CHAMP: lv.append(4)
+    return lv
+def _forfeited(team, elim_level):
+    return sum(_STORY_LEVEL_PTS[l] for l in _levels_picked(team) if l>=elim_level)
+
+def _collect_busts():
+    """Every branch that actually played its own match and lost (an upset that cost the
+    entrant), newest-round first, richest detail — shared by the story's turning-point card."""
+    busts=[]
+    for (mc,dt,a,b,pk) in R32:
+        if mc in RES:
+            gA,gB,w,note=RES[mc]
+            if pk!=w: busts.append((0,int(mc[1:]),pk,w,a,b,gA,gB,note))
+    for code,(fa,fb) in KO_FEED.items():
+        if code in RES:
+            wa=RES[fa][2] if fa in RES else None
+            wb=RES[fb][2] if fb in RES else None
+            pk=PICK_BY_CODE.get(code); gA,gB,w,note=RES[code]
+            if pk and pk in (wa,wb) and pk!=w:
+                busts.append((_STORY_KO_LEVEL[KO_ROUND[code]],int(code[1:]),pk,w,wa,wb,gA,gB,note))
+    return busts
+
+def story_cards():
+    """A tight 3-card narrative arc — momentum, the turning point, the stakes ahead — all
+    derived live so it tracks the current round and never repeats the game-by-game recaps
+    already shown in Game facts / the bracket. Capped at three so it stays a visual aid."""
+    cards=[]
+    # 1) MOMENTUM — the entrant's record across the rounds played so far
+    played=[(s,round_tally(s)) for s in _ROUND_SEQ]
+    bits=[f"{c} of {d} in the {_ROUND_FULL[s]}" for (s,(c,d,l)) in played if d]
+    tot_c=sum(c for (_s,(c,d,l)) in played); tot_d=sum(d for (_s,(c,d,l)) in played)
+    if not bits:
+        cards.append(("\u26bd","The story so far","Kicking off",
+            "No games are final yet — your first results will land here as they finish."))
+    else:
+        head=("Perfect run" if tot_c==tot_d else "Holding strong" if tot_c*2>=tot_d else "Bumpy road")
+        body=(" · ".join(bits))+f". {CONF} points banked, {LIVE} still live."
+        cards.append(("\u2705" if tot_c==tot_d else "\U0001f4ca",
+            f"{tot_c} of {tot_d} picks right so far",head,body))
+    # 2) TURNING POINT — the single costliest upset against you (not a list; a highlight)
+    busts=_collect_busts()
+    if busts:
+        busts.sort(key=lambda x:(-_forfeited(x[2],x[0]),-x[0],x[1]))
+        lvl,_n,pk,w,a,b,gA,gB,note=busts[0]
+        sc=f"{a} {gA}{DASH}{gB} {b}"+(f" ({note})" if note else "")
+        forfeit=_forfeited(pk,lvl); n=len(busts)
+        lead=(f"{w} knocked out your {pk} pick — {sc}." if lvl==0
+              else f"{w} ended your {pk} run in the {_STORY_ROUND_NAME[lvl]} — {sc}.")
+        if n>1:
+            tail=f" It's the costliest of {n} branches that have busted, {OUT} points gone in all."
+        else:
+            tail=f" That's {forfeit} point{'s' if forfeit!=1 else ''} off your board."
+        cards.append((team_emoji(w),"Biggest swing",f"{w} over {pk}",lead+tail))
+    else:
+        cards.append(("\U0001f3af","Clean sheet","No busted branches yet",
+            "Every team you've backed so far is still standing — nothing off your board."))
+    # 3) STAKES AHEAD — champion + final-four watch + what's next
+    ce=team_emoji(CHAMP)
+    if CHAMP in ELIM:
+        cards.append((ce,"What's at stake",f"{CHAMP} is out",
+            f"Your title pick is gone, so the Champion’s 16 points are off the board — {ATTAIN} still attainable."))
+    else:
+        ff=", ".join(t for t in QF_WIN if t not in ELIM) or "—"
+        nxt=f" Up next: the {NEXT_LABEL}." if NEXT_LABEL else ""
+        cards.append((ce,"What's at stake",f"{CHAMP} still standing",
+            f"{CHAMP} is alive, with {FF_ALIVE} of your final four ({ff}) still in it.{nxt}"))
+    return cards[:3]
 def build_story():
     return ''.join(f'<div class="glass story"><div class="story-ic">{ic}</div>'
         f'<div class="story-tag">{esc(tag)}</div><div class="story-title">{esc(ti)}</div>'
-        f'<div class="story-body">{esc(bd)}</div></div>' for ic,tag,ti,bd in STORY)
+        f'<div class="story-body">{esc(bd)}</div></div>' for ic,tag,ti,bd in story_cards())
 
-STAGES=[("Group stage","Ended Jun 27","done"),("Round of 32","Jun 28–Jul 3 · 10/16","active"),
- ("Round of 16","Jul 4–7","up"),("Quarterfinals","Jul 9–11","up"),
- ("Semifinals","Jul 14–15","up"),("Final","Sun Jul 19 · MetLife","up")]
+# Tournament-stage tracker — "done"/"active"/"up" is derived from actual match counts
+# (not hand-set), so it advances correctly on its own as each round finishes: the first
+# round that isn't 100% final becomes "active", everything before it is "done", everything
+# after stays "up". This is what keeps the Round of 32 -> Round of 16 handoff (and every
+# later one) accurate without manual edits.
+_STAGE_ROUNDS=[("Round of 32","r32","Jun 28–Jul 3",R32_DONE,N_R32)]
+for (label,short,codes) in KO_ROUND_ORDER:
+    _dates={"r16":"Jul 4–7","qf":"Jul 9–11","sf":"Jul 14–15","final":"Sun Jul 19 · MetLife"}[short]
+    _STAGE_ROUNDS.append((label,short,_dates,sum(1 for mc in codes if mc in RES),len(codes)))
+def _build_stages_list():
+    stages=[("Group stage","Ended Jun 27","done")]
+    active_taken=False
+    for (label,short,dates,done,total) in _STAGE_ROUNDS:
+        if total>0 and done==total:
+            stages.append((label,f"{dates} · {done}/{total}","done"))
+        elif not active_taken:
+            stages.append((label,f"{dates} · {done}/{total}" if total else dates,"active"))
+            active_taken=True
+        else:
+            stages.append((label,dates,"up"))
+    return stages
+STAGES=_build_stages_list()
+
+# Default the round-by-round results view to whichever round the tournament is
+# actually in right now: the first round that isn't fully final (the same "active"
+# round the stage tracker highlights). This makes the dashboard follow the
+# tournament on its own — once the Round of 32 is complete the results panel
+# defaults to the Round of 16, then the Quarterfinals, and so on; once the Final
+# is played it stays there. Recomputed on every build, so each auto-sync that
+# finishes a round advances the default with no manual edit.
+_ROUND_TAGS={"r32":"R32","r16":"R16","qf":"QF","sf":"SF","final":"Final"}
+def _current_round():
+    for (label,short,dates,done,total) in _STAGE_ROUNDS:
+        if total==0 or done<total:
+            return short
+    return _STAGE_ROUNDS[-1][1]
+CURRENT_ROUND=_current_round()
+_CUR=next((r for r in _STAGE_ROUNDS if r[1]==CURRENT_ROUND), _STAGE_ROUNDS[0])
+CUR_LABEL,CUR_DONE,CUR_TOTAL=_CUR[0],_CUR[3],_CUR[4]
+CUR_REMAIN=CUR_TOTAL-CUR_DONE
+def _round_subtitle():
+    tag=_ROUND_TAGS.get(CURRENT_ROUND,CUR_LABEL)
+    if CUR_TOTAL and CUR_DONE>=CUR_TOTAL:
+        return f"All {CUR_TOTAL} {tag} final"
+    if CUR_DONE==0:
+        return f"{tag} up next · {CUR_TOTAL} to play"
+    return f"{CUR_DONE} of {CUR_TOTAL} {tag} final · {CUR_REMAIN} to play"
+CUR_SUBTITLE=_round_subtitle()
+
+# The entrant's record in a given round (won / decided / still-live), plus the record in
+# the round the tournament is currently in, the next round up, and a one-line live status.
+# All recomputed each build, so the hero, KPI, scorecard and story copy follow the live
+# round on their own instead of staying frozen on the Round of 32.
+_ROUND_PICKS={"r16":R16_WIN,"qf":QF_WIN,"sf":SF_WIN,"final":[CHAMP]}
+_ROUND_FULL={"r32":"Round of 32","r16":"Round of 16","qf":"Quarterfinals","sf":"Semifinals","final":"Final"}
+_ROUND_SEQ=["r32","r16","qf","sf","final"]
+def round_tally(short):
+    if short=="r32":
+        seq=[pick_status("r32",pk,mc) for (mc,dt,a,b,pk) in R32]
+    else:
+        seq=[pick_status(short,w) for w in _ROUND_PICKS.get(short,[])]
+    corr=sum(1 for s in seq if s=="won"); dec=sum(1 for s in seq if s!="pending")
+    return corr,dec,len(seq)-dec
+CUR_CORR,CUR_DEC,CUR_LIVE=round_tally(CURRENT_ROUND)
+def _next_round(short):
+    i=_ROUND_SEQ.index(short) if short in _ROUND_SEQ else -1
+    return _ROUND_SEQ[i+1] if 0<=i<len(_ROUND_SEQ)-1 else None
+NEXT_ROUND=_next_round(CURRENT_ROUND)
+NEXT_LABEL=_ROUND_FULL.get(NEXT_ROUND,"") if NEXT_ROUND else ""
+def _live_status():
+    full=_ROUND_FULL.get(CURRENT_ROUND,CUR_LABEL)
+    if CUR_TOTAL and CUR_DONE>=CUR_TOTAL:
+        return f"The {full} is complete." + (f" The {NEXT_LABEL} is up next." if NEXT_LABEL else "")
+    if CUR_DONE==0:
+        return f"The {full} is up next — {CUR_TOTAL} games to play."
+    nxt=f", then the {NEXT_LABEL}" if NEXT_LABEL else ""
+    return f"The {full} is underway — {CUR_DONE} of {CUR_TOTAL} final, {CUR_REMAIN} to go{nxt}."
+LIVE_STATUS=_live_status()
 def build_stages():
     return ''.join(f'<div class="stage s-{st}"><span class="sdot">{ {"done":"●","active":"◉","up":"○"}[st] }</span>'
         f'<div><div class="sname">{esc(n)}</div><div class="sdate">{esc(d)}</div></div></div>' for n,d,st in STAGES)
@@ -601,33 +816,64 @@ def build_results_panel():
             up.append(f'<div class="rr up"><div class="rr-m">{esc(mc)}</div>'
                 f'<div class="rr-s">{esc(a)} vs {esc(b)}<span class="rr-t">{d} · {ptz} PT · {ct} CT · {et} ET</span></div>'
                 f'<div class="rr-p"><span class="res-soon">your pick: {esc(pk)}</span></div></div>')
-    return ('<div class="glass rrbox"><div class="rr-h">Final results · your pick '
+    return ('<div class="glass rrbox res-panel" data-round="r32"><div class="rr-h">Round of 32 results · your pick '
             f'<b>{r32_correct}/{r32_decided}</b></div>'+''.join(rows)+
             '<div class="rr-h" style="margin-top:12px">Still to play</div>'+''.join(up)+'</div>')
 
-# ── USER DATA (game facts) — highlight cards for the most recent finished games,
-#    newest first: (emoji, headline, "Team A x–y Team B", "Day · City", recap).
-#    ONE emoji = the winner's nickname (England 🦁, France 🐓, Belgium 😈…) or the
-#    country flag; draws use 🤝. The recap is one fun sentence naming the scorers &
-#    minutes, matched to the story (brace, comeback, rout, late winner, shootout).
-#    Fill this from your live lookup (Step 2). In the repo, the sync engine
-#    (scripts/fetch_results.py) regenerates AUTO_HL from FIFA's free feed in exactly
-#    this style; FEATURED stays yours to pin. HIGHLIGHTS = FEATURED first, then AUTO_HL.
-FEATURED=[
- ("⏱️","Latest goal in WC history","Belgium 3–2 Senegal","Wed, Jul 1 · 4:00 PM ET (1:00 PM PT)",
-  "Two down with five minutes left, Belgium roared back through Lukaku and Tielemans — whose winning penalty at 124:44 is the latest goal ever recorded at a World Cup."),
- ("🥅","Two giants out on penalties","Germany & Netherlands gone","Mon, Jun 29 · 4:30 PM & 9:00 PM ET",
-  "Germany fell to Paraguay (1–1, 4–3) and the Netherlands to Morocco (1–1, 3–2) — both European heavyweights knocked out in Round-of-32 shootouts."),
- ("⚡","Stoppage-time stunner","Brazil 2–1 Japan","Mon, Jun 29 · 1:00 PM ET (10:00 AM PT)",
-  "Japan led through Kaishu Sano before Casemiro levelled and substitute Gabriel Martinelli curled in a 95th-minute winner — Brazil's deepest scare in years."),
- ("👟","Mbappé & Haaland deliver","France roll, Norway make history","Tue, Jun 30 · 5:00 PM & 1:00 PM ET",
-  "Kylian Mbappé scored twice in France's 3–0 win over Sweden, while Erling Haaland's goal earned Norway a 2–1 win over Ivory Coast — their first World Cup knockout win ever."),
- ("🦁","Kane rescues England","England 2–1 DR Congo","Wed, Jul 1 · Atlanta",
-  "Trailing at the break, Harry Kane scored twice in the second half to drag the Three Lions through."),
- ("🍁","History for the hosts","Canada 1–0 South Africa","Sun, Jun 28 · 3:00 PM ET (12:00 PM PT)",
-  "Stephen Eustáquio's strike gave co-hosts Canada their first knockout-round win in World Cup history — the freebie everyone was credited with."),
-]
-AUTO_HL=[]  # AUTO — maintained by the sync engine; newest finished games first. Do not hand-edit.
+# Toggleable results panels for the later knockout rounds (Round of 16 = "round of 16",
+# Quarterfinals = "round of 8", Semifinals = "round of 4"), built from the exact same
+# live topology (KO_FEED/RES/PICK_BY_CODE/ELIM) as the bracket map and knockout scoring
+# above, so the match list, scores and pick badges can never drift out of sync with it.
+def build_round_results_panel(label, short, codes):
+    r16day={mc:(day,et,ct,ptz) for (mc,day,a,b,et,ct,ptz) in R16_FIX}
+    rows=[]; done=0; dec=0; corr=0
+    for mc in codes:
+        fa,fb=KO_FEED[mc]
+        a=RES[fa][2] if fa in RES else None
+        b=RES[fb][2] if fb in RES else None
+        pk=PICK_BY_CODE.get(mc)
+        if mc in RES:
+            done+=1; dec+=1
+            gA,gB,w,note=RES[mc]
+            an=a or "?"; bn=b or "?"
+            if pk==w: badge='<span class="res-ok">✓ you</span>'; corr+=1
+            elif pk in ELIM: badge='<span class="res-no">✕ pick out</span>'
+            else: badge='<span class="res-no">✕ you</span>'
+            sc=(f'<b class="{"w" if w==an else "l"}">{esc(an)}</b> {gA}{DASH}{gB} '
+                f'<b class="{"w" if w==bn else "l"}">{esc(bn)}</b>'+((' <i>'+esc(note)+'</i>') if note else ''))
+            rows.append(f'<div class="rr"><div class="rr-m">{esc(mc)}</div>'
+                f'<div class="rr-s">{sc}</div><div class="rr-p">{badge}</div></div>')
+        else:
+            if short=="r16" and mc in r16day:
+                day,et,ct,ptz=r16day[mc]; when=f'{day} · {ptz} PT · {ct} CT · {et} ET'
+            else: when=KO_DATES[short]
+            ta=a or ("Winner "+fa); tb=b or ("Winner "+fb)
+            if pk and pk in ELIM: pkt=f'<span class="res-no">pick {esc(pk)} out</span>'
+            elif pk: pkt=f'<span class="res-soon">your pick: {esc(pk)}</span>'
+            else: pkt=''
+            rows.append(f'<div class="rr up"><div class="rr-m">{esc(mc)}</div>'
+                f'<div class="rr-s">{esc(ta)} vs {esc(tb)}<span class="rr-t">{when}</span></div>'
+                f'<div class="rr-p">{pkt}</div></div>')
+    acc=f'{corr}/{dec}' if dec else '—'
+    return (f'<div class="glass rrbox res-panel" data-round="{short}">'
+            f'<div class="rr-h">{esc(label)} results · your pick <b>{acc}</b> · {done}/{len(codes)} final</div>'
+            +''.join(rows)+'</div>')
+
+# ── GAME FACTS — the last six finished games, newest first, shown as highlight cards.
+#    Each card is (emoji, headline, scoreline, "day · venue", one-sentence recap).
+#    The sync engine (scripts/fetch_results.py) pulls these automatically from FIFA's
+#    free public feed and rewrites AUTO_HL on every run, so the section stays current
+#    with no manual editing. FEATURED is an optional slot for a hand-written story you
+#    want pinned above the auto cards; leave it empty to show only the live last-six.
+FEATURED=[]
+AUTO_HL=[
+ ("🦁","Bellingham's brace sinks Mexico","Mexico 2–3 England","Mon Jul 6 · Mexico City","Bellingham struck twice in the first half (36', 38') as England beat Mexico 3–2 in the Round of 16, with Kane (60' pen) also on the mark."),
+ ("🇳🇴","Haaland's brace sinks Brazil","Brazil 1–2 Norway","Sun Jul 5 · New Jersey","Haaland struck twice after the break (79', 90') as Norway beat Brazil 2–1 in the Round of 16."),
+ ("🐓","France edge Paraguay","Paraguay 0–1 France","Sat Jul 4 · Philadelphia","Nervy but enough: France saw off Paraguay 1–0 in the Round of 16 thanks to Mbappe (70' pen)."),
+ ("🇲🇦","Ounahi's brace sinks Canada","Canada 0–3 Morocco","Sat Jul 4 · Houston","Ounahi struck twice after the break (50', 82') as Morocco beat Canada 3–0 in the Round of 16, with Rahimi (90'+8') also on the mark."),
+ ("☕","Colombia edge Ghana","Colombia 1–0 Ghana","Sat Jul 4 · Kansas City","Nervy but enough: Colombia saw off Ghana 1–0 in the Round of 32 thanks to Arias (14')."),
+ ("💙","Argentina edge Cape Verde","Argentina 3–2 Cape Verde","Fri Jul 3 · Miami","Argentina left it late, snatching a 3–2 Round of 32 squeaker past Cape Verde (Messi (29'), Martinez (92') and Borges OG (111'))."),
+]  # AUTO — maintained by the sync engine; the last six finished games. Do not hand-edit.
 HIGHLIGHTS=FEATURED+AUTO_HL
 def build_highlights():
     return ''.join(f'<div class="glass story"><div class="story-ic">{ic}</div>'
@@ -652,45 +898,9 @@ def build_upcoming():
 # Live knockout board — Round of 16, Quarterfinals, Semifinals, Final. Actual teams and
 # scores come from RES (kept current by the sync engine); teams for each match are the
 # winners of its two feeder matches (KO_FEED). Pending matches show the known/So-far teams.
-KO_DATES={"r16":"Jul 4–7","qf":"Jul 9–11","sf":"Jul 14–15","final":"Sun Jul 19 · MetLife"}
-KO_ROUND_ORDER=[("Round of 16","r16",[f"M{n}" for n in range(89,97)]),
- ("Quarterfinals","qf",[f"M{n}" for n in range(97,101)]),
- ("Semifinals","sf",["M101","M102"]),("Final","final",["M104"])]
-def build_knockouts():
-    r16day={mc:(day,et,ct,ptz) for (mc,day,a,b,et,ct,ptz) in R16_FIX}
-    blocks=[]
-    for (label,short,codes) in KO_ROUND_ORDER:
-        rows=[]; done=0
-        for mc in codes:
-            fa,fb=KO_FEED[mc]
-            a=RES[fa][2] if fa in RES else None
-            b=RES[fb][2] if fb in RES else None
-            pk=PICK_BY_CODE.get(mc)
-            if mc in RES:
-                done+=1; gA,gB,w,note=RES[mc]
-                an=a or "?"; bn=b or "?"
-                if pk is None: badge=''
-                elif pk==w: badge='<span class="res-ok">✓ you</span>'
-                elif pk in ELIM: badge='<span class="res-no">✕ pick out</span>'
-                else: badge='<span class="res-no">✕ you</span>'
-                sc=(f'<b class="{"w" if w==an else "l"}">{esc(an)}</b> {gA}{DASH}{gB} '
-                    f'<b class="{"w" if w==bn else "l"}">{esc(bn)}</b>'+((' <i>'+esc(note)+'</i>') if note else ''))
-                rows.append(f'<div class="rr"><div class="rr-m">{esc(mc)}</div>'
-                    f'<div class="rr-s">{sc}</div><div class="rr-p">{badge}</div></div>')
-            else:
-                if short=="r16" and mc in r16day:
-                    day,et,ct,ptz=r16day[mc]; when=f'{day} · {ptz} PT · {ct} CT · {et} ET'
-                else: when=KO_DATES[short]
-                ta=a or ("Winner "+fa); tb=b or ("Winner "+fb)
-                if pk and pk in ELIM: pkt=f'<span class="res-no">pick {esc(pk)} out</span>'
-                elif pk: pkt=f'<span class="res-soon">your pick: {esc(pk)}</span>'
-                else: pkt=''
-                rows.append(f'<div class="rr up"><div class="rr-m">{esc(mc)}</div>'
-                    f'<div class="rr-s">{esc(ta)} vs {esc(tb)}<span class="rr-t">{when}</span></div>'
-                    f'<div class="rr-p">{pkt}</div></div>')
-        blocks.append('<div class="glass rrbox ko-block">'
-            f'<div class="rr-h">{esc(label)} · {done}/{len(codes)} final</div>'+''.join(rows)+'</div>')
-    return '<div class="g2 kogrid">'+''.join(blocks)+'</div>'
+# Rendered as toggleable result panels alongside the Round of 32 panel (see RESULTS_ROUNDS
+# below) rather than a second always-visible grid, so viewing every round needs no extra
+# scrolling.
 
 def build_legend():
     items=[
@@ -794,6 +1004,11 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .shead .tile{width:30px;height:30px;border-radius:9px;background:var(--grad);display:grid;place-items:center;font-size:.95rem;flex:0 0 auto;box-shadow:0 4px 14px rgba(0,151,244,.3)}
 .shead h2{font-size:1.16rem;margin:0;font-weight:700;letter-spacing:-.01em}
 .shead .cap{margin-left:auto;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.sec-toggle{flex:0 0 auto;width:26px;height:26px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--muted);cursor:pointer;font-size:.85rem;line-height:1;transition:.16s;display:grid;place-items:center}
+.sec-toggle:hover{color:var(--text);background:var(--hover)}
+.sec-toggle[aria-expanded="false"]{transform:rotate(-90deg)}
+.sec-body{overflow:hidden}
+.sec-body.collapsed{display:none}
 .g2{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--gap)}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap)}
 .kpigrid{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--gap)}
@@ -821,14 +1036,22 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .sb-stat span{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
 .sb-stat.s-win b{color:var(--win-ink)}.sb-stat.s-live b{color:var(--blue)}.sb-stat.s-out b{color:var(--lose-ink)}.sb-stat.s-max b{color:var(--text)}
 .brk-wrap{padding:8px;overflow:hidden}
-.bracket{display:flex;gap:10px;overflow-x:auto;padding:14px 8px;align-items:stretch;scrollbar-width:thin;position:relative}
+.bracket{display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;padding:14px 8px;align-items:stretch;scrollbar-width:none;-ms-overflow-style:none;position:relative}
+.bracket::-webkit-scrollbar{display:none}
 .bksvg{position:absolute;top:0;left:0;pointer-events:none;z-index:0;overflow:visible}
-.brk-toggle{display:inline-flex;gap:6px;padding:5px;border-radius:999px;margin-bottom:12px;background:var(--panel);border:1px solid var(--border)}
-.brk-toggle button{font-family:inherit;font-size:.8rem;font-weight:600;color:var(--muted);background:transparent;border:0;padding:7px 16px;border-radius:999px;cursor:pointer;transition:.16s}
-.brk-toggle button:hover{color:var(--text);background:var(--hover)}
-.brk-toggle button.on{color:#fff;background:var(--blue);box-shadow:0 4px 14px rgba(0,151,244,.35)}
+.brk-toggle,.res-toggle{display:inline-flex;gap:6px;padding:5px;border-radius:999px;margin-bottom:12px;background:var(--panel);border:1px solid var(--border)}
+.brk-toggle button,.res-toggle button{font-family:inherit;font-size:.8rem;font-weight:600;color:var(--muted);background:transparent;border:0;padding:7px 16px;border-radius:999px;cursor:pointer;transition:.16s}
+.brk-toggle button:hover,.res-toggle button:hover{color:var(--text);background:var(--hover)}
+.brk-toggle button.on,.res-toggle button.on{color:#fff;background:var(--blue);box-shadow:0 4px 14px rgba(0,151,244,.35)}
 .brk-wrap[data-view="actual"] .bracket.mode-picked{display:none}
 .brk-wrap[data-view="picked"] .bracket.mode-actual{display:none}
+.res-toggle{flex-wrap:wrap}
+.res-wrap .res-panel{display:none}
+.res-wrap[data-view="r32"] .res-panel[data-round="r32"]{display:block}
+.res-wrap[data-view="r16"] .res-panel[data-round="r16"]{display:block}
+.res-wrap[data-view="qf"] .res-panel[data-round="qf"]{display:block}
+.res-wrap[data-view="sf"] .res-panel[data-round="sf"]{display:block}
+.res-wrap[data-view="final"] .res-panel[data-round="final"]{display:block}
 .round{flex:1 1 0;min-width:150px;display:flex;flex-direction:column;position:relative;z-index:1}
 .conn{fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
 .conn.c-won{stroke:var(--win)}
@@ -839,6 +1062,8 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .team.st-actual{border-color:color-mix(in srgb,var(--blue) 45%,var(--border));opacity:.9}
 .team.st-actual .tname{color:var(--muted)}
 .team.st-actual .rb.up{color:var(--blue)}
+.team.st-actual.gone{opacity:.62}
+.team.st-actual.gone .tname{text-decoration:line-through}
 .team[data-team]{cursor:help}
 .statcard{position:fixed;z-index:80;min-width:212px;max-width:250px;padding:13px 15px;border-radius:14px;
   background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border2);
@@ -874,6 +1099,7 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .rhead span{display:block;font-size:.6rem;font-weight:600;color:var(--muted);opacity:.8;text-transform:none;margin-top:2px}
 .match{position:relative;height:132px;display:flex;flex-direction:column;justify-content:center}
 .mlabel{font-size:.58rem;font-weight:700;color:var(--muted);opacity:.75;text-align:center}
+.mlabel.up{opacity:.85;margin-bottom:3px;letter-spacing:.02em}
 .mscore{font-size:.57rem;color:var(--text2);text-align:center;margin:1px 0 4px;font-weight:600}
 .mscore.up{color:var(--muted);opacity:.8;font-weight:600;font-style:italic}
 .team{position:relative;display:flex;align-items:center;gap:7px;padding:8px 10px;margin:3px 0;border-radius:10px;border:1px solid var(--border);background:var(--panel);font-size:.82rem;font-weight:600;transition:.16s}
@@ -1065,6 +1291,8 @@ JS=r"""
  }
  window.__drawConn=drawConnectors;
  document.querySelectorAll('.brk-toggle button').forEach(function(bt){bt.addEventListener('click',function(){var w=document.querySelector('.brk-wrap');w.setAttribute('data-view',bt.dataset.view);document.querySelectorAll('.brk-toggle button').forEach(function(x){x.classList.toggle('on',x===bt);});setTimeout(drawConnectors,60);});});
+ document.querySelectorAll('.res-toggle button').forEach(function(bt){bt.addEventListener('click',function(){var w=document.querySelector('.res-wrap');w.setAttribute('data-view',bt.dataset.view);document.querySelectorAll('.res-toggle button').forEach(function(x){x.classList.toggle('on',x===bt);});});});
+ document.querySelectorAll('.sec-toggle').forEach(function(bt){bt.addEventListener('click',function(){var body=document.getElementById(bt.getAttribute('aria-controls'));if(!body)return;var open=bt.getAttribute('aria-expanded')!=='false';bt.setAttribute('aria-expanded',open?'false':'true');body.classList.toggle('collapsed',open);});});
  var _rt;window.addEventListener('resize',function(){clearTimeout(_rt);_rt=setTimeout(drawConnectors,120);});
  window.addEventListener('load',function(){setTimeout(drawConnectors,60);});
  // ---- hover: quick World Cup stat card on each team box ----
@@ -1103,84 +1331,105 @@ def chip(t):
     return (f'<button class="chip{el}" data-team="{esc(t)}"><span class="star" data-star="{esc(t)}" role="button" aria-label="favorite" tabindex="0">☆</span>'
             f'<span class="cseed">{esc(seed_of(t))}</span><span class="ctxt">{esc(t)}</span></button>')
 
+def shead(sid, icon, title, cap):
+    """Section header + the opening tag of its collapsible body. Every collapsible
+    section is shead(...) + <content> + '</div>' (closing div.sec-body) — the toggle
+    arrow just shows/hides that one wrapper via CSS/JS, nothing else changes."""
+    return (f'<div class="shead" id="{sid}">'
+            f'<button class="sec-toggle" type="button" aria-expanded="true" aria-controls="{sid}-body" aria-label="Collapse section">▾</button>'
+            f'<span class="tile">{icon}</span><h2>{title}</h2>'
+            f'<span class="cap">{cap}</span></div>'
+            f'<div class="sec-body" id="{sid}-body">')
+
 HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf-8">'
-f'<meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(ENTRANT)}’s World Cup 2026 Bracket</title>'+'<style>'+CSS+'</style></head><body><div class="wrap">'
-'<div class="topbar"><div class="brand"><span class="orb"></span><div>2026 FIFA World Cup - Bracket Dashboard - MSFT SLED<small>Live results vs your picks</small></div></div>'
-f'<div class="refreshed glass" id="topRefreshed" title="When live results were last synced"><span class="rf-dot"></span>Updated {REFRESHED}</div>'
-'<div class="modes glass"><button data-mode="dark" class="on">Dark</button><button data-mode="light">Light</button>'
-'<button data-mode="easy" title="Reading mode — a highly legible font, larger text, extra line and letter spacing, sentence case (no all-caps), left-aligned text and a soft, glare-free background">Easy</button>'
-'</div></div>'
-'<div class="shell"><nav class="rail glass" id="rail">'
-'<button class="navtoggle" id="navToggle" aria-expanded="false" aria-controls="railLinks">📑 Contents ☰</button>'
-'<div class="links" id="railLinks"><div class="rt">On this page</div>'
-'<a href="#intro"><span class="ic">🔎</span> Overview</a>'
-'<a href="#sec-standing"><span class="ic">📊</span> Live standing</a>'
-'<a href="#sec-scorecard"><span class="ic">🧮</span> Scorecard</a>'
-'<a href="#sec-r32"><span class="ic">⚽</span> Round of 32</a>'
-'<a href="#sec-r16"><span class="ic">🏆</span> Knockouts</a>'
-'<a href="#sec-news"><span class="ic">📰</span> Game facts</a>'
-'<a href="#sec-bracket"><span class="ic">🗺️</span> Bracket map</a>'
-'<a href="#sec-finalfour"><span class="ic">🏅</span> Final four</a>'
-'<a href="#sec-story"><span class="ic">✨</span> How it played out</a>'
-'<a href="#sec-scoring"><span class="ic">🎯</span> Scoring &amp; schedule</a>'
-'</div></nav><div class="content">'
-f'<section class="hero glass" id="intro"><div class="eyebrow">{esc(ENTRANT)} · live results vs your picks</div>'
-f'<h1>Backing <span class="g">{esc(CHAMP)}</span> {"— and still in it" if CHAMP_ALIVE else "— but knocked out"}</h1>'
-f'<p class="sub">{R32_DONE} of {N_R32} Round-of-32 games are final — you\'re <b>{r32_correct} of {r32_decided} right</b>, '
-f'with <b>{CONF} points</b> banked and <b>{LIVE}</b> still live. Your champion pick {esc(CHAMP)} is <b>{CHAMP_STATUS}</b>{esc(BUSTED_PHRASE)}.</p>'
-'<div class="badges">'
-f'<span class="pill live"><span class="dot"></span>{CONF} pts confirmed</span>'
-f'<span class="pill"><span class="dot"></span>R32 {r32_correct}/{r32_decided}</span>'
-f'<span class="pill"><span class="dot"></span>Max attainable {ATTAIN}</span>'
-f'<span class="pill"><span class="dot"></span>{esc(CHAMP)} alive</span></div>'
-'<div class="composer"><span class="corb"></span><span class="plus">+</span>'
-'<input id="search" type="text" placeholder="Track a team through the bracket — try England, Morocco, Paraguay…" autocomplete="off">'
-'<span class="mic">🎤</span><button class="clr" id="clear">Clear</button></div></section>'
-'<div class="filterbar glass"><div class="chips">'+''.join(chip(t) for t in r32_win)+
++f'<meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(ENTRANT)}’s World Cup 2026 Bracket</title>'+'<style>'+CSS+'</style></head><body><div class="wrap">'
++'<div class="topbar"><div class="brand"><span class="orb"></span><div>2026 FIFA World Cup - Bracket Dashboard - MSFT SLED<small>Live results vs your picks</small></div></div>'
++f'<div class="refreshed glass" id="topRefreshed" title="When live results were last synced"><span class="rf-dot"></span>Updated {REFRESHED}</div>'
++'<div class="modes glass"><button data-mode="dark" class="on">Dark</button><button data-mode="light">Light</button>'
++'<button data-mode="easy" title="Reading mode — a highly legible font, larger text, extra line and letter spacing, sentence case (no all-caps), left-aligned text and a soft, glare-free background">Easy</button>'
++'</div></div>'
++'<div class="shell"><nav class="rail glass" id="rail">'
++'<button class="navtoggle" id="navToggle" aria-expanded="false" aria-controls="railLinks">📑 Contents ☰</button>'
++'<div class="links" id="railLinks"><div class="rt">On this page</div>'
++'<a href="#intro"><span class="ic">🔎</span> Overview</a>'
++'<a href="#sec-standing"><span class="ic">📊</span> Live standing</a>'
++'<a href="#sec-scorecard"><span class="ic">🧮</span> Scorecard</a>'
++'<a href="#sec-r32"><span class="ic">⚽</span> Round-by-round results</a>'
++'<a href="#sec-news"><span class="ic">📰</span> Game facts</a>'
++'<a href="#sec-bracket"><span class="ic">🗺️</span> Bracket map</a>'
++'<a href="#sec-finalfour"><span class="ic">🏅</span> Final four</a>'
++'<a href="#sec-story"><span class="ic">✨</span> How it played out</a>'
++'<a href="#sec-scoring"><span class="ic">🎯</span> Scoring &amp; schedule</a>'
++'</div></nav><div class="content">'
++f'<section class="hero glass" id="intro"><div class="eyebrow">{esc(ENTRANT)} · live results vs your picks</div>'
++f'<h1>Backing <span class="g">{esc(CHAMP)}</span> {"— and still in it" if CHAMP_ALIVE else "— but knocked out"}</h1>'
++f'<p class="sub">The <b>{esc(CUR_LABEL)}</b> is <b>{CUR_DONE} of {CUR_TOTAL} final</b> — you\'re <b>{CUR_CORR} of {CUR_DEC} right</b> this round, '
++f'with <b>{CONF} points</b> banked and <b>{LIVE}</b> still live. Your champion {esc(CHAMP)} is <b>{CHAMP_STATUS}</b>.'
++ (f' The {esc(NEXT_LABEL)} is up next.' if NEXT_LABEL else '') + '</p>'
++'<div class="badges">'
++f'<span class="pill live"><span class="dot"></span>{CONF} pts confirmed</span>'
++f'<span class="pill"><span class="dot"></span>{esc(_ROUND_TAGS.get(CURRENT_ROUND,CUR_LABEL))} {CUR_CORR}/{CUR_DEC}</span>'
++f'<span class="pill"><span class="dot"></span>Max attainable {ATTAIN}</span>'
++f'<span class="pill"><span class="dot"></span>{esc(CHAMP)} {"alive" if CHAMP_ALIVE else "out"}</span></div>'
++'<div class="composer"><span class="corb"></span><span class="plus">+</span>'
++'<input id="search" type="text" placeholder="Track a team through the bracket — try England, Morocco, Paraguay…" autocomplete="off">'
++'<span class="mic">🎤</span><button class="clr" id="clear">Clear</button></div></section>'
++'<div class="filterbar glass"><div class="chips">'+''.join(chip(t) for t in r32_win)+
 '</div><label class="toggle"><input type="checkbox" id="favonly"><span class="tsw"></span>Favorites only</label><span class="count" id="count"></span></div>'
-'<div class="shead" id="sec-standing"><span class="tile">📊</span><h2>Your live standing</h2><span class="cap">6 signals</span></div>'
-f'<div class="kpigrid">{build_kpis()}</div>'
-'<div class="shead" id="sec-scorecard"><span class="tile">🧮</span><h2>Scorecard — your path, scored live</h2>'
-f'<span class="cap">{CONF} confirmed · {LIVE} live</span></div>'
-'<div class="note"><b>How this is scored.</b> Results are pulled from live web coverage (ESPN, CBS Sports, FIFA) and matched to your Excel picks. '
-f'The Round of 32 is <b>{R32_DONE} of {N_R32} games</b> final — you sit on <b>{CONF} points</b> ({r32_correct}/{r32_decided} correct). '
-'The six remaining R32 games play July 2–3; those rows and every later round stay <b>pending</b> until they’re played. '
-'Flip any row yourself as games finish — totals recompute and save on this device.</div>'
++shead("sec-standing","📊","Your live standing","6 signals")
++f'<div class="kpigrid">{build_kpis()}</div>'
++'</div>'
++shead("sec-scorecard","🧮","Scorecard — your path, scored live",f"{CONF} confirmed · {LIVE} live")
++'<div class="note"><b>How this is scored.</b> Results are pulled from live web coverage (ESPN, CBS Sports, FIFA) and matched to your Excel picks. '
++f'The <b>{esc(CUR_LABEL)}</b> stands at <b>{CUR_DONE} of {CUR_TOTAL}</b> — you sit on <b>{CONF} points</b> ({CUR_CORR}/{CUR_DEC} right this round). '
++f'{esc(LIVE_STATUS)} Later rounds stay <b>pending</b> until they’re played. '
++'Flip any row yourself as games finish — totals recompute and save on this device.</div>'
 + build_scorebar()
 + f'<div class="glass">{build_scorecard()}</div>'
-'<div style="text-align:right;margin-top:10px"><button class="chip" id="scReset" style="cursor:pointer">↺ Reset to live results</button></div>'
-'<div class="shead" id="sec-r32"><span class="tile">⚽</span><h2>Round of 32 results</h2>'+f'<span class="cap">{R32_DONE} final · {REMAIN_R32} to play</span></div>'
-f'{build_results_panel()}'
-'<div class="shead" id="sec-r16"><span class="tile">🏆</span><h2>Knockout rounds — live</h2><span class="cap">R16 · QF · SF · Final</span></div>'
-f'{build_knockouts()}'
-'<div class="shead" id="sec-news"><span class="tile">📰</span><h2>Game facts — recent games</h2><span class="cap">newest first</span></div>'
-f'<div class="g3">{build_highlights()}</div>'
-'<div class="shead" id="sec-bracket"><span class="tile">🗺️</span><h2>Your bracket, marked up</h2><span class="cap">✓ hit · ✕ miss · ▲ who went through</span></div>'
-f'{build_legend()}'
-'<div class="brk-toggle"><button data-view="actual" class="on">Actual path</button><button data-view="picked">My picks</button></div>'
-f'<div class="glass brk-wrap" data-view="actual">{build_bracket("actual")}{build_bracket("picked")}</div>'
-'<div class="shead" id="sec-finalfour"><span class="tile">🏅</span><h2>Your final four</h2><span class="cap">'+f'{FF_ALIVE}/{len(QF_WIN)} still alive'+'</span></div>'
-f'<div class="ffgrid">{build_finalfour()}</div>'
-'<div class="shead" id="sec-story"><span class="tile">✨</span><h2>How it played out</h2><span class="cap">so far</span></div>'
-f'<div class="g3">{build_story()}</div>'
-'<div class="shead" id="sec-scoring"><span class="tile">🎯</span><h2>Scoring &amp; schedule</h2><span class="cap">80 max</span></div>'
-'<div class="g2"><div class="glass" style="padding:20px"><div style="font-weight:700;margin-bottom:12px">Points double every round</div>'
-'<div class="scard" style="padding:0">'
-'<div class="scrow schead" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Round</div><div class="tc">Games</div><div class="tc">Pts/pick</div><div class="tc">Max</div></div>'
-'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Round of 32</div><div class="tc">16</div><div class="tc">1</div><div class="tc">16</div></div>'
-'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Round of 16</div><div class="tc">8</div><div class="tc">2</div><div class="tc">16</div></div>'
-'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Quarterfinals</div><div class="tc">4</div><div class="tc">4</div><div class="tc">16</div></div>'
-'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Semifinals</div><div class="tc">2</div><div class="tc">8</div><div class="tc">16</div></div>'
-'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc"><b>Final (Champion)</b></div><div class="tc">1</div><div class="tc">16</div><div class="tc">16</div></div>'
-'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px;border-top:1px solid var(--border)"><div class="tc"><b>Total</b></div><div class="tc">31</div><div class="tc"></div><div class="tc"><b>80</b></div></div>'
-'</div><div style="font-size:.8rem;color:var(--muted);margin-top:12px;line-height:1.5">Each pick scored on its own; Champion is worth a full 16. '
-'Tiebreaker: total goals in the Final at the end of extra time — penalties don’t count. Your tiebreaker: <b>4</b>.</div></div>'
-'<div class="glass" style="padding:20px"><div style="font-weight:700;margin-bottom:4px">Where the tournament stands</div>'
-f'<div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">Live results as of {REFRESHED}</div>'
-f'<div class="stages" style="grid-template-columns:1fr;padding:0;gap:8px">{build_stages()}</div></div></div>'
-'<div class="glass foot"><b>Sources.</b> Your picks, scoring, tiebreaker and any host bonus rule from your <b>SLED World Cup 2026 bracket workbook</b> and the challenge instructions. '
++ '<div style="text-align:right;margin-top:10px"><button class="chip" id="scReset" style="cursor:pointer">↺ Reset to live results</button></div>'
++ '</div>'
++ shead("sec-r32","⚽","Round-by-round results",CUR_SUBTITLE)
++ '<div class="res-toggle">'
++f'<button data-view="r32" class="{"on" if CURRENT_ROUND=="r32" else ""}">Round of 32</button>'
++''.join(f'<button data-view="{short}" class="{"on" if short==CURRENT_ROUND else ""}">{esc(label)}</button>' for (label,short,codes) in KO_ROUND_ORDER)
++'</div>'
++f'<div class="res-wrap" data-view="{CURRENT_ROUND}">{build_results_panel()}'
++''.join(build_round_results_panel(label,short,codes) for (label,short,codes) in KO_ROUND_ORDER)
++'</div>'
++ '</div>'
++ shead("sec-news","📰","Game facts — recent games","newest first")
++ f'<div class="g3">{build_highlights()}</div>'
++ '</div>'
++ shead("sec-bracket","🗺️","Your bracket, marked up","✓ hit · ✕ miss · ▲ who went through")
++ f'{build_legend()}'
++'<div class="brk-toggle"><button data-view="actual" class="on">Actual path</button><button data-view="picked">My picks</button></div>'
++f'<div class="glass brk-wrap" data-view="actual">{build_bracket("actual")}{build_bracket("picked")}</div>'
++ '</div>'
++ shead("sec-finalfour","🏅","Your final four",f'{FF_ALIVE}/{len(QF_WIN)} still alive')
++ f'<div class="ffgrid">{build_finalfour()}</div>'
++ '</div>'
++ shead("sec-story","✨","How it played out","so far")
++ f'<div class="g3">{build_story()}</div>'
++ '</div>'
++ shead("sec-scoring","🎯","Scoring &amp; schedule","80 max")
++ '<div class="g2"><div class="glass" style="padding:20px"><div style="font-weight:700;margin-bottom:12px">Points double every round</div>'
++'<div class="scard" style="padding:0">'
++'<div class="scrow schead" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Round</div><div class="tc">Games</div><div class="tc">Pts/pick</div><div class="tc">Max</div></div>'
++'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Round of 32</div><div class="tc">16</div><div class="tc">1</div><div class="tc">16</div></div>'
++'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Round of 16</div><div class="tc">8</div><div class="tc">2</div><div class="tc">16</div></div>'
++'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Quarterfinals</div><div class="tc">4</div><div class="tc">4</div><div class="tc">16</div></div>'
++'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Semifinals</div><div class="tc">2</div><div class="tc">8</div><div class="tc">16</div></div>'
++'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc"><b>Final (Champion)</b></div><div class="tc">1</div><div class="tc">16</div><div class="tc">16</div></div>'
++'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px;border-top:1px solid var(--border)"><div class="tc"><b>Total</b></div><div class="tc">31</div><div class="tc"></div><div class="tc"><b>80</b></div></div>'
++'</div><div style="font-size:.8rem;color:var(--muted);margin-top:12px;line-height:1.5">Each pick scored on its own; Champion is worth a full 16. '
++'Tiebreaker: total goals in the Final at the end of extra time — penalties don’t count. Your tiebreaker: <b>4</b>.</div></div>'
++'<div class="glass" style="padding:20px"><div style="font-weight:700;margin-bottom:4px">Where the tournament stands</div>'
++f'<div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">Live results as of {REFRESHED}</div>'
++f'<div class="stages" style="grid-template-columns:1fr;padding:0;gap:8px">{build_stages()}</div></div></div>'
++ '</div>'
++'<div class="glass foot"><b>Sources.</b> Your picks, scoring, tiebreaker and any host bonus rule from your <b>SLED World Cup 2026 bracket workbook</b> and the challenge instructions. '
 'Match results, scores and kickoff times from <b>FIFA official match records</b> (fifa.com), corroborated by NBC Sports, CBS Sports, ESPN and Sporting News, for the 2026 FIFA World Cup. Kickoff times anchored to ET, converted to CT/PT. Hover-card country pedigree (titles, best finish) from public FIFA World Cup historical records.'
-f'<div class="src"><b>Status.</b> Round of 32 is {R32_DONE} of {N_R32} games final; {REMAIN_R32} still to play, and every later round is pending. '
+f'<div class="src"><b>Status.</b> {esc(LIVE_STATUS)} '
 f'You have <b>{CONF} points</b> confirmed, <b>{LIVE}</b> live, max attainable <b>{ATTAIN}</b>. '
 f'This is your personal, <b>unofficial</b> tally for Rob to review — his scoring is authoritative. Champion {esc(CHAMP)} · runner-up {esc(RUNNER)}.</div>'
 f'<div class="src">Live results as of <b>{REFRESHED}</b> · reading mode, favorites and any manual score edits are saved on this device.</div>'
@@ -1199,5 +1448,6 @@ open(out,'w',encoding='utf-8').write(HTML)
 print("WROTE",out,len(HTML),"chars")
 print("Confirmed",CONF,"Live",LIVE,"Out",OUT,"Attainable",ATTAIN,"R32",str(r32_correct)+"/"+str(r32_decided))
 print("Eliminated teams:",sorted(ELIM))
+
 
 ```
