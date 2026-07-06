@@ -786,6 +786,16 @@ html[data-theme="hongkong"]{--bg:#0a0a14;--panel:#14121f;--text:#F6ECD8;--text2:
  --blue:#00E5FF;--purple:#C77DFF;--pink:#FF2D6B;--orange:#FF7A1A;--green:#00E5A0;--teal:#00E5FF;
  --grad:linear-gradient(120deg,#FF2D6B,#FFC531,#00E5A0);
  --radius:14px;--radius-sm:10px;--fs:16px;--lh:1.55;--ls:.01em;--fstack:"PingFang HK","Hiragino Sans GB","Microsoft JhengHei","Noto Sans HK","Segoe UI",system-ui,sans-serif;}
+/* Fun · BART Third Rail — SF BART traction-power control room for an electrician / electrical
+   engineer: deep tunnel-dark with a faint blueprint grid, high-voltage hazard yellow, BART
+   route-line accents (yellow/orange/red/green/blue), monospace schematic type, and a 1000V DC
+   third-rail badge. */
+html[data-theme="bart"]{--bg:#0B0F17;--panel:#131A24;--text:#EAF2FA;--text2:#CFE0EF;--muted:#8497A8;--border:#22303F;--border2:#FFD21E;
+ --glass:linear-gradient(180deg,#131A24,#0E141D);--shadow:0 0 0 1px rgba(255,210,30,.12),0 10px 30px rgba(0,0,0,.55);--hover:rgba(255,210,30,.12);
+ --gold:#FFD21E;--gold-ink:#FFDE5A;--win:#4DB748;--win-ink:#79E06E;--out:#7789a0;--lose-ink:#FF5A4D;--g1:rgba(255,210,30,.14);--g2:rgba(0,114,188,.16);--g3:rgba(229,0,43,.09);
+ --blue:#2E9BE6;--purple:#7A5CFF;--pink:#E4002B;--orange:#F57F00;--green:#4DB748;--teal:#00B3C4;
+ --grad:linear-gradient(90deg,#FFCF00,#F57F00,#E4002B,#4DB748,#0072BC);
+ --radius:8px;--radius-sm:6px;--fs:15px;--lh:1.5;--ls:.01em;--fstack:ui-monospace,"SFMono-Regular","Consolas","Roboto Mono","Courier New",monospace;}
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 html{scroll-behavior:smooth;scroll-padding-top:24px}
 body{font-family:var(--fstack);font-size:var(--fs);line-height:var(--lh);letter-spacing:var(--ls);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative;min-height:100vh}
@@ -1142,6 +1152,19 @@ html[data-theme="hongkong"] .orb{background:var(--grad);box-shadow:0 0 10px #FF2
 html[data-theme="hongkong"] .pill.live .dot,html[data-theme="hongkong"] .rf-dot{box-shadow:0 0 8px currentColor,0 0 16px rgba(0,229,160,.6)}
 html[data-theme="hongkong"] .brand>div{position:relative}
 html[data-theme="hongkong"] .brand>div::after{content:"香港 · 1989 · HONG KONG";display:block;margin-top:3px;font-size:.7rem;font-weight:800;letter-spacing:.14em;color:#FF2D6B;text-shadow:0 0 6px rgba(255,45,107,.9),0 0 14px rgba(255,45,107,.55)}
+html[data-theme="bart"] body::before{display:none}
+html[data-theme="bart"] body{background-color:#0B0F17;background-image:linear-gradient(rgba(255,210,30,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(46,155,230,.05) 1px,transparent 1px),radial-gradient(circle at 84% 6%,rgba(255,210,30,.12),transparent 40%),radial-gradient(circle at 10% 92%,rgba(0,114,188,.14),transparent 44%);background-size:28px 28px,28px 28px,auto,auto}
+html[data-theme="bart"] .glass{background:linear-gradient(180deg,#131A24,#0E141D);backdrop-filter:none;-webkit-backdrop-filter:none;border:1px solid rgba(255,210,30,.22)}
+html[data-theme="bart"] .hero{border-top:4px solid transparent;border-image:repeating-linear-gradient(45deg,#FFD21E 0 14px,#0B0F17 14px 28px) 4}
+html[data-theme="bart"] h1,html[data-theme="bart"] h2,html[data-theme="bart"] h3,html[data-theme="bart"] .story-title,html[data-theme="bart"] .shead h2{background:none;color:#FFD21E;-webkit-text-fill-color:#FFD21E;text-shadow:0 0 8px rgba(255,210,30,.4);letter-spacing:.02em}
+html[data-theme="bart"] .eyebrow,html[data-theme="bart"] .kicker{color:#2E9BE6;text-shadow:0 0 6px rgba(46,155,230,.55);text-transform:uppercase;letter-spacing:.16em}
+html[data-theme="bart"] a{color:#2E9BE6}
+html[data-theme="bart"] .modes button,html[data-theme="bart"] .fun-btn,html[data-theme="bart"] .chip,html[data-theme="bart"] .seg button,html[data-theme="bart"] .fun-menu button{border:1px solid rgba(255,210,30,.30);background:rgba(255,255,255,.03);color:var(--text)}
+html[data-theme="bart"] .modes button.on,html[data-theme="bart"] .fun-btn.on,html[data-theme="bart"] .fun-menu button.on,html[data-theme="bart"] .seg button.on{background:#FFD21E;color:#0B0F17;border-color:#FFD21E;box-shadow:0 0 12px rgba(255,210,30,.65)}
+html[data-theme="bart"] .team{border:1px solid rgba(46,155,230,.28)}
+html[data-theme="bart"] .orb{background:var(--grad);box-shadow:0 0 10px rgba(255,210,30,.75),0 0 22px rgba(46,155,230,.45)}
+html[data-theme="bart"] .brand>div{position:relative}
+html[data-theme="bart"] .brand>div::after{content:"⚡ 1000 V DC · THIRD RAIL · SFBART";display:inline-block;margin-top:4px;font-size:.63rem;font-weight:800;letter-spacing:.14em;color:#FFD21E;background:rgba(255,210,30,.08);border:1px solid rgba(255,210,30,.45);border-left:5px solid #FFD21E;padding:2px 9px;border-radius:3px;text-shadow:0 0 6px rgba(255,210,30,.45)}
 """
 
 JS=r"""
@@ -1149,7 +1172,7 @@ JS=r"""
  var root=document.documentElement,LS=window.localStorage;
  var KTHEME='wcb.theme',KFAV='wcb.favs',KFO='wcb.favonly',KSC='wcb.scores.v3';
  function setTheme(t){root.setAttribute('data-theme',t);document.querySelectorAll('.modes button').forEach(function(b){if(b.dataset.mode)b.classList.toggle('on',b.dataset.mode===t)});if(funBtn)funBtn.classList.toggle('on',!!FUN[t]);try{LS.setItem(KTHEME,t)}catch(e){}closeFun();if(window.__drawConn)setTimeout(window.__drawConn,80);}
- var FUN={geocities:1,minecraft:1,winxp:1,doodle:1,hongkong:1};
+ var FUN={geocities:1,minecraft:1,winxp:1,doodle:1,hongkong:1,bart:1};
  var funWrap=document.getElementById('funWrap'),funBtn=document.getElementById('funBtn');
  function closeFun(){if(funWrap){funWrap.classList.remove('open');if(funBtn)funBtn.setAttribute('aria-expanded','false');}}
  document.querySelectorAll('.modes button').forEach(function(b){if(b.dataset.mode)b.addEventListener('click',function(){setTheme(b.dataset.mode)})});
@@ -1287,6 +1310,7 @@ HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf
 +'<button data-mode="winxp" role="menuitem" title="Windows XP — Luna blue, Bliss green-hills desktop, cream dialogs, rounded blue title bars, Tahoma"><span class="fm-em">🪟</span> Windows XP</button>'
 +'<button data-mode="doodle" role="menuitem" title="Hand-drawn pencil sketch — warm paper with faint ruled lines, graphite wobbly borders, handwriting font, grayscale flags"><span class="fm-em">✏️</span> Doodle</button>'
 +'<button data-mode="hongkong" role="menuitem" title="Hong Kong 1989 — neon-noir Kowloon nightscape, glowing neon-sign colours, bilingual 香港 · 1989 badge"><span class="fm-em">🌃</span> Hong Kong 1989</button>'
++'<button data-mode="bart" role="menuitem" title="BART Third Rail — SF BART traction-power control room: tunnel-dark blueprint grid, high-voltage hazard yellow, BART route-line accents, monospace schematic type and a 1000V DC third-rail badge"><span class="fm-em">⚡</span> BART · Third Rail</button>'
 +'</div></div></div></div>'
 +'<div class="shell"><nav class="rail glass" id="rail">'
 +'<button class="navtoggle" id="navToggle" aria-expanded="false" aria-controls="railLinks">📑 Contents ☰</button>'
