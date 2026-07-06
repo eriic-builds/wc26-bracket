@@ -16,7 +16,7 @@ import html, json, re
 #  exact dashboard design / UI / format. Do not restyle, re-order, or add to it.
 # ══════════════════════════════════════════════════════════════════════════════
 ENTRANT="Eric Lam"; TIEBREAKER=4
-REFRESHED="July 6, 2026 · 11:31 AM PT"
+REFRESHED="July 6, 2026 · 3:27 PM PT"
 CREDIT="Built With Cowork — Imagined by Eric Lam"  # tiny footer signature — fixed, do not change
 SYNC_URL="https://github.com/eriic-builds/wc26-bracket/actions/workflows/sync-results.yml"  # "Sync now" button: opens the workflow's Run page on GitHub (tap "Run workflow" to sync). No relay, no token. Leave "" to hide the button.
 
@@ -66,7 +66,8 @@ RES={"M73":(0,1,"Canada",""),
  "M89":(0,1,"France",""),
  "M90":(0,3,"Morocco",""),
  "M91":(1,2,"Norway",""),
- "M92":(2,3,"England","")}
+ "M92":(2,3,"England",""),
+ "M93":(0,1,"Spain","")}
 UPCOMING={}
 
 R16_WIN=["France","Morocco","Spain","United States","Japan","England","Argentina","Colombia"]
@@ -693,12 +694,12 @@ def build_round_results_panel(label, short, codes):
 #    want pinned above the auto cards; leave it empty to show only the live last-six.
 FEATURED=[]
 AUTO_HL=[
+ ("🐂","Spain edge Portugal","Portugal 0–1 Spain","Mon Jul 6 · Dallas","Heartbreak for Portugal — Spain nicked it 1–0 late in the Round of 16, Merino (90'+1') on target."),
  ("🦁","Bellingham's brace sinks Mexico","Mexico 2–3 England","Mon Jul 6 · Mexico City","Bellingham struck twice in the first half (36', 38') as England beat Mexico 3–2 in the Round of 16, with Kane (60' pen) also on the mark."),
  ("🇳🇴","Haaland's brace sinks Brazil","Brazil 1–2 Norway","Sun Jul 5 · New Jersey","Haaland struck twice after the break (79', 90') as Norway beat Brazil 2–1 in the Round of 16."),
  ("🐓","France edge Paraguay","Paraguay 0–1 France","Sat Jul 4 · Philadelphia","Nervy but enough: France saw off Paraguay 1–0 in the Round of 16 thanks to Mbappe (70' pen)."),
  ("🇲🇦","Ounahi's brace sinks Canada","Canada 0–3 Morocco","Sat Jul 4 · Houston","Ounahi struck twice after the break (50', 82') as Morocco beat Canada 3–0 in the Round of 16, with Rahimi (90'+8') also on the mark."),
  ("☕","Colombia edge Ghana","Colombia 1–0 Ghana","Sat Jul 4 · Kansas City","Nervy but enough: Colombia saw off Ghana 1–0 in the Round of 32 thanks to Arias (14')."),
- ("💙","Argentina edge Cape Verde","Argentina 3–2 Cape Verde","Fri Jul 3 · Miami","Argentina left it late, snatching a 3–2 Round of 32 squeaker past Cape Verde (Messi (29'), Martinez (92') and Borges OG (111'))."),
 ]  # AUTO — maintained by the sync engine; the last six finished games. Do not hand-edit.
 HIGHLIGHTS=FEATURED+AUTO_HL
 def build_highlights():
