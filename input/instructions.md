@@ -32,6 +32,10 @@ with the user's data. Do these steps and do not deviate from the generator's des
    your dashboard." Then stop and wait. Do not build with the example data.
 
 **Step 2 (after they upload their Excel):**
+**Always pull the latest, up-to-date information first.** Before you build, do a fresh live web
+lookup of the current tournament state as of today — the newest FIFA official results, scores,
+kickoff times, and finished games — and build from those. Do not rely on the example data in this
+kit or on older/cached numbers; the tournament moves fast, so re-check at the moment you build.
 1. Replace ONLY the USER DATA block at the top of the generator (and the HIGHLIGHTS list) with their
    values:
    - **Name (`ENTRANT`):** use the entrant’s name from the **cell next to the "Your Name:" label on their
