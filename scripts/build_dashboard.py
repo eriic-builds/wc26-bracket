@@ -18,7 +18,7 @@ import html, json, re
 ENTRANT="Eric Lam"; TIEBREAKER=4
 REFRESHED="July 6, 2026 · 11:31 AM PT"
 CREDIT="Built With Cowork — Imagined by Eric Lam"  # tiny footer signature — fixed, do not change
-SYNC_URL=""  # "Sync now" button endpoint: your deployed sync-relay URL (see relay/README.md). The button POSTs here to trigger the workflow in the background. Leave "" to hide the button.
+SYNC_URL="https://github.com/eriic-builds/wc26-bracket/actions/workflows/sync-results.yml"  # "Sync now" button: opens the workflow's Run page on GitHub (tap "Run workflow" to sync). No relay, no token. Leave "" to hide the button.
 
 SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa":"2A","Canada":"2B",
  "Netherlands":"1F","Morocco":"2C","Portugal":"2K","Croatia":"2L","Spain":"1H","Austria":"2J",
@@ -831,13 +831,7 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .synbtn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;font-family:inherit;font-size:.76rem;font-weight:700;color:var(--text);text-decoration:none;cursor:pointer;transition:.16s}
 .synbtn:hover{background:var(--hover);transform:translateY(-1px)}
 .synbtn:active{transform:translateY(0)}
-.synbtn:disabled{cursor:default}
-.synbtn.ok{color:var(--win)}
-.synbtn.err{color:var(--red)}
-.synbtn.cool{color:var(--muted)}
 .synbtn .syn-ic{display:inline-block;font-size:.92rem;line-height:1}
-.synbtn.syncing .syn-ic{animation:spin .9s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
 .shell{display:grid;grid-template-columns:186px minmax(0,1fr);gap:22px;align-items:start}
 .content{min-width:0}
 .rail{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow:auto;padding:14px 12px;align-self:start;z-index:5}
@@ -1292,29 +1286,6 @@ JS=r"""
    var spy=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){railLinks.forEach(function(l){l.classList.remove('active');});var a=linkFor[e.target.id];if(a)a.classList.add('active');}});},{rootMargin:'-45% 0px -50% 0px',threshold:0});
    secs.forEach(function(s){spy.observe(s);});
  }
- // ── "Sync now" button: trigger the sync relay in the background (no navigation),
- //    with a client-side cooldown so rapid clicks/reloads can't spam the workflow ──
- var _sb=document.getElementById('syncBtn');
- if(_sb&&_sb.dataset.endpoint){
-   var _tx=_sb.querySelector('.syn-tx'),_busy=false,_iv=null,_KSY='wc26_lastSync',_COOL=60000;
-   function _lab(t){if(_tx)_tx.textContent=t;}
-   function _left(){var t=0;try{t=parseInt(localStorage.getItem(_KSY)||'0',10);}catch(e){}var d=_COOL-(Date.now()-t);return d>0?d:0;}
-   function _cool(){if(_iv)clearInterval(_iv);_sb.disabled=true;_sb.classList.add('cool');
-     function tick(){var s=Math.ceil(_left()/1000);if(s<=0){clearInterval(_iv);_iv=null;_sb.disabled=false;_sb.classList.remove('cool','ok');_lab('Sync now');}else{_lab('Wait '+s+'s');}}
-     tick();_iv=setInterval(tick,1000);}
-   if(_left()>0)_cool();
-   _sb.addEventListener('click',function(){
-     if(_busy||_left()>0)return;
-     _busy=true;_sb.classList.remove('err','ok');_sb.classList.add('syncing');_sb.disabled=true;_lab('Syncing\u2026');
-     fetch(_sb.dataset.endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
-      .then(function(r){if(!r.ok)throw new Error(r.status);
-        _busy=false;try{localStorage.setItem(_KSY,String(Date.now()));}catch(e){}
-        _sb.classList.remove('syncing');_sb.classList.add('ok');_lab('Started \u2713');_cool();})
-      .catch(function(){
-        _busy=false;_sb.classList.remove('syncing');_sb.classList.add('err');_sb.disabled=false;_lab('Failed \u00b7 retry');
-        setTimeout(function(){if(!_busy&&_left()<=0){_sb.classList.remove('err');_lab('Sync now');}},4000);});
-   });
- }
 })();
 """
 
@@ -1338,9 +1309,9 @@ HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf
 +'<div class="topbar"><div class="brand"><span class="orb"></span><div>2026 FIFA World Cup - Bracket Dashboard - MSFT SLED<small>Live results vs your picks</small></div></div>'
 +'<div class="upd-group">'
 +f'<div class="refreshed glass" id="topRefreshed" title="When live results were last synced"><span class="rf-dot"></span>Updated {REFRESHED}</div>'
-+(f'<button class="synbtn glass" id="syncBtn" type="button" data-endpoint="{esc(SYNC_URL)}" '
-  'title="Pull the latest results now: runs the sync in the background — the dashboard updates in about 1-2 minutes.">'
-  '<span class="syn-ic">🔄</span><span class="syn-tx">Sync now</span></button>' if SYNC_URL else '')
++(f'<a class="synbtn glass" id="syncBtn" href="{esc(SYNC_URL)}" target="_blank" rel="noopener" '
+  'title="Pull the latest results: opens the sync workflow on GitHub — tap Run workflow, and the dashboard updates in about 1-2 minutes.">'
+  '<span class="syn-ic">🔄</span><span class="syn-tx">Sync now</span></a>' if SYNC_URL else '')
 +'</div>'
 +'<div class="modes glass"><button data-mode="dark" class="on">Dark</button><button data-mode="light">Light</button>'
 +'<button data-mode="easy" title="Reading mode — a highly legible font, larger text, extra line and letter spacing, sentence case (no all-caps), left-aligned text and a soft, glare-free background">Easy</button>'
