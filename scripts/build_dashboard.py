@@ -805,6 +805,7 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .wrap{max-width:1280px;margin:0 auto;padding:26px 22px 90px;position:relative;z-index:1}
 .glass{background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
 .topbar{display:flex;align-items:center;gap:14px;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap}
+.upd-group{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:11px;font-weight:600}
 .orb{width:30px;height:30px;border-radius:50%;background:var(--grad);box-shadow:0 0 16px rgba(0,151,244,.5);flex:0 0 auto}
 .brand small{display:block;color:var(--muted);font-weight:500;font-size:.72rem;letter-spacing:.04em}
@@ -1306,9 +1307,11 @@ def shead(sid, icon, title, cap):
 HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf-8">'
 +f'<meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(ENTRANT)}’s World Cup 2026 Bracket</title>'+'<style>'+CSS+'</style></head><body><div class="wrap">'
 +'<div class="topbar"><div class="brand"><span class="orb"></span><div>2026 FIFA World Cup - Bracket Dashboard - MSFT SLED<small>Live results vs your picks</small></div></div>'
++'<div class="upd-group">'
 +f'<div class="refreshed glass" id="topRefreshed" title="When live results were last synced"><span class="rf-dot"></span>Updated {REFRESHED}</div>'
 +(f'<a class="synbtn glass" href="{esc(SYNC_URL)}" target="_blank" rel="noopener" title="Pull the latest results now: opens the Sync workflow on GitHub — click the green Run workflow button there. The dashboard refreshes in about 1-2 minutes.">'
   '<span class="syn-ic">🔄</span>Sync now</a>' if SYNC_URL else '')
++'</div>'
 +'<div class="modes glass"><button data-mode="dark" class="on">Dark</button><button data-mode="light">Light</button>'
 +'<button data-mode="easy" title="Reading mode — a highly legible font, larger text, extra line and letter spacing, sentence case (no all-caps), left-aligned text and a soft, glare-free background">Easy</button>'
 +'<div class="fun-wrap" id="funWrap"><button class="fun-btn" id="funBtn" aria-haspopup="true" aria-expanded="false" title="Fun themes">Fun <span class="fun-car">▾</span></button>'
