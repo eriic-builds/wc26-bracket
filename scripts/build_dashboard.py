@@ -18,6 +18,7 @@ import html, json, re
 ENTRANT="Eric Lam"; TIEBREAKER=4
 REFRESHED="July 6, 2026 · 11:31 AM PT"
 CREDIT="Built With Cowork — Imagined by Eric Lam"  # tiny footer signature — fixed, do not change
+SYNC_URL="https://github.com/eriic-builds/wc26-bracket/actions/workflows/sync-results.yml"  # "Sync now" button target: the sync workflow's Actions page. Set "" to hide the button.
 
 SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa":"2A","Canada":"2B",
  "Netherlands":"1F","Morocco":"2C","Portugal":"2K","Croatia":"2L","Spain":"1H","Austria":"2J",
@@ -826,6 +827,10 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .refreshed{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;font-size:.76rem;font-weight:600;color:var(--text2)}
 .refreshed .rf-dot{width:8px;height:8px;border-radius:50%;background:var(--win);box-shadow:0 0 8px var(--win);flex:0 0 auto;animation:rfpulse 2.4s ease-in-out infinite}
 @keyframes rfpulse{0%,100%{opacity:.45}50%{opacity:1}}
+.synbtn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;font-family:inherit;font-size:.76rem;font-weight:700;color:var(--text);text-decoration:none;cursor:pointer;transition:.16s}
+.synbtn:hover{background:var(--hover);transform:translateY(-1px)}
+.synbtn:active{transform:translateY(0)}
+.synbtn .syn-ic{font-size:.92rem;line-height:1}
 .shell{display:grid;grid-template-columns:186px minmax(0,1fr);gap:22px;align-items:start}
 .content{min-width:0}
 .rail{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow:auto;padding:14px 12px;align-self:start;z-index:5}
@@ -1302,6 +1307,8 @@ HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf
 +f'<meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(ENTRANT)}’s World Cup 2026 Bracket</title>'+'<style>'+CSS+'</style></head><body><div class="wrap">'
 +'<div class="topbar"><div class="brand"><span class="orb"></span><div>2026 FIFA World Cup - Bracket Dashboard - MSFT SLED<small>Live results vs your picks</small></div></div>'
 +f'<div class="refreshed glass" id="topRefreshed" title="When live results were last synced"><span class="rf-dot"></span>Updated {REFRESHED}</div>'
++(f'<a class="synbtn glass" href="{esc(SYNC_URL)}" target="_blank" rel="noopener" title="Pull the latest results now: opens the Sync workflow on GitHub — click the green Run workflow button there. The dashboard refreshes in about 1-2 minutes.">'
+  '<span class="syn-ic">🔄</span>Sync now</a>' if SYNC_URL else '')
 +'<div class="modes glass"><button data-mode="dark" class="on">Dark</button><button data-mode="light">Light</button>'
 +'<button data-mode="easy" title="Reading mode — a highly legible font, larger text, extra line and letter spacing, sentence case (no all-caps), left-aligned text and a soft, glare-free background">Easy</button>'
 +'<div class="fun-wrap" id="funWrap"><button class="fun-btn" id="funBtn" aria-haspopup="true" aria-expanded="false" title="Fun themes">Fun <span class="fun-car">▾</span></button>'
