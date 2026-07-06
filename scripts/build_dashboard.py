@@ -186,7 +186,17 @@ assert CONF+OUT+LIVE==POINTS_MAX, (CONF,OUT,LIVE)
 N_R32=len(R32); R32_DONE=sum(1 for m in R32 if m[0] in RES); REMAIN_R32=N_R32-R32_DONE
 CHAMP_ALIVE = CHAMP not in ELIM
 CHAMP_STATUS = "still alive" if CHAMP_ALIVE else "out"
-BUSTED=[m[4] for m in R32 if m[0] in RES and m[4] in ELIM]
+# Genuine "busted branches" = the entrant's own picks that lost a match they were picked
+# to win (an R32 miss, or a later-round pick that reached its match and lost) — NOT a
+# correct pick that fell to another of your picks. Keeps the KPI note in step with the
+# scoring (OUT points) and the "How it played out" story.
+BUSTED=[m[4] for m in R32 if m[0] in RES and RES[m[0]][2]!=m[4]]
+for _code,(_fa,_fb) in KO_FEED.items():
+    if _code in RES:
+        _pk=PICK_BY_CODE.get(_code)
+        _wa=RES[_fa][2] if _fa in RES else None
+        _wb=RES[_fb][2] if _fb in RES else None
+        if _pk and _pk in (_wa,_wb) and _pk!=RES[_code][2]: BUSTED.append(_pk)
 BUSTED_TXT=" & ".join(BUSTED) if BUSTED else ""
 BUSTED_PHRASE=("; busted so far: "+BUSTED_TXT) if BUSTED else ""
 BUSTED_NOTE=(BUSTED_TXT+" branch"+("es" if len(BUSTED)>1 else "")) if BUSTED else "none yet"
@@ -398,25 +408,29 @@ def build_scorebar():
       f'<div class="sb-stat s-max"><b id="scMax" data-max="{POINTS_MAX}">{ATTAIN}</b><span>still attainable</span></div>'
       '</div></div>')
 
-KPIS=[
- ("Confirmed points", f"<span id='kpiConfirmed'>{CONF}</span><span class='kunit'>/ {POINTS_MAX}</span>","✅","teal",f"{r32_correct} of {r32_decided} R32 picks right"),
- ("Round of 32", f"{r32_correct}<span class='kunit'>/ {r32_decided}</span>","⚽","blue",f"{REMAIN_R32} games left"),
- ("Still live", f"<span id='kpiLive'>{LIVE}</span>","⚡","blue","across your open picks"),
- ("Max attainable", f"{ATTAIN}","🎯","green","if your path holds"),
- ("Champion pick", CHAMP,"🏆","gold",CHAMP_STATUS),
- ("Points lost", f"{OUT}","🚫","red",BUSTED_NOTE),
-]
+KPIS=None  # KPIs are built live in build_kpis() so they can follow the current round
 def build_kpis():
+    rnd_full=_ROUND_FULL.get(CURRENT_ROUND,CUR_LABEL)
+    if CUR_REMAIN: rnd_note=f"{CUR_REMAIN} game{'s' if CUR_REMAIN!=1 else ''} left"
+    elif NEXT_LABEL: rnd_note=f"{NEXT_LABEL} next"
+    else: rnd_note="round complete"
+    kpis=[
+     ("Confirmed points", f"<span id='kpiConfirmed'>{CONF}</span><span class='kunit'>/ {POINTS_MAX}</span>","✅","teal",f"{r32_correct} of {r32_decided} R32 picks right"),
+     (rnd_full, f"{CUR_CORR}<span class='kunit'>/ {CUR_DEC}</span>","⚽","blue",rnd_note),
+     ("Still live", f"<span id='kpiLive'>{LIVE}</span>","⚡","blue","across your open picks"),
+     ("Max attainable", f"{ATTAIN}","🎯","green","if your path holds"),
+     ("Champion pick", CHAMP,"🏆","gold",CHAMP_STATUS),
+     ("Points lost", f"{OUT}","🚫","red",BUSTED_NOTE),
+    ]
     return ''.join(f'<div class="glass kpi t-{t}"><div class="kpi-ic">{ic}</div>'
         f'<div class="kpi-l">{esc(l)}</div><div class="kpi-v">{v}</div><div class="kpi-n">{esc(n)}</div></div>'
-        for l,v,ic,t,n in KPIS)
+        for l,v,ic,t,n in kpis)
 
 def build_finalfour():
     out=[]
     for tm in QF_WIN:
         role="Champion" if tm==CHAMP else ("Runner-up" if tm==RUNNER else "Semifinalist")
         alive = tm not in ELIM
-        state = ("won R32" if tm in [RES[m][2] for m in RES] else "R32 Jul 2–3")
         cls="ff-champ" if tm==CHAMP else ("ff-run" if tm==RUNNER else "")
         dot = '<span class="ff-live">● alive</span>' if alive else '<span class="ff-dead">✕ out</span>'
         out.append(f'<div class="ff {cls}" data-team="{esc(tm)}"><span class="ff-seed">{esc(seed_of(tm))}</span>'
@@ -459,59 +473,68 @@ def _levels_picked(team):
 def _forfeited(team, elim_level):
     return sum(_STORY_LEVEL_PTS[l] for l in _levels_picked(team) if l>=elim_level)
 
-def story_cards():
-    cards=[]
-    # 1) running Round-of-32 scoreline
-    delivered=[pk for (mc,dt,a,b,pk) in R32 if mc in RES and RES[mc][2]==pk]
-    misses=r32_decided-r32_correct
-    if r32_decided==0:
-        cards.append(("\u26bd","Round of 32","Kicking off",
-            "No games are final yet — your first results land here as they finish."))
-    else:
-        head="Perfect start" if misses==0 else ("Holding strong" if r32_correct>=misses else "Bumpy round")
-        dl=", ".join(delivered)
-        body=(f"{dl} came through for you. " if dl else "")
-        body+=("You've got every finished game right so far." if misses==0
-               else f"{misses} of your {r32_decided} decided Round-of-32 games missed.")
-        cards.append(("\u2705" if misses==0 else "\U0001f4ca",
-            f"{r32_correct} of {r32_decided} in the Round of 32",head,body))
-    # 2) busted branches — a pick that actually played its match and lost, in round order
+def _collect_busts():
+    """Every branch that actually played its own match and lost (an upset that cost the
+    entrant), newest-round first, richest detail — shared by the story's turning-point card."""
     busts=[]
     for (mc,dt,a,b,pk) in R32:
         if mc in RES:
             gA,gB,w,note=RES[mc]
-            if pk!=w: busts.append((0,int(mc[1:]),mc,pk,w,a,b,gA,gB,note))
+            if pk!=w: busts.append((0,int(mc[1:]),pk,w,a,b,gA,gB,note))
     for code,(fa,fb) in KO_FEED.items():
         if code in RES:
             wa=RES[fa][2] if fa in RES else None
             wb=RES[fb][2] if fb in RES else None
             pk=PICK_BY_CODE.get(code); gA,gB,w,note=RES[code]
-            lvl=_STORY_KO_LEVEL[KO_ROUND[code]]
             if pk and pk in (wa,wb) and pk!=w:
-                busts.append((lvl,int(code[1:]),code,pk,w,wa,wb,gA,gB,note))
-    busts.sort(key=lambda x:(x[0],x[1]))
-    for (lvl,_n,code,pk,w,a,b,gA,gB,note) in busts:
-        rd=_STORY_ROUND_NAME[lvl]
+                busts.append((_STORY_KO_LEVEL[KO_ROUND[code]],int(code[1:]),pk,w,wa,wb,gA,gB,note))
+    return busts
+
+def story_cards():
+    """A tight 3-card narrative arc — momentum, the turning point, the stakes ahead — all
+    derived live so it tracks the current round and never repeats the game-by-game recaps
+    already shown in Game facts / the bracket. Capped at three so it stays a visual aid."""
+    cards=[]
+    # 1) MOMENTUM — the entrant's record across the rounds played so far
+    played=[(s,round_tally(s)) for s in _ROUND_SEQ]
+    bits=[f"{c} of {d} in the {_ROUND_FULL[s]}" for (s,(c,d,l)) in played if d]
+    tot_c=sum(c for (_s,(c,d,l)) in played); tot_d=sum(d for (_s,(c,d,l)) in played)
+    if not bits:
+        cards.append(("\u26bd","The story so far","Kicking off",
+            "No games are final yet — your first results will land here as they finish."))
+    else:
+        head=("Perfect run" if tot_c==tot_d else "Holding strong" if tot_c*2>=tot_d else "Bumpy road")
+        body=(" · ".join(bits))+f". {CONF} points banked, {LIVE} still live."
+        cards.append(("\u2705" if tot_c==tot_d else "\U0001f4ca",
+            f"{tot_c} of {tot_d} picks right so far",head,body))
+    # 2) TURNING POINT — the single costliest upset against you (not a list; a highlight)
+    busts=_collect_busts()
+    if busts:
+        busts.sort(key=lambda x:(-_forfeited(x[2],x[0]),-x[0],x[1]))
+        lvl,_n,pk,w,a,b,gA,gB,note=busts[0]
         sc=f"{a} {gA}{DASH}{gB} {b}"+(f" ({note})" if note else "")
-        forfeit=_forfeited(pk,lvl)
-        voided=[_STORY_ROUND_NAME[l] for l in _levels_picked(pk) if l>=lvl]
-        lead=(f"{w} knocked out your {pk} pick {sc}." if lvl==0
-              else f"{w} ended your {pk} run in the {rd} — {sc}.")
-        if forfeit and voided:
-            tail=f" That wipes {forfeit} point{'s' if forfeit!=1 else ''} you had riding on {pk} ({', '.join(voided)})."
+        forfeit=_forfeited(pk,lvl); n=len(busts)
+        lead=(f"{w} knocked out your {pk} pick — {sc}." if lvl==0
+              else f"{w} ended your {pk} run in the {_STORY_ROUND_NAME[lvl]} — {sc}.")
+        if n>1:
+            tail=f" It's the costliest of {n} branches that have busted, {OUT} points gone in all."
         else:
-            tail=f" {pk} had already banked its earlier points, so nothing more is lost here."
-        cards.append((team_emoji(w),f"Busted branch — {rd}",f"{w} over {pk}",lead+tail))
-    # 3) champion outlook
+            tail=f" That's {forfeit} point{'s' if forfeit!=1 else ''} off your board."
+        cards.append((team_emoji(w),"Biggest swing",f"{w} over {pk}",lead+tail))
+    else:
+        cards.append(("\U0001f3af","Clean sheet","No busted branches yet",
+            "Every team you've backed so far is still standing — nothing off your board."))
+    # 3) STAKES AHEAD — champion + final-four watch + what's next
     ce=team_emoji(CHAMP)
     if CHAMP in ELIM:
-        cards.append((ce,"Your champion",f"{CHAMP} is out",
-            f"The title pick you built the bracket around is gone, so the Champion’s 16 points are off the board."))
+        cards.append((ce,"What's at stake",f"{CHAMP} is out",
+            f"Your title pick is gone, so the Champion’s 16 points are off the board — {ATTAIN} still attainable."))
     else:
-        ff=", ".join(QF_WIN)
-        cards.append((ce,"Your champion",f"{CHAMP} still standing",
-            f"{CHAMP} is still alive, with {FF_ALIVE} of your final four ({ff}) still in it."))
-    return cards
+        ff=", ".join(t for t in QF_WIN if t not in ELIM) or "—"
+        nxt=f" Up next: the {NEXT_LABEL}." if NEXT_LABEL else ""
+        cards.append((ce,"What's at stake",f"{CHAMP} still standing",
+            f"{CHAMP} is alive, with {FF_ALIVE} of your final four ({ff}) still in it.{nxt}"))
+    return cards[:3]
 def build_story():
     return ''.join(f'<div class="glass story"><div class="story-ic">{ic}</div>'
         f'<div class="story-tag">{esc(tag)}</div><div class="story-title">{esc(ti)}</div>'
@@ -565,6 +588,36 @@ def _round_subtitle():
         return f"{tag} up next · {CUR_TOTAL} to play"
     return f"{CUR_DONE} of {CUR_TOTAL} {tag} final · {CUR_REMAIN} to play"
 CUR_SUBTITLE=_round_subtitle()
+
+# The entrant's record in a given round (won / decided / still-live), plus the record in
+# the round the tournament is currently in, the next round up, and a one-line live status.
+# All recomputed each build, so the hero, KPI, scorecard and story copy follow the live
+# round on their own instead of staying frozen on the Round of 32.
+_ROUND_PICKS={"r16":R16_WIN,"qf":QF_WIN,"sf":SF_WIN,"final":[CHAMP]}
+_ROUND_FULL={"r32":"Round of 32","r16":"Round of 16","qf":"Quarterfinals","sf":"Semifinals","final":"Final"}
+_ROUND_SEQ=["r32","r16","qf","sf","final"]
+def round_tally(short):
+    if short=="r32":
+        seq=[pick_status("r32",pk,mc) for (mc,dt,a,b,pk) in R32]
+    else:
+        seq=[pick_status(short,w) for w in _ROUND_PICKS.get(short,[])]
+    corr=sum(1 for s in seq if s=="won"); dec=sum(1 for s in seq if s!="pending")
+    return corr,dec,len(seq)-dec
+CUR_CORR,CUR_DEC,CUR_LIVE=round_tally(CURRENT_ROUND)
+def _next_round(short):
+    i=_ROUND_SEQ.index(short) if short in _ROUND_SEQ else -1
+    return _ROUND_SEQ[i+1] if 0<=i<len(_ROUND_SEQ)-1 else None
+NEXT_ROUND=_next_round(CURRENT_ROUND)
+NEXT_LABEL=_ROUND_FULL.get(NEXT_ROUND,"") if NEXT_ROUND else ""
+def _live_status():
+    full=_ROUND_FULL.get(CURRENT_ROUND,CUR_LABEL)
+    if CUR_TOTAL and CUR_DONE>=CUR_TOTAL:
+        return f"The {full} is complete." + (f" The {NEXT_LABEL} is up next." if NEXT_LABEL else "")
+    if CUR_DONE==0:
+        return f"The {full} is up next — {CUR_TOTAL} games to play."
+    nxt=f", then the {NEXT_LABEL}" if NEXT_LABEL else ""
+    return f"The {full} is underway — {CUR_DONE} of {CUR_TOTAL} final, {CUR_REMAIN} to go{nxt}."
+LIVE_STATUS=_live_status()
 def build_stages():
     return ''.join(f'<div class="stage s-{st}"><span class="sdot">{ {"done":"●","active":"◉","up":"○"}[st] }</span>'
         f'<div><div class="sname">{esc(n)}</div><div class="sdate">{esc(d)}</div></div></div>' for n,d,st in STAGES)
@@ -1250,13 +1303,14 @@ HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf
 +'</div></nav><div class="content">'
 +f'<section class="hero glass" id="intro"><div class="eyebrow">{esc(ENTRANT)} · live results vs your picks</div>'
 +f'<h1>Backing <span class="g">{esc(CHAMP)}</span> {"— and still in it" if CHAMP_ALIVE else "— but knocked out"}</h1>'
-+f'<p class="sub">{R32_DONE} of {N_R32} Round-of-32 games are final — you\'re <b>{r32_correct} of {r32_decided} right</b>, '
-+f'with <b>{CONF} points</b> banked and <b>{LIVE}</b> still live. Your champion pick {esc(CHAMP)} is <b>{CHAMP_STATUS}</b>{esc(BUSTED_PHRASE)}.</p>'
++f'<p class="sub">The <b>{esc(CUR_LABEL)}</b> is <b>{CUR_DONE} of {CUR_TOTAL} final</b> — you\'re <b>{CUR_CORR} of {CUR_DEC} right</b> this round, '
++f'with <b>{CONF} points</b> banked and <b>{LIVE}</b> still live. Your champion {esc(CHAMP)} is <b>{CHAMP_STATUS}</b>.'
++ (f' The {esc(NEXT_LABEL)} is up next.' if NEXT_LABEL else '') + '</p>'
 +'<div class="badges">'
 +f'<span class="pill live"><span class="dot"></span>{CONF} pts confirmed</span>'
-+f'<span class="pill"><span class="dot"></span>R32 {r32_correct}/{r32_decided}</span>'
++f'<span class="pill"><span class="dot"></span>{esc(_ROUND_TAGS.get(CURRENT_ROUND,CUR_LABEL))} {CUR_CORR}/{CUR_DEC}</span>'
 +f'<span class="pill"><span class="dot"></span>Max attainable {ATTAIN}</span>'
-+f'<span class="pill"><span class="dot"></span>{esc(CHAMP)} alive</span></div>'
++f'<span class="pill"><span class="dot"></span>{esc(CHAMP)} {"alive" if CHAMP_ALIVE else "out"}</span></div>'
 +'<div class="composer"><span class="corb"></span><span class="plus">+</span>'
 +'<input id="search" type="text" placeholder="Track a team through the bracket — try England, Morocco, Paraguay…" autocomplete="off">'
 +'<span class="mic">🎤</span><button class="clr" id="clear">Clear</button></div></section>'
@@ -1267,8 +1321,8 @@ HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf
 +'</div>'
 +shead("sec-scorecard","🧮","Scorecard — your path, scored live",f"{CONF} confirmed · {LIVE} live")
 +'<div class="note"><b>How this is scored.</b> Results are pulled from live web coverage (ESPN, CBS Sports, FIFA) and matched to your Excel picks. '
-+f'The Round of 32 is <b>{R32_DONE} of {N_R32} games</b> final — you sit on <b>{CONF} points</b> ({r32_correct}/{r32_decided} correct). '
-+'The six remaining R32 games play July 2–3; those rows and every later round stay <b>pending</b> until they’re played. '
++f'The <b>{esc(CUR_LABEL)}</b> stands at <b>{CUR_DONE} of {CUR_TOTAL}</b> — you sit on <b>{CONF} points</b> ({CUR_CORR}/{CUR_DEC} right this round). '
++f'{esc(LIVE_STATUS)} Later rounds stay <b>pending</b> until they’re played. '
 +'Flip any row yourself as games finish — totals recompute and save on this device.</div>'
 + build_scorebar()
 + f'<div class="glass">{build_scorecard()}</div>'
@@ -1315,7 +1369,7 @@ HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf
 + '</div>'
 +'<div class="glass foot"><b>Sources.</b> Your picks, scoring, tiebreaker and any host bonus rule from your <b>SLED World Cup 2026 bracket workbook</b> and the challenge instructions. '
 'Match results, scores and kickoff times from <b>FIFA official match records</b> (fifa.com), corroborated by NBC Sports, CBS Sports, ESPN and Sporting News, for the 2026 FIFA World Cup. Kickoff times anchored to ET, converted to CT/PT. Hover-card country pedigree (titles, best finish) from public FIFA World Cup historical records.'
-f'<div class="src"><b>Status.</b> Round of 32 is {R32_DONE} of {N_R32} games final; {REMAIN_R32} still to play, and every later round is pending. '
+f'<div class="src"><b>Status.</b> {esc(LIVE_STATUS)} '
 f'You have <b>{CONF} points</b> confirmed, <b>{LIVE}</b> live, max attainable <b>{ATTAIN}</b>. '
 f'This is your personal, <b>unofficial</b> tally for Rob to review — his scoring is authoritative. Champion {esc(CHAMP)} · runner-up {esc(RUNNER)}.</div>'
 f'<div class="src">Live results as of <b>{REFRESHED}</b> · reading mode, favorites and any manual score edits are saved on this device.</div>'
