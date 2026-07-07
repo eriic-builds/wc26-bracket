@@ -982,7 +982,6 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .team.st-actual .tname{color:var(--muted)}
 .team.st-actual .rb.up{color:var(--blue)}
 .team.st-actual.gone{opacity:.62}
-.team.st-actual.gone .tname{text-decoration:line-through}
 .team[data-team]{cursor:help}
 .statcard{position:fixed;z-index:80;min-width:212px;max-width:250px;padding:13px 15px;border-radius:14px;
   background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border2);
@@ -1009,7 +1008,6 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .team.st-won{border-color:color-mix(in srgb,var(--win) 55%,var(--border));box-shadow:0 2px 10px rgba(0,178,145,.12)}
 .team.st-won .tname{color:var(--win-ink)}
 .team.st-won.gone{opacity:.55;box-shadow:none}
-.team.st-won.gone .tname{text-decoration:line-through}
 .team.st-lost{border-color:color-mix(in srgb,var(--red) 50%,var(--border))}
 .team.st-lost .tname{text-decoration:line-through;color:var(--lose-ink)}
 .team.advancer .tname{font-weight:750}
