@@ -1,0 +1,28 @@
+name: CI
+
+# Runs the sync-engine unit tests and guards against generator/output drift:
+# if the committed docs/index.html no longer matches what build_dashboard.py
+# produces, the build fails (the exact regression from issue #2, where a hand
+# edit to the generated HTML was silently wiped on the next generator run).
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Generator / output drift guard
+        # Regenerate the HTML, then fail if it differs from what's committed.
+        # Diff only docs/index.html: build_dashboard.py legitimately changes its
+        # REFRESHED stamp on every sync, so a whole-tree diff would false-positive.
+        run: |
+          python scripts/build_dashboard.py
+          git diff --exit-code docs/index.html
