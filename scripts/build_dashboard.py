@@ -958,8 +958,8 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .team.st-won .tname{color:var(--win-ink)}
 .team.st-won.gone{opacity:.55;box-shadow:none;border-color:var(--border)}
 .team.st-won.gone .tname{color:var(--muted)}
-.team.st-lost{border-color:color-mix(in srgb,var(--red) 50%,var(--border))}
-.team.st-lost .tname{text-decoration:line-through;color:var(--lose-ink)}
+.team.st-lost{border-color:var(--border);opacity:.55}
+.team.st-lost .tname{color:var(--muted)}
 .team.advancer .tname{font-weight:750}
 .adv-arrow{color:var(--muted);font-weight:800;margin-left:2px;flex:0 0 auto}
 .matches{flex:1;display:flex;flex-direction:column;justify-content:space-around}
@@ -983,8 +983,9 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .team.adv .tname{color:var(--win-ink)}
 .team.realadv{border-color:var(--border2)}
 .team.realadv .tname{color:var(--muted)}
-.team.busted{border-color:color-mix(in srgb,var(--red) 50%,var(--border))}
-.team.busted .tname{text-decoration:line-through;color:var(--lose-ink)}
+.team.busted{border-color:var(--border);opacity:.55}
+.team.busted .tname{color:var(--muted)}
+.team.busted .rb.no,.team.st-lost .rb.no{color:var(--muted)}
 .team.champ{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 14%,var(--panel));box-shadow:0 0 20px rgba(255,206,32,.28)}
 .team.champ .tname{color:var(--gold-ink);font-weight:750}
 .team.out{opacity:.5}.team.out .tname{color:var(--out)}
