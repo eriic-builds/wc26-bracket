@@ -9,6 +9,8 @@
 
 **Live dashboard:** https://eriic-builds.github.io/wc26-bracket/
 
+![Dashboard preview](docs/assets/og-preview.png)
+
 ---
 
 ## Table of contents
