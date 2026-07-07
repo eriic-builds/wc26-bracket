@@ -1,5 +1,5 @@
 {
- "refreshed": "July 7, 2026 · 12:20 PM PT",
+ "refreshed": "July 7, 2026 · 4:07 PM PT",
  "res": {
   "M73": [
    0,
@@ -138,16 +138,16 @@
    2,
    "Argentina",
    ""
+  ],
+  "M96": [
+   0,
+   0,
+   "Switzerland",
+   "4–3 pens"
   ]
  },
  "upcoming": {},
  "ko_fix": {
-  "M96": [
-   "Tue Jul 7",
-   "4:00 PM",
-   "3:00 PM",
-   "1:00 PM"
-  ],
   "M97": [
    "Thu Jul 9",
    "4:00 PM",
@@ -165,9 +165,22 @@
    "5:00 PM",
    "4:00 PM",
    "2:00 PM"
+  ],
+  "M100": [
+   "Sat Jul 11",
+   "9:00 PM",
+   "8:00 PM",
+   "6:00 PM"
   ]
  },
  "auto_hl": [
+  [
+   "🇨🇭",
+   "Switzerland win on penalties",
+   "Switzerland 0–0 Colombia",
+   "Tue Jul 7 · Vancouver",
+   "Ice-cold from twelve yards, Switzerland saw off Colombia on penalties (4–3 pens) after 0–0 in the Round of 16."
+  ],
   [
    "💙",
    "Argentina come from behind vs Egypt",
@@ -202,13 +215,6 @@
    "Brazil 1–2 Norway",
    "Sun Jul 5 · New Jersey",
    "Haaland struck twice after the break (79', 90') as Norway beat Brazil 2–1 in the Round of 16."
-  ],
-  [
-   "🐓",
-   "France edge Paraguay",
-   "Paraguay 0–1 France",
-   "Sat Jul 4 · Philadelphia",
-   "Nervy but enough: France saw off Paraguay 1–0 in the Round of 16 thanks to Mbappe (70' pen)."
   ]
  ]
 }
