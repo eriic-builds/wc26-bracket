@@ -5,70 +5,73 @@
 A single-file, self-contained World Cup 2026 bracket dashboard. There is no frontend
 framework and no build tool — a Python generator writes one static `docs/index.html`
 (inline CSS/JS/data, zero external requests), served by GitHub Pages. A second script
-keeps it current by pulling finished match results from the web and rewriting the
-generator's data.
+keeps it current by pulling finished match results from the web and writing them to
+`data/live.json`, then re-running the generator.
 
 ```
-input/bracket-picks.xlsx  ─┐
-                           ├─►  scripts/build_dashboard.py  ─►  docs/index.html  ─►  GitHub Pages
-input/instructions.md  ────┘        (DATA block + render)         (self-contained)     (live site)
-                                            ▲
-        scripts/fetch_results.py  ──────────┘   (writes finished results into DATA, then re-runs the generator)
+data/picks.json    ─┐
+data/topology.json  ├─►  scripts/build_dashboard.py  ─►  docs/index.html  ─►  GitHub Pages
+data/live.json     ─┘        (loads JSON + render)         (self-contained)     (live site)
+                                        ▲
+        scripts/fetch_results.py  ──────┘   (writes results/times/highlights to data/live.json, re-runs the generator)
 ```
 
 ## Architecture — read this before touching either script
 
-- **`scripts/build_dashboard.py`** has a `DATA` block (top) and a **render engine** below the
-  `"RENDER ENGINE"` banner comment. The render engine is verbatim/reproducible output logic —
-  never restyle, reorder, or extend it as a side effect of a data change. All page content
-  (bracket, "How it played out" story cards, stage tracker, KPIs) is *derived* from the data
-  (`RES`, `SEED`, `KO_FEED`, `R32`, etc.) inside functions like `story_cards()`/`build_story()`,
-  `_build_stages_list()`, and `_current_round()` — never hardcode narrative text or stage state;
-  add derivation logic instead so every rebuild stays in sync.
+- **`scripts/build_dashboard.py`** loads `data/{picks,live,topology}.json` at the top (tuples
+  restored from JSON lists), then has a **render engine** below the `"RENDER ENGINE"` banner
+  comment. The render engine is verbatim/reproducible output logic — never restyle, reorder, or
+  extend it as a side effect of a data change. All page content (bracket, "How it played out"
+  story cards, stage tracker, KPIs) is *derived* from the data (`RES`, `SEED`, `KO_FEED`, `R32`,
+  etc.) inside functions like `story_cards()`/`build_story()`, `_build_stages_list()`, and
+  `_current_round()` — never hardcode narrative text or stage state; add derivation logic instead
+  so every rebuild stays in sync.
 - **`docs/index.html` is build output — never hand-edit it.** Any content/markup/CSS change goes
   into `build_dashboard.py`, then regenerate and commit the generator and the HTML together
   (`python scripts/build_dashboard.py`). A hand-edit here has caused a real regression before.
-- **`scripts/fetch_results.py` rewrites `build_dashboard.py`'s source with regex**, targeting the
-  literal `RES={...}`, `UPCOMING={...}`, `AUTO_HL=[...]`, and `REFRESHED="..."` assignments, then
-  re-runs the generator. It never clobbers an existing result and is idempotent (no new finished
-  games = no diff). It matches finished games to bracket codes round-by-round (R32 → R16 → QF →
-  SF → Final, via `KO_FEED`/`match_all`), normalizes team names via `scripts/team_map.json`, and
-  auto-builds the "Game facts" `AUTO_HL` cards (scorers/half/comeback context) from the same feed.
+  A CI drift guard (`.github/workflows/ci.yml`) enforces this: it regenerates and fails on any diff.
+- **`scripts/fetch_results.py` reads/writes `data/live.json` directly** (`res`, `upcoming`,
+  `ko_fix`, `auto_hl`, `refreshed`) — it does NOT edit Python source (the old regex-rewrite
+  approach was retired in the JSON refactor). It never clobbers an existing result and is
+  idempotent (no new finished games = no diff). It matches finished games to bracket codes
+  round-by-round (R32 → R16 → QF → SF → Final, via `KO_FEED`/`match_all`), collects the FIFA
+  schedule to fill `ko_fix` kickoff times for pending matches, normalizes team names via
+  `scripts/team_map.json`, and rebuilds the "Game facts" `auto_hl` cards from the same feed.
+  Do NOT `import build_dashboard` from the sync (it writes HTML at import time); shared constants
+  like `KO_FEED` live in `data/topology.json`.
 - Results source is `--source auto` by default: FIFA's free public feed
   (`api.fifa.com/api/v3`), falling back to football-data.org on an outage/empty feed (needs the
   optional `FOOTBALL_DATA_TOKEN` secret). football-data.org folds penalty-shootout goals into
   `score.fullTime` — subtract `score.penalties` to recover the true regulation/AET score.
 
-## Data model (`DATA` block in `scripts/build_dashboard.py`)
+## Data model (`data/*.json`)
 
-| Variable | Holds |
-| --- | --- |
-| `ENTRANT`, `TIEBREAKER` | Entrant name and Final total-goals tiebreaker. |
-| `SEED` | Team → group seed. |
-| `R32` | The 16 Round-of-32 fixtures: `(matchcode, date, teamA, teamB, pick)`. |
-| `RES` | Finished results by match code: `(goalsA, goalsB, winner, note)`. |
-| `UPCOMING` | Not-yet-played matches → kickoff day label. |
-| `KO_FEED` | Knockout topology: each later-round match code → its two feeder match codes. |
-| `R32_TIMES`, `R16_FIX`, `R16_PICK` | Kickoff times / later fixtures/picks. |
-| `R16_WIN`, `QF_WIN`, `SF_WIN`, `CHAMP`, `RUNNER` | Picks per later round. |
-| `FEATURED` / `AUTO_HL` | Game-fact cards; `FEATURED` is hand-written, `AUTO_HL` is sync-generated (newest first). `HIGHLIGHTS = FEATURED + AUTO_HL`. |
+`build_dashboard.py` loads three files from `data/`:
 
-## Build / run commands
+- **`picks.json`** (per-entrant): `entrant`, `tiebreaker`, `freebie_match`, `seed`, `r32`
+  (`[matchcode, date, teamA, teamB, pick]`), `r16_win`, `qf_win`, `sf_win`, `champ`, `runner`.
+- **`live.json`** (sync-written; the only file a sync run changes): `refreshed`, `res`
+  (`{code: [gA, gB, winner, note]}`), `upcoming`, `ko_fix` (`{code: [day, ET, CT, PT]}`), `auto_hl`.
+- **`topology.json`**: `ko_feed` (`{code: [feederA, feederB]}`), shared by both scripts.
+
+`R32_TIMES`, `R16_FIX`, `KO_DATES`, `WC_HISTORY`, emoji maps, and `FEATURED` remain as constants
+in `build_dashboard.py`; `HIGHLIGHTS = FEATURED + auto_hl`.
+
+## Build / run / test commands
 
 ```bash
-python scripts/build_dashboard.py                          # regenerate docs/index.html from DATA
+python scripts/build_dashboard.py                          # regenerate docs/index.html from data/*.json
+python -m unittest discover -s tests -v                    # run the sync-engine unit tests (stdlib, no network)
+python -m unittest tests.test_fetch_results.KoFixTests     # run a single test class
+python scripts/build_dashboard.py && git diff --exit-code docs/index.html  # the CI drift guard, locally
 python scripts/fetch_results.py --dry-run                   # preview live-feed changes, write nothing
 python scripts/fetch_results.py --input results.json        # apply results from a local JSON feed
-python scripts/fetch_results.py --dry-run --input results.json
 python scripts/fetch_results.py --source footballdata       # force football-data.org (needs FOOTBALL_DATA_TOKEN)
 ```
-`results.json` is a list of finished games: `{"home","away","homeGoals","awayGoals"}`, plus
-`"winner"`/`"note"` for decided-on-penalties games (e.g. `"note": "5-4 pens"`).
+`results.json` (for `--input`) is a list of finished games: `{"home","away","homeGoals","awayGoals"}`,
+plus `"winner"`/`"note"` for decided-on-penalties games (e.g. `"note": "5-4 pens"`).
 
-There is currently no automated test suite or CI workflow in this repo (only
-`sync-results.yml` and `deploy-pages.yml` exist under `.github/workflows/`). `PLAN-ci-drift-guard-and-tests.md`
-specifies adding `tests/` + a drift-guard CI job — check whether it has landed before assuming
-either exists.
+CI (`.github/workflows/ci.yml`) runs the tests + drift guard on every push/PR (Python 3.12).
 
 ## Conventions
 
@@ -81,19 +84,23 @@ either exists.
 - `docs/.nojekyll` must stay committed even though Pages is deployed via
   `.github/workflows/deploy-pages.yml` uploading `docs/` directly (Settings → Pages → Source:
   GitHub Actions) — it's a harmless fallback if branch-based serving is ever reinstated.
-- **The tournament is live**: `sync-results.yml` auto-commits to `main` up to 3×/day, rewriting
-  `RES=`/`UPCOMING=`/`AUTO_HL=`/`REFRESHED=` and regenerating the HTML. Rebase onto `main` right
-  before opening/merging a PR; on conflicts in those data blocks, take `main`'s side and re-apply
-  your structural change on top.
+- **The tournament is live**: `sync-results.yml` auto-commits to `main` up to 3×/day, writing
+  `data/live.json` and regenerating the HTML. Rebase onto `main` right before opening/merging a
+  PR; on conflicts in `data/live.json`, take `main`'s side for the data and re-apply your
+  structural change on top.
+- Pushing anything under `.github/workflows/` requires the git/gh token to carry the `workflow`
+  OAuth scope (`gh auth refresh -h github.com -s workflow`) — a plain `repo`-scoped token is
+  rejected.
 - Workflow chaining note: a push made with the default `GITHUB_TOKEN` (as `sync-results.yml`
   does) never triggers other workflows' `push` triggers, so it explicitly dispatches
   `deploy-pages.yml` via `gh workflow run` after committing.
 
-## Pending work
+## History
 
-`COPILOT-EXECUTE.md` is an agent runbook that sequences five root-level plan files
-(`PLAN-ci-drift-guard-and-tests.md`, `PLAN-auto-knockout-fixtures.md`,
-`PLAN-json-data-layer.md`, `PLAN-timezone-and-sync-observability.md`,
-`PLAN-og-social-preview.md`) as ordered, dependent tasks (one branch/PR per task). Read the
-relevant plan file in full, and `COPILOT-EXECUTE.md`'s global rules, before starting any of
-that work — each plan contains edge cases and exact file lists the summary above omits.
+The five ranked plans (`PLAN-*.md`, sequenced by `COPILOT-EXECUTE.md`) have all landed as
+PRs #5–#10: the test suite + CI drift guard, the pair-collision fix, auto knockout kickoff times
+(`ko_fix`), the `data/*.json` layer, the DST-safe timestamp + status badges + failure-alert
+issues, and the OpenGraph/favicon social preview. One follow-up remains: a maintainer must add
+`docs/assets/og-preview.png` (a 1200×630 screenshot — see `docs/assets/README.md`) and set the
+repo's Settings → Social preview. `OPUS-BUILD-fan-bracket-viewer.md` specs a separate fork repo
+and is not part of this codebase.
