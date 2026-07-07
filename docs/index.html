@@ -230,7 +230,8 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .lg-line.lg-line-actual{border-top:3px dashed var(--blue);opacity:.8}
 .team.st-won{border-color:color-mix(in srgb,var(--win) 55%,var(--border));box-shadow:0 2px 10px rgba(0,178,145,.12)}
 .team.st-won .tname{color:var(--win-ink)}
-.team.st-won.gone{opacity:.55;box-shadow:none}
+.team.st-won.gone{opacity:.55;box-shadow:none;border-color:var(--border)}
+.team.st-won.gone .tname{color:var(--muted)}
 .team.st-lost{border-color:color-mix(in srgb,var(--red) 50%,var(--border))}
 .team.st-lost .tname{text-decoration:line-through;color:var(--lose-ink)}
 .team.advancer .tname{font-weight:750}
