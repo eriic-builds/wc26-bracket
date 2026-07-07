@@ -150,13 +150,21 @@ def actual_advancer(short, team):
     if code and code in RES: return RES[code][2]
     return None
 def reach_status(team, short):
-    """Did this team actually reach (win into) the round this column represents?"""
-    if team in ELIM: return "lost"
+    """Did this team actually reach (win into) the round this column represents?
+
+    A team that reached this round is "won" here even if it was later knocked
+    out — being eliminated in a *later* round doesn't retroactively make it wrong
+    to have reached *this* one. Only teams that never reached this round are
+    "lost" (eliminated earlier) or "pending" (round not yet decided). Checking
+    "did it win into this round" before the ELIM test is what keeps a correct
+    pick green in the round it reached instead of flipping blue once it bows out."""
     prev={"r16":"r32","qf":"r16","sf":"qf","final":"sf","champion":"final"}.get(short)
     if prev=="r32": won=team in R32_ACTUAL_WINNERS
     elif prev: won=team in KO_WINNERS_BY_ROUND.get(prev,set())
     else: won=False
-    return "won" if won else "pending"
+    if won: return "won"
+    if team in ELIM: return "lost"
+    return "pending"
 
 def pick_status(short, team, mc=None):
     if short=="r32":
@@ -286,8 +294,12 @@ def later_cell(team, picked, short, champ=False, actual=None, mode="actual"):
     if mode=="picked":
         # Your bracket as you filled it — every pick trails forward, coloured by result.
         return _pick_box(team, picked, short, champ, reach_status(team, short))
-    # Actual mode: prune eliminated picks; carry the real advancer up (blue) where known.
-    if team in ELIM:
+    # Actual mode: a pick that correctly reached this round stays as itself
+    # (green) even if it was later knocked out — only its onward path to the next
+    # round turns red/blue. Prune a pick to the team that actually advanced (blue)
+    # only when the pick never reached this round.
+    st=reach_status(team, short)
+    if st!="won" and team in ELIM:
         if actual:
             sd=seed_of(actual); sh=f'<span class="seed">{esc(sd)}</span>' if sd else ''
             gone=actual in ELIM
@@ -303,7 +315,7 @@ def later_cell(team, picked, short, champ=False, actual=None, mode="actual"):
                     f'<span class="fav-bar"></span>{sh}<span class="tname">{esc(actual)}</span>'
                     f'<span class="rb up" title="{esc(tip)}">▲</span></div>')
         return '<div class="team blank"><span class="tname">&nbsp;</span></div>'
-    return _pick_box(team, picked, short, champ, reach_status(team, short))
+    return _pick_box(team, picked, short, champ, st)
 
 def build_bracket(mode="actual"):
     cols=[]; cells=[]
