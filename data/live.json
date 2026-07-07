@@ -1,5 +1,5 @@
 {
- "refreshed": "July 7, 2026 · 2:25 AM PT",
+ "refreshed": "July 7, 2026 · 12:13 PM PT",
  "res": {
   "M73": [
    0,
@@ -132,16 +132,16 @@
    4,
    "Belgium",
    ""
+  ],
+  "M95": [
+   3,
+   2,
+   "Argentina",
+   ""
   ]
  },
  "upcoming": {},
  "ko_fix": {
-  "M95": [
-   "Tue Jul 7",
-   "12:00 PM",
-   "11:00 AM",
-   "9:00 AM"
-  ],
   "M96": [
    "Tue Jul 7",
    "4:00 PM",
@@ -169,11 +169,18 @@
  },
  "auto_hl": [
   [
+   "💙",
+   "Argentina come from behind vs Egypt",
+   "Argentina 3–2 Egypt",
+   "Tue Jul 7 · Atlanta",
+   "Backs to the wall, Argentina rallied to see off Egypt 3–2 in the Round of 16 — Romero (79'), Messi (83') and Fernandez (90'+2') turning it around."
+  ],
+  [
    "😈",
    "Ketelaere's brace sinks United States",
    "United States 1–4 Belgium",
    "Tue Jul 7 · Seattle",
-   "Ketelaere struck twice in the first half (9', 33') as Belgium beat United States 4–1 in the Round of 16, with Vanaken (57') and Lukaku (90'+3') also on the mark."
+   "Ketelaere struck twice in the first half (0', 33') as Belgium beat United States 4–1 in the Round of 16, with Vanaken (57') and Lukaku (90'+3') also on the mark."
   ],
   [
    "🐂",
@@ -202,13 +209,6 @@
    "Paraguay 0–1 France",
    "Sat Jul 4 · Philadelphia",
    "Nervy but enough: France saw off Paraguay 1–0 in the Round of 16 thanks to Mbappe (70' pen)."
-  ],
-  [
-   "🇲🇦",
-   "Ounahi's brace sinks Canada",
-   "Canada 0–3 Morocco",
-   "Sat Jul 4 · Houston",
-   "Ounahi struck twice after the break (50', 82') as Morocco beat Canada 3–0 in the Round of 16, with Rahimi (90'+8') also on the mark."
   ]
  ]
 }
