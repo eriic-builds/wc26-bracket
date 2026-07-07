@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your Roadmap — wc26-bracket Plans, Explained Simply</title>
+<style>
+:root{
+  --bg:#141317; --panel:#1c1b21; --text:#fff; --text2:#f4f7ee; --muted:#9aa2ad;
+  --border:rgba(255,255,255,.10); --border2:rgba(255,255,255,.18);
+  --blue:#0097F4; --teal:#00B291; --gold:#FFCE20; --red:#E5484D; --green:#9BC72A; --purple:#CB85FF;
+  --grad:linear-gradient(120deg,#0097F4,#00B291);
+  --glass:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.028));
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;font-size:16px}
+.wrap{max-width:900px;margin:0 auto;padding:40px 24px 100px}
+h1{font-size:clamp(1.8rem,5vw,2.8rem);line-height:1.1;margin:0 0 8px}
+h1 .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--muted);margin:0 0 30px;font-size:1.05rem}
+.card{background:var(--glass);border:1px solid var(--border);border-radius:18px;padding:26px 28px;margin-bottom:22px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.card h2{margin:0 0 4px;font-size:1.3rem;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.rank{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--grad);color:#fff;font-weight:800;font-size:1rem;flex:0 0 auto}
+.rank.six{background:linear-gradient(120deg,#CB85FF,#FF32A3)}
+.file{font-family:ui-monospace,Consolas,monospace;font-size:.82rem;color:var(--teal);background:rgba(0,178,145,.10);border:1px solid rgba(0,178,145,.35);border-radius:8px;padding:2px 9px;display:inline-block;margin:4px 0 14px}
+.tag{display:inline-block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:3px 10px;border-radius:999px;margin-left:4px}
+.tag.urgent{background:rgba(229,72,77,.18);color:#f2757a;border:1px solid rgba(229,72,77,.4)}
+.tag.first{background:rgba(255,206,32,.14);color:var(--gold);border:1px solid rgba(255,206,32,.4)}
+.tag.big{background:rgba(203,133,255,.14);color:var(--purple);border:1px solid rgba(203,133,255,.4)}
+.eli5{background:rgba(0,151,244,.08);border-left:3px solid var(--blue);border-radius:0 10px 10px 0;padding:12px 16px;margin:0 0 16px;color:var(--text2)}
+.eli5 b{color:#fff}
+.label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:18px 0 8px}
+ol.steps{margin:0;padding-left:22px}
+ol.steps li{margin-bottom:10px}
+ol.steps li::marker{color:var(--teal);font-weight:700}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.85em;background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:6px;padding:2px 7px;color:#ffd75e;white-space:nowrap}
+.prompt{font-family:ui-monospace,Consolas,monospace;font-size:.85rem;background:#0d0c10;border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin:8px 0 4px;color:#c8f5e4;white-space:pre-wrap;word-break:break-word}
+.prompt::before{content:"💬 paste this into Claude Code:";display:block;font-family:"Segoe UI",sans-serif;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px}
+.done{font-size:.9rem;color:var(--muted)}
+.done b{color:var(--green)}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:10px 0 4px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border)}
+th{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+tr:hover td{background:rgba(255,255,255,.03)}
+.big-idea{background:rgba(255,206,32,.07);border:1px solid rgba(255,206,32,.25);border-radius:14px;padding:14px 18px;margin:22px 0;color:var(--text2)}
+.big-idea b{color:var(--gold)}
+.foot{margin-top:40px;color:var(--muted);font-size:.8rem;text-align:center}
+a{color:var(--blue)}
+@media(max-width:560px){.wrap{padding:24px 14px 70px}.card{padding:20px 18px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Your <span class="g">wc26-bracket</span> Roadmap</h1>
+<p class="sub">Six plan files were written into your repo. This page explains each one like you've never seen the code before, and tells you exactly how to run them.</p>
+
+<div class="card">
+  <h2>⚡ The 30-second version</h2>
+  <table>
+    <tr><th>Order</th><th>Plan file</th><th>One-liner</th></tr>
+    <tr><td>1st</td><td><code>PLAN-ci-drift-guard-and-tests.md</code></td><td>A robot that checks your robot's work</td></tr>
+    <tr><td>2nd — <b style="color:#f2757a">before July 9!</b></td><td><code>PLAN-auto-knockout-fixtures.md</code></td><td>Show real kickoff times for QF/SF/Final</td></tr>
+    <tr><td>3rd</td><td><code>PLAN-json-data-layer.md</code></td><td>Stop the script from performing surgery on itself</td></tr>
+    <tr><td>4th</td><td><code>PLAN-timezone-and-sync-observability.md</code></td><td>Fix a clock bug + get alerted when syncs fail</td></tr>
+    <tr><td>5th</td><td><code>PLAN-og-social-preview.md</code></td><td>Make shared links look pretty in Teams/Slack</td></tr>
+    <tr><td>Whenever</td><td><code>OPUS-BUILD-fan-bracket-viewer.md</code></td><td>The fork where ANYONE uploads their own bracket</td></tr>
+  </table>
+  <div class="big-idea"><b>How to execute any plan:</b> open Claude Code in this repo, and literally just say <i>"read PLAN-&lt;name&gt;.md and execute it"</i>. The plans were written so a less capable model can follow them without asking you questions. Each one ends with a checklist you can verify yourself.</div>
+</div>
+
+<!-- ═══════════════ PLAN 1 ═══════════════ -->
+<div class="card">
+  <h2><span class="rank">1</span> Safety net &amp; drift alarm <span class="tag first">Do this first</span></h2>
+  <span class="file">PLAN-ci-drift-guard-and-tests.md</span>
+  <div class="eli5">
+    <b>Stupidly simple:</b> Three times a day, a robot (GitHub Actions) edits your Python code with find-and-replace and pushes the result — with <b>nobody checking its work</b>. Once already (issue #2), a fix got silently erased this way. This plan adds tests plus a tripwire: if the published page ever stops matching what the generator produces, GitHub turns red and tells you. It also fixes a real bug I found where a group-stage result could overwrite the <b>Final's</b> result if the same two teams meet twice.
+  </div>
+  <div class="label">What gets created</div>
+  A <code>tests/</code> folder, a sample data file, and one new workflow file <code>.github/workflows/ci.yml</code>. One small bug fix in <code>fetch_results.py</code>.
+  <div class="label">How to execute</div>
+  <ol class="steps">
+    <li>Open Claude Code in <code>~/Projects/wc26-bracket</code>.</li>
+    <li>Paste the prompt below.</li>
+    <li>When it's done, run <code>python3 -m unittest discover -s tests -v</code> yourself — you should see green dots and ≥ 8 tests.</li>
+    <li>Commit &amp; push. Go to the repo's <b>Actions</b> tab — a new "CI" workflow should run and pass.</li>
+    <li>Optional proof it works: hand-edit one letter in <code>docs/index.html</code>, push, and watch CI fail. Revert after.</li>
+  </ol>
+  <div class="prompt">Read PLAN-ci-drift-guard-and-tests.md and execute it exactly. Don't skip the pair-collision fix or the edge cases section. Verify every acceptance criterion before finishing.</div>
+  <p class="done"><b>You're done when:</b> the Actions tab shows a green "CI" run, and breaking the HTML on purpose makes it red.</p>
+</div>
+
+<!-- ═══════════════ PLAN 2 ═══════════════ -->
+<div class="card">
+  <h2><span class="rank">2</span> Auto kickoff times for QF / SF / Final <span class="tag urgent">Deadline: July 9</span></h2>
+  <span class="file">PLAN-auto-knockout-fixtures.md</span>
+  <div class="eli5">
+    <b>Stupidly simple:</b> Your dashboard knows kickoff times for the Round of 16 because you typed them in by hand. Nobody typed in the Quarterfinals, Semis, or Final — so once the R16 ends, every upcoming match just says a vague "Jul 9–11". FIFA's feed already contains the full schedule; the sync script just throws that part away. This plan makes it keep it, so times fill in automatically for the rest of the tournament. Bonus: deletes a 60-line chunk of dead code that has "(Japan)" hardcoded into it.
+  </div>
+  <div class="label">What gets touched</div>
+  <code>scripts/fetch_results.py</code> and <code>scripts/build_dashboard.py</code>. No new files.
+  <div class="label">How to execute</div>
+  <ol class="steps">
+    <li>Do Plan 1 first if you can (it makes this change safer) — but if it's July 8, just do this one.</li>
+    <li>Paste the prompt below into Claude Code.</li>
+    <li>After it finishes, run <code>python3 scripts/fetch_results.py --dry-run</code> — the output should mention KO_FIX entries with real times.</li>
+    <li>Run it for real (no <code>--dry-run</code>), then open <code>docs/index.html</code> in your browser → "Round-by-round results" → <b>Quarterfinals</b> tab. Pending matches should show times like <i>"Thu Jul 9 · 12:00 PM PT · 2:00 PM CT · 3:00 PM ET"</i>.</li>
+    <li>Commit &amp; push. The live site updates in ~2 minutes.</li>
+  </ol>
+  <div class="prompt">Read PLAN-auto-knockout-fixtures.md and execute it exactly. Use zoneinfo for timezone conversion (never fixed UTC offsets), delete the dead build_upcoming function, and verify every acceptance criterion.</div>
+  <p class="done"><b>You're done when:</b> the live site shows real kickoff times on the Quarterfinals panel.</p>
+</div>
+
+<!-- ═══════════════ PLAN 3 ═══════════════ -->
+<div class="card">
+  <h2><span class="rank">3</span> Move the data out of the code</h2>
+  <span class="file">PLAN-json-data-layer.md</span>
+  <div class="eli5">
+    <b>Stupidly simple:</b> Right now your picks and the live results are <b>typed inside the Python script itself</b>, and the sync robot updates them by doing regex find-and-replace on its own source code. That's like a surgeon operating on themselves — it works until it really doesn't. This plan moves all the data into plain <code>data/*.json</code> files. The script reads them; the robot writes them. Nobody edits code anymore. This is also the key that unlocks Plan 6 (other people's brackets) — you can't have "everyone's picks" while the picks live inside one Python file.
+  </div>
+  <div class="label">What gets created / touched</div>
+  New: <code>data/picks.json</code>, <code>data/live.json</code>, <code>data/topology.json</code>. Edited: both scripts, the sync workflow, README.
+  <div class="label">How to execute</div>
+  <ol class="steps">
+    <li><b>Only after Plans 1 &amp; 2 are merged</b> — the tests are what make this refactor safe.</li>
+    <li>Paste the prompt below.</li>
+    <li>The magic checkpoint: after the change, <code>python3 scripts/build_dashboard.py</code> must produce a <b>byte-identical</b> <code>docs/index.html</code> (<code>git diff docs/index.html</code> shows nothing). If it doesn't, the data was transcribed wrong — the plan says to fix the JSON, never the engine.</li>
+    <li>Trigger a manual sync from the Actions tab and confirm the commit now touches <code>data/live.json</code> + <code>docs/index.html</code> — and no longer touches the Python script.</li>
+  </ol>
+  <div class="prompt">Read PLAN-json-data-layer.md and execute it exactly. The non-negotiable gate: after moving the data to JSON, the regenerated docs/index.html must be byte-identical to the committed one before you proceed. Verify all acceptance criteria.</div>
+  <p class="done"><b>You're done when:</b> <code>grep -c "re.sub" scripts/fetch_results.py</code> prints 0, and a sync run commits JSON instead of editing Python.</p>
+</div>
+
+<!-- ═══════════════ PLAN 4 ═══════════════ -->
+<div class="card">
+  <h2><span class="rank">4</span> Fix the clock + know when syncs break</h2>
+  <span class="file">PLAN-timezone-and-sync-observability.md</span>
+  <div class="eli5">
+    <b>Stupidly simple:</b> Two small things. ① The "Updated July 6 · 10:13 PM PT" stamp is computed by assuming California is always exactly 7 hours behind UTC — true in summer, wrong in winter. One-line fix using real timezone data. ② If the 3×/day sync ever fails, nothing tells you — the dashboard just quietly goes stale. This adds status badges to the README and makes a failed run automatically open a GitHub issue in your face.
+  </div>
+  <div class="label">What gets touched</div>
+  One function in <code>fetch_results.py</code>, a few lines in <code>sync-results.yml</code>, two badge lines in <code>README.md</code>.
+  <div class="label">How to execute</div>
+  <ol class="steps">
+    <li>Paste the prompt below — this one is ~20 minutes of work.</li>
+    <li>Check the README on GitHub afterward: two badges should render at the top (green = healthy).</li>
+    <li>To prove the alarm works: the plan describes temporarily adding a failing step, dispatching the workflow, and confirming exactly one issue gets opened. Then remove the temp step.</li>
+  </ol>
+  <div class="prompt">Read PLAN-timezone-and-sync-observability.md and execute it exactly. Keep the timestamp format byte-compatible, and don't change fetch_results.py's exit-0-on-outage behavior. Verify all acceptance criteria.</div>
+  <p class="done"><b>You're done when:</b> badges show on the README and a deliberately-failed test run opened one issue.</p>
+</div>
+
+<!-- ═══════════════ PLAN 5 ═══════════════ -->
+<div class="card">
+  <h2><span class="rank">5</span> Make shared links look good</h2>
+  <span class="file">PLAN-og-social-preview.md</span>
+  <div class="eli5">
+    <b>Stupidly simple:</b> Paste your dashboard link into Teams or iMessage today and it shows up as a naked URL — no picture, no description. Every real website has invisible "OpenGraph" tags that tell chat apps what image and blurb to show. This plan adds them (with live numbers — "42/80 points confirmed" — baked in at build time), plus a ⚽ favicon for the browser tab.
+  </div>
+  <div class="label">What gets touched</div>
+  The <code>&lt;head&gt;</code> section inside <code>build_dashboard.py</code>, one new screenshot at <code>docs/assets/og-preview.png</code>, README.
+  <div class="label">How to execute</div>
+  <ol class="steps">
+    <li>You have one manual job: take a nice screenshot. Open the live dashboard, dark theme, ~1280px wide, capture the hero + KPI row. Claude can crop/resize it to 1200×630 for you.</li>
+    <li>Paste the prompt below.</li>
+    <li>One more manual step at the end (GitHub won't allow it via CLI): repo → <b>Settings → General → Social preview</b> → upload the same image.</li>
+    <li>After the Pages deploy, paste your URL into a private Slack/Teams chat — it should unfurl with the image.</li>
+  </ol>
+  <div class="prompt">Read PLAN-og-social-preview.md and execute it exactly. All tags go in the generator, never hand-edited into docs/index.html. I'll provide the screenshot — resize it to 1200×630 and wire everything up. Verify all acceptance criteria.</div>
+  <p class="done"><b>You're done when:</b> the link unfurls with an image, and the browser tab shows ⚽.</p>
+</div>
+
+<!-- ═══════════════ PLAN 6 ═══════════════ -->
+<div class="card">
+  <h2><span class="rank six">6</span> The fan viewer — anyone uploads their own bracket <span class="tag big">The big one · give to Opus 4.8</span></h2>
+  <span class="file">OPUS-BUILD-fan-bracket-viewer.md</span>
+  <div class="eli5">
+    <b>Stupidly simple:</b> A new repo (a fork) where anyone in the pool visits the page, drags in <b>their own filled-in Excel bracket</b>, and instantly sees <i>their</i> version of your dashboard — their picks, scored against the same live results. Their file never leaves their browser (privacy for free), and it's remembered on their device so they don't re-upload every visit — with Save / Load / Export buttons. The catch: today the page is <i>built</i> in Python before publishing; for per-visitor picks, the rendering has to move into the browser (JavaScript). The spec covers that port completely — including the exact cell-by-cell map of the Excel sheet, which I extracted from your real workbook so Opus never guesses.
+  </div>
+  <div class="label">How to execute</div>
+  <ol class="steps">
+    <li><b>Strongly recommended:</b> land Plan 3 in this repo first — the fork inherits its clean data layer and the job gets meaningfully smaller.</li>
+    <li>Create the fork/new repo on GitHub (suggested name: <code>wc26-bracket-yours</code>) and clone it next to this one.</li>
+    <li>Start a Claude Code session <b>with the Opus 4.8 model</b> (<code>/model</code> → Opus) in the new repo's folder.</li>
+    <li>Give it the spec file (copy <code>OPUS-BUILD-fan-bracket-viewer.md</code> into the new repo) and paste the prompt below.</li>
+    <li>It's a multi-session build. The spec is ordered so each phase is independently verifiable — the "golden test" in §7 is the checkpoint that proves the JavaScript port renders <i>exactly</i> what the Python engine renders. Don't let it skip that.</li>
+    <li>Final check yourself: upload a bracket, reload the page (it should remember), open DevTools → Network and confirm nothing was uploaded anywhere.</li>
+  </ol>
+  <div class="prompt">Read OPUS-BUILD-fan-bracket-viewer.md — it is your complete build spec. Execute it phase by phase in the order given in §6. Do not skip the golden-file test in §7 before deleting the Python renderer, and treat every item in §8 (edge cases) as a requirement. Check off §9 before calling it done.</div>
+  <p class="done"><b>You're done when:</b> a friend can visit the page, drop in their Excel, and see their own live-scored bracket — with nothing sent to any server.</p>
+</div>
+
+<div class="foot">Generated July 6, 2026 · lives at <code>PLANS-GUIDE.html</code> in the repo root — open it anytime with <code>open PLANS-GUIDE.html</code></div>
+
+</div>
+</body>
+</html>
