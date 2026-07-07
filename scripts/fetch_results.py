@@ -4,8 +4,8 @@
 
 What it does
 ------------
-1. Reads the Round-of-32 fixtures straight out of ``build_dashboard.py`` (the
-   ``R32`` list) so it always matches the entrant's bracket.
+1. Reads the Round-of-32 fixtures from ``data/picks.json`` and the knockout
+   topology from ``data/topology.json`` so it always matches the entrant's bracket.
 2. Gets finished-match results from the web. The default ``--source auto`` prefers
    FIFA's free public feed (api.fifa.com/api/v3, competition 17 / season 285023 —
    no API key or signup) and automatically falls back to football-data.org on any
@@ -15,14 +15,15 @@ What it does
      - ``--source footballdata`` — football-data.org only (needs ``FOOTBALL_DATA_TOKEN``); or
      - ``--input results.json`` for a local/offline feed (also used by self-test).
 3. Normalizes source team names to the bracket's names via ``team_map.json``.
-4. Matches each finished game to a bracket match by the pair of teams, and
-   updates the ``RES`` and ``UPCOMING`` blocks in ``build_dashboard.py`` in place
-   (finished games only, never clobbering a still-pending game with junk).
-5. Rewrites ``AUTO_HL`` with highlight cards for the last six finished games
-   (from the whole feed, not just this bracket). For the FIFA source it also
-   pulls each of those games' goals (scorer, minute, half) from FIFA's free
+4. Matches each finished game to a bracket match by the pair of teams, and updates
+   the ``res`` / ``upcoming`` / ``ko_fix`` fields in ``data/live.json`` (finished
+   games only, never clobbering a still-pending game with junk).
+5. Rewrites ``auto_hl`` (in ``data/live.json``) with highlight cards for the last
+   six finished games (from the whole feed, not just this bracket). For the FIFA
+   source it also pulls each game's goals (scorer, minute, half) from FIFA's free
    per-match feed so the recap names scorers and flags braces/comebacks.
-6. Re-runs ``build_dashboard.py`` to regenerate ``docs/index.html``.
+6. Re-runs ``build_dashboard.py`` (which reads the JSON) to regenerate
+   ``docs/index.html``. The generator source is never edited by the sync.
 
 Safety
 ------
@@ -39,6 +40,10 @@ from zoneinfo import ZoneInfo
 HERE = os.path.dirname(os.path.abspath(__file__))
 GEN = os.path.join(HERE, "build_dashboard.py")
 TEAM_MAP = os.path.join(HERE, "team_map.json")
+DATA = os.path.join(os.path.dirname(HERE), "data")
+PICKS = os.path.join(DATA, "picks.json")
+LIVE = os.path.join(DATA, "live.json")
+TOPOLOGY = os.path.join(DATA, "topology.json")
 
 FD_URL = "https://api.football-data.org/v4/competitions/WC/matches?status=FINISHED"
 
@@ -64,61 +69,6 @@ def norm(name: str, tmap: dict) -> str:
         return ""
     name = name.strip()
     return tmap.get(name, name)
-
-
-def read_r32(gen_text: str):
-    """Return list of (code, teamA, teamB) from the R32 block."""
-    rows = re.findall(
-        r'\("(M\d+)","[^"]*","([^"]*)","([^"]*)","[^"]*"\)', gen_text
-    )
-    return [(c, a, b) for (c, a, b) in rows]
-
-
-def parse_res_block(gen_text: str) -> dict:
-    """Return the current RES dict {code: (gA, gB, winner, note)}."""
-    m = re.search(r"RES=\{([^}]*)\}", gen_text, re.DOTALL)
-    res = {}
-    if not m:
-        return res
-    for code, a, b, w, note in re.findall(
-        r'"(M\d+)":\((\d+),(\d+),"([^"]*)","([^"]*)"\)', m.group(1)
-    ):
-        res[code] = (int(a), int(b), w, note)
-    return res
-
-
-def parse_upcoming_block(gen_text: str) -> dict:
-    m = re.search(r"UPCOMING=\{([^}]*)\}", gen_text, re.DOTALL)
-    up = {}
-    if not m:
-        return up
-    for code, day in re.findall(r'"(M\d+)":"([^"]*)"', m.group(1)):
-        up[code] = day
-    return up
-
-
-def parse_ko_fix(gen_text: str) -> dict:
-    """Return the current KO_FIX dict {code: (day, ET, CT, PT)} (kickoff times for
-    not-yet-played knockout matches). Mirrors parse_upcoming_block."""
-    m = re.search(r"KO_FIX=\{([^}]*)\}", gen_text, re.DOTALL)
-    d = {}
-    if not m:
-        return d
-    for code, day, et, ct, pt in re.findall(
-        r'"(M\d+)":\("([^"]*)","([^"]*)","([^"]*)","([^"]*)"\)', m.group(1)):
-        d[code] = (day, et, ct, pt)
-    return d
-
-
-def parse_ko_feed(gen_text: str) -> dict:
-    """Return the knockout topology {code: (feederA, feederB)} from KO_FEED."""
-    m = re.search(r"KO_FEED=\{(.*?)\}", gen_text, re.DOTALL)
-    feed = {}
-    if not m:
-        return feed
-    for code, fa, fb in re.findall(r'"(M\d+)":\("(M\d+)","(M\d+)"\)', m.group(1)):
-        feed[code] = (fa, fb)
-    return feed
 
 
 def ko_label(code: str, ko_feed: dict) -> str:
@@ -941,40 +891,6 @@ def build_auto_hl(feed, limit=6):
     return entries
 
 
-def render_auto_hl(entries) -> str:
-    if not entries:
-        return "AUTO_HL=[]"
-    lines = ["AUTO_HL=["]
-    for ic, tag, ti, wh, bd in entries:
-        parts = ",".join(json.dumps(x, ensure_ascii=False) for x in (ic, tag, ti, wh, bd))
-        lines.append(" (" + parts + "),")
-    lines.append("]")
-    return "\n".join(lines)
-
-
-def render_res(res: dict) -> str:
-    order = sorted(res, key=lambda c: int(c[1:]))
-    items = [f'"{c}":({res[c][0]},{res[c][1]},"{res[c][2]}","{res[c][3]}")'
-             for c in order]
-    return "RES={" + ",\n ".join(items) + "}"
-
-
-def render_upcoming(up: dict) -> str:
-    order = sorted(up, key=lambda c: int(c[1:]))
-    items = [f'"{c}":"{up[c]}"' for c in order]
-    return "UPCOMING={" + ",".join(items) + "}"
-
-
-def render_ko_fix(d: dict) -> str:
-    """Render the KO_FIX block. Numeric code order keeps the diff stable; the
-    values contain no ``}`` so the KO_FIX=\\{[^}]*\\} rewrite stays valid."""
-    if not d:
-        return "KO_FIX={}"
-    order = sorted(d, key=lambda c: int(c[1:]))
-    items = [f'"{c}":("{d[c][0]}","{d[c][1]}","{d[c][2]}","{d[c][3]}")' for c in order]
-    return "KO_FIX={" + ",\n ".join(items) + "}"
-
-
 def now_pt_stamp() -> str:
     pt = timezone(timedelta(hours=-7))  # PDT (summer)
     now = datetime.now(pt)
@@ -982,6 +898,20 @@ def now_pt_stamp() -> str:
     day = str(now.day)
     hour = str(int(now.strftime("%I")))
     return now.strftime(f"%B {day}, %Y \u00b7 {hour}:%M %p PT")
+
+
+def _write_live(live: dict) -> None:
+    """Persist data/live.json. ensure_ascii=False keeps emoji/en-dashes readable;
+    indent=1 matches the committed formatting so syncs produce a minimal diff."""
+    with open(LIVE, "w", encoding="utf-8") as fh:
+        json.dump(live, fh, ensure_ascii=False, indent=1)
+        fh.write("\n")
+
+
+def _rebuild() -> None:
+    """Regenerate docs/index.html from the data files (never hand-edits it)."""
+    env = dict(os.environ, PYTHONIOENCODING="utf-8")
+    subprocess.run([sys.executable, GEN], check=True, env=env)
 
 
 def main() -> int:
@@ -995,12 +925,18 @@ def main() -> int:
     args = ap.parse_args()
 
     tmap = load_team_map()
-    with open(GEN, encoding="utf-8") as fh:
-        gen_text = fh.read()
-    r32 = read_r32(gen_text)
-    ko_feed = parse_ko_feed(gen_text)
-    cur_res = parse_res_block(gen_text)
-    cur_up = parse_upcoming_block(gen_text)
+    with open(PICKS, encoding="utf-8") as fh:
+        picks = json.load(fh)
+    with open(TOPOLOGY, encoding="utf-8") as fh:
+        topo = json.load(fh)
+    with open(LIVE, encoding="utf-8") as fh:
+        live = json.load(fh)
+    r32 = [(r[0], r[2], r[3]) for r in picks["r32"]]            # (code, teamA, teamB)
+    ko_feed = {k: tuple(v) for k, v in topo["ko_feed"].items()}
+    cur_res = {k: tuple(v) for k, v in live["res"].items()}
+    cur_up = dict(live["upcoming"])
+    cur_ko_fix = {k: tuple(v) for k, v in live["ko_fix"].items()}
+    cur_auto_hl = [tuple(e) for e in live["auto_hl"]]
 
     if args.input:
         feed, upcoming_feed = results_from_json(args.input, tmap)
@@ -1043,23 +979,19 @@ def main() -> int:
 
     # Kickoff times for pending knockout fixtures (QF/SF/Final), derived from the
     # FIFA schedule. Recomputed every run: entries appear when both feeders are
-    # known and drop out once the match is played. A schedule-only change still
-    # triggers a commit/rebuild (it is folded into the change decision below).
-    cur_ko_fix = parse_ko_fix(gen_text)
-    new_ko_fix = build_ko_fix(ko_feed, new_res, upcoming_feed)
-    ko_fix_block_new = render_ko_fix(new_ko_fix)
-    ko_fix_present = bool(re.search(r"KO_FIX=\{[^}]*\}", gen_text))
-    ko_fix_changed = ko_fix_present and new_ko_fix != cur_ko_fix
-    if not ko_fix_present:
-        print("  warning: no KO_FIX={} block in build_dashboard.py \u2014 skipping "
-              "schedule sync (add KO_FIX={} to the USER DATA section to enable it).")
+    # known and drop out once the match is played.
+    if upcoming_feed:
+        new_ko_fix = build_ko_fix(ko_feed, new_res, upcoming_feed)
+    else:
+        # No schedule feed (local --input or football-data source): don't wipe the
+        # kickoff times — keep them, dropping only matches that are now decided.
+        new_ko_fix = {c: v for c, v in cur_ko_fix.items() if c not in new_res}
+    ko_fix_changed = new_ko_fix != cur_ko_fix
 
     # Auto game-fact highlights (newest first) reflect every finished game in the
     # feed, not only the ones in this bracket.
     auto_entries = build_auto_hl(feed)
-    hl_block_new = render_auto_hl(auto_entries)
-    cur_hl = re.search(r"AUTO_HL=\[.*?\]", gen_text, re.DOTALL)
-    hl_changed = bool(cur_hl) and cur_hl.group(0) != hl_block_new
+    hl_changed = auto_entries != cur_auto_hl
 
     if not changed and not hl_changed and not ko_fix_changed:
         if args.dry_run:
@@ -1067,16 +999,13 @@ def main() -> int:
             return 0
         # Nothing to apply, but record that we checked so "last synced" stays honest.
         stamp = now_pt_stamp()
-        out_text = re.sub(r'REFRESHED="[^"]*"', f'REFRESHED="{stamp}"', gen_text, count=1)
-        if out_text != gen_text:
-            with open(GEN, "w", encoding="utf-8") as fh:
-                fh.write(out_text)
-            # Keep docs/index.html in lock-step with the source: the REFRESHED
-            # stamp lives in build_dashboard.py, so the HTML must be rebuilt or
-            # the two files drift (source shows the new time, HTML the old one).
+        if live.get("refreshed") != stamp:
+            live["refreshed"] = stamp
+            _write_live(live)
+            # Keep docs/index.html in lock-step with the data: REFRESHED lives in
+            # live.json, so the HTML must be rebuilt or the two drift.
             if not args.no_build:
-                env = dict(os.environ, PYTHONIOENCODING="utf-8")
-                subprocess.run([sys.executable, GEN], check=True, env=env)
+                _rebuild()
                 print("Regenerated docs/index.html.")
         print(f"Source: {src}. No new finished games \u2014 refreshed sync time to {stamp}.")
         return 0
@@ -1101,20 +1030,18 @@ def main() -> int:
         print("dry-run: no files written.")
         return 0
 
-    out_text = re.sub(r"RES=\{[^}]*\}", render_res(new_res), gen_text, count=1)
-    out_text = re.sub(r"UPCOMING=\{[^}]*\}", render_upcoming(new_up), out_text, count=1)
-    if ko_fix_present:
-        out_text = re.sub(r"KO_FIX=\{[^}]*\}", lambda _m: ko_fix_block_new, out_text, count=1)
-    if cur_hl:
-        out_text = re.sub(r"AUTO_HL=\[.*?\]", lambda _m: hl_block_new, out_text, count=1, flags=re.DOTALL)
-    out_text = re.sub(r'REFRESHED="[^"]*"', f'REFRESHED="{now_pt_stamp()}"', out_text, count=1)
-    with open(GEN, "w", encoding="utf-8") as fh:
-        fh.write(out_text)
-    print("Updated build_dashboard.py (RES / UPCOMING / KO_FIX / AUTO_HL / REFRESHED).")
+    # Write data/live.json deterministically (numeric code order, unicode kept) so
+    # each sync produces a minimal diff.
+    live["res"] = {c: list(new_res[c]) for c in sorted(new_res, key=lambda c: int(c[1:]))}
+    live["upcoming"] = {c: new_up[c] for c in sorted(new_up, key=lambda c: int(c[1:]))}
+    live["ko_fix"] = {c: list(new_ko_fix[c]) for c in sorted(new_ko_fix, key=lambda c: int(c[1:]))}
+    live["auto_hl"] = [list(e) for e in auto_entries]
+    live["refreshed"] = now_pt_stamp()
+    _write_live(live)
+    print("Updated data/live.json (res / upcoming / ko_fix / auto_hl / refreshed).")
 
     if not args.no_build:
-        env = dict(os.environ, PYTHONIOENCODING="utf-8")
-        subprocess.run([sys.executable, GEN], check=True, env=env)
+        _rebuild()
         print("Regenerated docs/index.html.")
     return 0
 

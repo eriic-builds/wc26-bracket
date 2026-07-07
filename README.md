@@ -13,7 +13,7 @@
 - [What it does](#what-it-does)
 - [What's in it for me](#whats-in-it-for-me)
 - [How it's built](#how-its-built)
-- [The data model (the `DATA` block)](#the-data-model-the-data-block)
+- [The data model (`data/*.json`)](#the-data-model-datajson)
 - [Hosting on GitHub Pages](#hosting-on-github-pages)
 - [Auto-sync automation (Phase 2)](#auto-sync-automation-phase-2)
 - [Refreshing results manually](#refreshing-results-manually)
@@ -87,26 +87,45 @@ input/instructions.md  ────┘        (DATA block + render)         (sel
 
 ---
 
-## The data model (the `DATA` block)
+## The data model (`data/*.json`)
 
-Everything the page shows comes from a handful of variables at the top of
-`build_dashboard.py`. The important ones:
+Everything the page shows comes from three JSON files in `data/`, loaded by
+`build_dashboard.py` at generate time (the render engine below the banner is verbatim).
+Splitting the data out means the sync only ever rewrites **`data/live.json`** — it never
+edits Python source (retiring the old regex-rewrites-Python approach).
 
-| Variable | What it holds |
+**`data/picks.json`** — this entrant's bracket (the only per-person file):
+
+| Key | What it holds |
 | --- | --- |
-| `ENTRANT`, `TIEBREAKER` | Name on the dashboard and the Final total-goals tiebreaker. |
-| `REFRESHED` | "Last updated" timestamp shown in the header. |
-| `SEED` | Every team → its group seed (e.g. `"England":"1L"`). |
-| `R32` | The 16 Round-of-32 fixtures: `(matchcode, date, teamA, teamB, my pick)`. |
-| `FREEBIE_MATCH` | The match everyone is auto-credited (Canada vs South Africa). |
-| `RES` | **Finished** results, keyed by match code: `(goalsA, goalsB, winner, note)`. |
-| `UPCOMING` | Not-yet-played matches → their kickoff day label. |
-| `R32_TIMES`, `R16_FIX`, `R16_PICK` | Kickoff times and later-round fixtures/picks. |
-| `R16_WIN`, `QF_WIN`, `SF_WIN`, `CHAMP`, `RUNNER` | My picks for each later round. |
-| `FEATURED` / `AUTO_HL` | Game-fact recaps in the "Game facts" strip. `FEATURED` is hand-written; `AUTO_HL` is auto-appended by the sync (newest game first). `HIGHLIGHTS = FEATURED + AUTO_HL`. |
+| `entrant`, `tiebreaker` | Name on the dashboard and the Final total-goals tiebreaker. |
+| `seed` | Every team → its group seed (e.g. `"England":"1L"`). |
+| `r32` | The 16 Round-of-32 fixtures: `[matchcode, date, teamA, teamB, my pick]`. |
+| `freebie_match` | The match everyone is auto-credited (Canada vs South Africa). |
+| `r16_win`, `qf_win`, `sf_win`, `champ`, `runner` | My picks for each later round. |
+
+**`data/live.json`** — everything the sync writes (the only file a sync run changes):
+
+| Key | What it holds |
+| --- | --- |
+| `refreshed` | "Last updated" timestamp shown in the header. |
+| `res` | **Finished** results by match code: `[goalsA, goalsB, winner, note]`. |
+| `upcoming` | Not-yet-played matches → their kickoff day label. |
+| `ko_fix` | Auto kickoff times for pending QF/SF/Final matches: `[day, ET, CT, PT]`. |
+| `auto_hl` | Game-fact recap cards (newest first), rebuilt each sync from the last six finished games. |
+
+**`data/topology.json`** — the fixed knockout bracket (`ko_feed`: each match → its two
+feeder matches), shared by the generator and the sync engine.
+
+Earlier-round kickoff times (`R32_TIMES`, `R16_FIX`) and reference data (`KO_DATES`,
+`WC_HISTORY`, emoji maps) stay as constants in `build_dashboard.py`, as does `FEATURED`
+(a hand-pinned highlight slot); `HIGHLIGHTS = FEATURED + auto_hl`.
+
+> The Cowork build kit (`input/instructions.md`, **v10**) predates this JSON layer and still
+> embeds the generator with an inline `DATA` block.
 
 **Scoring in plain terms:** each correct advancing pick earns points by round; `winner:null`
-(or a match not in `RES`) means the game is still pending and counts toward *live* points, not
+(or a match not in `res`) means the game is still pending and counts toward *live* points, not
 lost ones. When a result is added, the engine recomputes confirmed / live / lost / attainable
 and marks eliminated teams automatically.
 
@@ -117,9 +136,9 @@ and marks eliminated teams automatically.
 Because the dashboard is a single static file, hosting is trivial:
 
 1. The generated dashboard lives at **`docs/index.html`**.
-   Treat `scripts/build_dashboard.py` as the source of truth for styles/layout — if you
-   hand-edit `docs/index.html`, mirror the same change in the generator and rebuild, or the
-   next sync/theme regeneration will overwrite it.
+   Treat `scripts/build_dashboard.py` + `data/*.json` as the source of truth — if you
+   hand-edit `docs/index.html` it still gets wiped on the next sync/theme regeneration.
+   Content/layout changes go in the generator; data changes go in `data/*.json`.
 2. This repo's **`.github/workflows/deploy-pages.yml`** uploads the already-built `docs/`
    folder straight to Pages. In **Settings → Pages**, set **Source** to **GitHub Actions**.
    Keep the committed **`docs/.nojekyll`** marker file in place as a harmless fallback if you
@@ -241,9 +260,12 @@ Then commit and push — Pages redeploys in about a minute.
 | Path | What it is |
 | --- | --- |
 | `input/instructions.md` | The **v8 build kit** — the spec the generator reproduces. |
-| `input/bracket-picks.xlsx` | My bracket picks (the "My Bracket" tab seeds the `DATA` block). |
-| `scripts/build_dashboard.py` | Stdlib generator: `DATA` block + render engine → `index.html`. |
-| `scripts/fetch_results.py` | Web/offline results sync that updates `DATA` and rebuilds. |
+| `input/bracket-picks.xlsx` | My bracket picks (the "My Bracket" tab seeds `data/picks.json`). |
+| `data/picks.json` | This entrant's bracket (picks, seeds, tiebreaker). |
+| `data/live.json` | Sync-written live data (results, kickoff times, highlights, timestamp). |
+| `data/topology.json` | The fixed knockout bracket (`ko_feed`), shared by both scripts. |
+| `scripts/build_dashboard.py` | Stdlib generator: loads `data/*.json` + render engine → `index.html`. |
+| `scripts/fetch_results.py` | Web/offline results sync that updates `data/live.json` and rebuilds. |
 | `scripts/team_map.json` | Source-name → bracket-name mapping (16 known variants). |
 | `docs/index.html` | The generated, self-contained dashboard (served by Pages). |
 | `docs/how-i-built-this.html` | A companion "making-of" page linked from the dashboard. |
@@ -305,17 +327,18 @@ copy <path-to>\instructions.md      input\instructions.md
 copy <path-to>\your-picks.xlsx      input\bracket-picks.xlsx
 ```
 
-### 4. Put in your picks (the `DATA` block)
+### 4. Put in your picks (`data/picks.json`)
 
-Open `scripts/build_dashboard.py` and edit only the **`DATA` block** at the top (see
-[the data model](#the-data-model-the-data-block)) to match your workbook's "My Bracket" tab:
+Edit **`data/picks.json`** (see [the data model](#the-data-model-datajson)) to match your
+workbook's "My Bracket" tab:
 
-- `ENTRANT`, `TIEBREAKER` — your name and Final total-goals tiebreaker.
-- `R32` — your 16 Round-of-32 fixtures and picks.
-- `R16_PICK`, `R16_WIN`, `QF_WIN`, `SF_WIN`, `CHAMP`, `RUNNER` — your later-round picks.
-- Leave `RES` empty (or with only truly-finished games) — the automation fills it as games play.
+- `entrant`, `tiebreaker` — your name and Final total-goals tiebreaker.
+- `r32` — your 16 Round-of-32 fixtures and picks.
+- `r16_win`, `qf_win`, `sf_win`, `champ`, `runner` — your later-round picks.
+- Leave `data/live.json`'s `res` empty (or with only truly-finished games) — the automation
+  fills it as games play.
 
-**Everything below the `RENDER ENGINE` banner stays verbatim — don't edit it.**
+**The render engine in `scripts/build_dashboard.py` (below the banner) stays verbatim — don't edit it.**
 
 ### 5. Build, then push
 
