@@ -1,0 +1,11 @@
+[
+  {"home": "Portugal", "away": "Croatia", "homeGoals": 2, "awayGoals": 1,
+   "date": "2026-07-02T16:00:00Z", "stage": "Round of 32"},
+  {"home": "Australia", "away": "Egypt", "homeGoals": 1, "awayGoals": 1,
+   "winner": "Egypt", "note": "4–2 pens",
+   "date": "2026-07-03T20:00:00Z", "stage": "Round of 32"},
+  {"home": "Ghana", "away": "Ecuador", "homeGoals": 0, "awayGoals": 0,
+   "date": "2026-06-20T18:00:00Z", "stage": "Group Stage"},
+  {"home": "Bosnia and Herzegovina", "away": "Norway", "homeGoals": 3, "awayGoals": 1,
+   "date": "2026-06-22T18:00:00Z", "stage": "Group Stage"}
+]
