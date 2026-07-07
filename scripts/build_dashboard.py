@@ -150,6 +150,14 @@ def actual_advancer(short, team):
     code=CODE_OF_PICK.get((prev,team))
     if code and code in RES: return RES[code][2]
     return None
+_PREV_OF={"r16":"r32","qf":"r16","sf":"qf","final":"sf","champion":"final"}
+_NEXT_OF={"r32":"r16","r16":"qf","qf":"sf","sf":"final","final":"champion"}
+def won_into(team, short):
+    """True if the team actually won into (reached) the round this column shows."""
+    prev=_PREV_OF.get(short)
+    if prev=="r32": return team in R32_ACTUAL_WINNERS
+    if prev: return team in KO_WINNERS_BY_ROUND.get(prev,set())
+    return False
 def reach_status(team, short):
     """Did this team actually reach (win into) the round this column represents?
 
@@ -159,13 +167,19 @@ def reach_status(team, short):
     "lost" (eliminated earlier) or "pending" (round not yet decided). Checking
     "did it win into this round" before the ELIM test is what keeps a correct
     pick green in the round it reached instead of flipping blue once it bows out."""
-    prev={"r16":"r32","qf":"r16","sf":"qf","final":"sf","champion":"final"}.get(short)
-    if prev=="r32": won=team in R32_ACTUAL_WINNERS
-    elif prev: won=team in KO_WINNERS_BY_ROUND.get(prev,set())
-    else: won=False
-    if won: return "won"
+    if won_into(team, short): return "won"
     if team in ELIM: return "lost"
     return "pending"
+def out_at_round(team, short):
+    """True when this column is where the team actually bowed out: it reached
+    this round (green path in) but lost its match here (didn't win into the next
+    round) and is now eliminated. Such a box stays green — the pick to get here
+    was correct — but is greyed out to show the team is done."""
+    if team not in ELIM: return False
+    if not won_into(team, short): return False        # never reached this round
+    nxt=_NEXT_OF.get(short)
+    if nxt and won_into(team, nxt): return False       # advanced past this round
+    return True
 
 def pick_status(short, team, mc=None):
     if short=="r32":
@@ -284,7 +298,12 @@ def _pick_box(team, picked, short, champ, st):
     cls=["team","st-"+st]
     if champ: cls.append("champ")
     if picked and not champ: cls.append("advancer")
-    badge='<span class="rb ok">✓</span>' if st=="won" else ('<span class="rb no">✕</span>' if st=="lost" else '')
+    # A correct pick that reached this round but has since bowed out here keeps its
+    # green (the pick to get here was right) but is greyed out to show it's done,
+    # and drops the ✓ so it doesn't read as "still through".
+    gone=(st=="won" and out_at_round(team, short))
+    if gone: cls.append("gone")
+    badge=('' if gone else '<span class="rb ok">✓</span>') if st=="won" else ('<span class="rb no">✕</span>' if st=="lost" else '')
     tag='<span class="tt">🏆</span>' if champ else ''
     chev='<span class="adv-arrow" title="you have this team advancing">›</span>' if (picked and not champ) else ''
     sd=seed_of(team); sh=f'<span class="seed">{esc(sd)}</span>' if sd else ''
@@ -957,6 +976,7 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .conn.c-lost{stroke:var(--red)}
 .conn.c-pending{stroke:var(--muted);opacity:.5;stroke-dasharray:5 5}
 .conn.c-actual{stroke:var(--blue);opacity:.7;stroke-dasharray:2 4}
+.conn.gone{opacity:.4}
 .team.blank{visibility:hidden}
 .team.st-actual{border-color:color-mix(in srgb,var(--blue) 45%,var(--border));opacity:.9}
 .team.st-actual .tname{color:var(--muted)}
@@ -988,6 +1008,8 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .lg-line.lg-line-actual{border-top:3px dashed var(--blue);opacity:.8}
 .team.st-won{border-color:color-mix(in srgb,var(--win) 55%,var(--border));box-shadow:0 2px 10px rgba(0,178,145,.12)}
 .team.st-won .tname{color:var(--win-ink)}
+.team.st-won.gone{opacity:.55;box-shadow:none}
+.team.st-won.gone .tname{text-decoration:line-through}
 .team.st-lost{border-color:color-mix(in srgb,var(--red) 50%,var(--border))}
 .team.st-lost .tname{text-decoration:line-through;color:var(--lose-ink)}
 .team.advancer .tname{font-weight:750}
@@ -1261,8 +1283,9 @@ JS=r"""
        var a=P(src),b=P(tb),x1=a.r+1,x2=b.l-1,xm=Math.round((x1+x2)/2);
        var d='M'+Math.round(x1)+' '+Math.round(a.y)+' H'+xm+' V'+Math.round(b.y)+' H'+Math.round(x2);
        var st=tb.classList.contains('st-won')?'won':tb.classList.contains('st-lost')?'lost':tb.classList.contains('st-actual')?'actual':'pending';
+       var gone=tb.classList.contains('gone');
        var p=document.createElementNS('http://www.w3.org/2000/svg','path');
-       p.setAttribute('d',d);p.setAttribute('class','conn c-'+st);svg.appendChild(p);
+       p.setAttribute('d',d);p.setAttribute('class','conn c-'+st+(gone?' gone':''));svg.appendChild(p);
      });
    }
  }
