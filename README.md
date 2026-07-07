@@ -161,7 +161,9 @@ You can also run it on demand: **Actions → Sync World Cup results → Run work
    Final) straight from `build_dashboard.py` so it always matches my bracket.
 2. Pulls **finished** 2026 World Cup matches from **FIFA's public feed**
    (`api.fifa.com/api/v3/calendar/matches`, competition `17` / season `285023`) — no token
-   required. (`--source footballdata` is still available if you'd rather use that API + token.)
+   required. The default `--source auto` **automatically falls back to football-data.org** if the
+   FIFA feed has an outage or returns an empty feed, so a single-source outage is a non-event. (You
+   can also pin one source: `--source fifa` or `--source footballdata`.)
 3. Normalizes source team names to the bracket's spellings via **`scripts/team_map.json`**
    (e.g. "Bosnia and Herzegovina" → "Bosnia & Herz.", "Côte d'Ivoire" → "Ivory Coast").
 4. Matches each finished game to a bracket match by the pair of teams — first the Round of 32,
@@ -187,6 +189,10 @@ You can also run it on demand: **Actions → Sync World Cup results → Run work
   changes nothing and exits cleanly.
 - **No key, no secret to leak** — the default FIFA feed needs no token, so there's nothing to
   configure and nothing that can expire.
+- **Resilient to a source outage** — `--source auto` transparently falls back to football-data.org
+  if FIFA is unreachable or returns an empty feed (set the optional `FOOTBALL_DATA_TOKEN` secret to
+  arm the fallback in CI); if *every* source fails, the run exits cleanly and simply leaves the
+  dashboard untouched rather than erroring out.
 - **Draws stay out of the bracket** — a genuine draw (no decider) is shown in the game-fact
   cards but never recorded as a knockout result.
 
@@ -416,9 +422,9 @@ Honest analysis of what could make this better, roughly by value vs. effort:
 
 **Medium value**
 - **A tiny GitHub Actions badge** in this README showing the last sync status.
-- **A fallback results source.** The default is FIFA's free feed; football-data.org is already
-  wired as an alternate (`--source footballdata`). A small auto-fallback between them would make a
-  single outage a non-event.
+- **A fallback results source. ✅ Done.** `--source auto` (now the default) uses FIFA's free feed
+  and automatically falls back to football-data.org on a FIFA outage or empty feed, so a single
+  outage is a non-event. Set the optional `FOOTBALL_DATA_TOKEN` secret to arm the fallback in CI.
 - **Unit tests** for `fetch_results.py` (name normalization, team-pair matching, draw handling)
   using a committed sample feed under `tests/`.
 

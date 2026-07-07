@@ -6,10 +6,13 @@ What it does
 ------------
 1. Reads the Round-of-32 fixtures straight out of ``build_dashboard.py`` (the
    ``R32`` list) so it always matches the entrant's bracket.
-2. Gets finished-match results from the web:
-     - default: FIFA's free public feed (api.fifa.com/api/v3), competition 17 /
-       season 285023 (World Cup 2026) — no API key or signup required; or
-     - ``--source footballdata`` for football-data.org (needs ``FOOTBALL_DATA_TOKEN``); or
+2. Gets finished-match results from the web. The default ``--source auto`` prefers
+   FIFA's free public feed (api.fifa.com/api/v3, competition 17 / season 285023 —
+   no API key or signup) and automatically falls back to football-data.org on any
+   FIFA outage or empty feed, so a single-source outage is a non-event. You can
+   also pin one source instead:
+     - ``--source fifa`` — FIFA's free feed only (no key); or
+     - ``--source footballdata`` — football-data.org only (needs ``FOOTBALL_DATA_TOKEN``); or
      - ``--input results.json`` for a local/offline feed (also used by self-test).
 3. Normalizes source team names to the bracket's names via ``team_map.json``.
 4. Matches each finished game to a bracket match by the pair of teams, and
@@ -353,6 +356,67 @@ def results_from_json(path: str, tmap: dict):
                     "winner": w, "note": note, "date": (m.get("date") or ""),
                     "stage": (m.get("stage", "")), "city": (m.get("city", ""))})
     return out
+
+
+# ── auto-fallback resolver ───────────────────────────────────────────────────
+# Network/parse errors we treat as a recoverable outage of one source (so we can
+# fall back to another) rather than crashing the whole sync. urllib.error.URLError
+# and TimeoutError are OSError subclasses; json.JSONDecodeError is a ValueError.
+_SOURCE_ERRORS = (urllib.error.URLError, OSError, ValueError)
+
+
+def _fetch_source(source: str, tmap: dict):
+    """Fetch one web source resiliently.
+
+    Returns ``(feed, is_fifa, error)`` where ``feed`` is a list (possibly empty)
+    on a clean fetch, or ``None`` if the source is unavailable (e.g. no
+    ``FOOTBALL_DATA_TOKEN``) or errored. ``error`` is a short reason string for
+    logging (``None`` on clean success).
+    """
+    try:
+        if source == "footballdata":
+            feed = results_from_footballdata(tmap)
+            if feed is None:
+                return None, False, "no FOOTBALL_DATA_TOKEN set"
+            return feed, False, None
+        return results_from_fifa(tmap), True, None
+    except _SOURCE_ERRORS as exc:
+        return None, source == "fifa", f"{type(exc).__name__}: {exc}"
+
+
+def results_auto(tmap: dict):
+    """Prefer FIFA (free, richest feed); fall back to football-data.org on any
+    FIFA outage or an empty FIFA feed.
+
+    Returns ``(feed, src_label, is_fifa)``. A clean-but-empty FIFA feed is kept
+    as the last resort (a genuinely empty schedule is valid), so the fallback
+    fires without hiding real "no games yet" states. Raises ``RuntimeError`` only
+    if *every* candidate source fails outright.
+    """
+    fifa_feed, fifa_err = None, None
+    for source, label in (("fifa", "FIFA public feed (api.fifa.com)"),
+                          ("footballdata", "football-data.org")):
+        feed, _is_fifa, err = _fetch_source(source, tmap)
+        if source == "fifa":
+            if err is None and feed:
+                return feed, label, True          # best case: FIFA has games
+            if err is None:
+                fifa_feed = feed                  # clean but empty -> last resort
+            else:
+                fifa_err = err
+                print(f"  auto: FIFA source unavailable ({err}); "
+                      "trying football-data.org\u2026")
+            continue
+        # football-data branch — only useful if it actually returns games.
+        if err is None and feed:
+            why = f"FIFA error ({fifa_err})" if fifa_err else "FIFA returned no finished games"
+            print(f"  auto: using football-data.org fallback ({why}).")
+            return feed, label, False
+        if err:
+            print(f"  auto: football-data.org fallback unavailable ({err}).")
+    if fifa_feed is not None:
+        return fifa_feed, "FIFA public feed (api.fifa.com)", True
+    raise RuntimeError(f"all result sources failed (FIFA: {fifa_err})")
 
 
 # ── matching + rewrite ───────────────────────────────────────────────────────
@@ -798,8 +862,9 @@ def now_pt_stamp() -> str:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--input", help="local results.json feed (instead of the web API)")
-    ap.add_argument("--source", choices=["fifa", "footballdata"], default="fifa",
-                    help="web source when --input is not used (default: fifa, free/no key)")
+    ap.add_argument("--source", choices=["auto", "fifa", "footballdata"], default="auto",
+                    help="web source when --input is not used (default: auto — FIFA free feed, "
+                         "auto-falling back to football-data.org on a FIFA outage or empty feed)")
     ap.add_argument("--dry-run", action="store_true", help="report changes, write nothing")
     ap.add_argument("--no-build", action="store_true", help="update source but skip regenerating HTML")
     args = ap.parse_args()
@@ -821,12 +886,22 @@ def main() -> int:
         if feed is None:
             print("No FOOTBALL_DATA_TOKEN set and no --input given \u2014 nothing to do.")
             return 0
-    else:
+    elif args.source == "fifa":
         feed = results_from_fifa(tmap)
         src = "FIFA public feed (api.fifa.com)"
         # Pull scorers/half/comeback context for just the games that will become
         # highlight cards (a handful of extra free FIFA calls, read-only).
         enrich_fifa_goals(feed)
+    else:  # auto (default): FIFA first, football-data.org fallback on outage
+        try:
+            feed, src, is_fifa = results_auto(tmap)
+        except RuntimeError as exc:
+            print(f"All result sources failed \u2014 nothing to do this run. ({exc})")
+            return 0
+        # Scorer/half/comeback enrichment is FIFA-only (needs FIFA match IDs);
+        # skip it when the fallback source supplied the feed.
+        if is_fifa:
+            enrich_fifa_goals(feed)
 
     # Resolve every round (R32 -> R16 -> QF -> SF -> Final) from the same feed.
     new_res, applied = match_all(r32, ko_feed, cur_res, feed)
