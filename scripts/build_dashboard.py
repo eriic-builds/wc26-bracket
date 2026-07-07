@@ -3,7 +3,7 @@
 Picks / scoring / tiebreaker come from the entrant's own 'My Bracket' Excel tab.
 Live match results & kickoff times come from a verified web lookup (FIFA official + majors).
 No results are invented; undecided matches are shown as pending."""
-import html, json, re
+import html, json, os, re
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  USER DATA — the ONLY part you change per entrant.
@@ -15,73 +15,37 @@ import html, json, re
 #  Everything below the "RENDER ENGINE" banner is kept VERBATIM — it reproduces the
 #  exact dashboard design / UI / format. Do not restyle, re-order, or add to it.
 # ══════════════════════════════════════════════════════════════════════════════
-ENTRANT="Eric Lam"; TIEBREAKER=4
-REFRESHED="July 7, 2026 · 12:36 AM PT"
+# Data is loaded from data/*.json — picks.json (this entrant's bracket),
+# live.json (FIFA-synced results/schedule/highlights, written by the sync engine),
+# topology.json (the fixed KO bracket). Everything below the RENDER ENGINE banner
+# is verbatim. The tuple() restores are because JSON has only lists.
+_DATA=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),"data")
+def _load(_name):
+    with open(os.path.join(_DATA,_name),encoding="utf-8") as _fh: return json.load(_fh)
+P=_load("picks.json"); L=_load("live.json"); T=_load("topology.json")
+ENTRANT=P["entrant"]; TIEBREAKER=P["tiebreaker"]
+REFRESHED=L["refreshed"]
 CREDIT="Built With Cowork — Imagined by Eric Lam"  # tiny footer signature — fixed, do not change
 SYNC_URL="https://github.com/eriic-builds/wc26-bracket/actions/workflows/sync-results.yml"  # "Sync now" button: opens the workflow's Run page on GitHub (tap "Run workflow" to sync). No relay, no token. Leave "" to hide the button.
 
-SEED={"Germany":"1E","Paraguay":"3rd","France":"1I","Sweden":"3rd","South Africa":"2A","Canada":"2B",
- "Netherlands":"1F","Morocco":"2C","Portugal":"2K","Croatia":"2L","Spain":"1H","Austria":"2J",
- "United States":"1D","Bosnia & Herz.":"3rd","Belgium":"1G","Senegal":"3rd","Brazil":"1C","Japan":"2F",
- "Ivory Coast":"2E","Norway":"2I","Mexico":"1A","Ecuador":"3rd","England":"1L","DR Congo":"3rd",
- "Argentina":"1J","Cape Verde":"2H","Australia":"2D","Egypt":"2G","Switzerland":"1B","Algeria":"3rd",
- "Colombia":"1K","Ghana":"3rd"}
+SEED=P["seed"]
 
-# (matchcode, date, teamA, teamB, the entrant's pick)
-R32=[("M74","Mon 6/29","Germany","Paraguay","Germany"),
- ("M77","Tue 6/30","France","Sweden","France"),
- ("M73","Sun 6/28","South Africa","Canada","Canada"),
- ("M75","Mon 6/29","Netherlands","Morocco","Morocco"),
- ("M83","Thu 7/2","Portugal","Croatia","Portugal"),
- ("M84","Thu 7/2","Spain","Austria","Spain"),
- ("M81","Wed 7/1","United States","Bosnia & Herz.","United States"),
- ("M82","Wed 7/1","Belgium","Senegal","Belgium"),
- ("M76","Mon 6/29","Brazil","Japan","Japan"),
- ("M78","Tue 6/30","Ivory Coast","Norway","Norway"),
- ("M79","Tue 6/30","Mexico","Ecuador","Mexico"),
- ("M80","Wed 7/1","England","DR Congo","England"),
- ("M86","Fri 7/3","Argentina","Cape Verde","Argentina"),
- ("M88","Fri 7/3","Australia","Egypt","Australia"),
- ("M85","Thu 7/2","Switzerland","Algeria","Switzerland"),
- ("M87","Fri 7/3","Colombia","Ghana","Colombia")]
-FREEBIE_MATCH="M73"
+# (matchcode, date, teamA, teamB, the entrant's pick) — from picks.json
+R32=[tuple(r) for r in P["r32"]]
+FREEBIE_MATCH=P["freebie_match"]
 
-# LIVE RESULTS (teamA goals, teamB goals, winner, note) — only completed matches
-RES={"M73":(0,1,"Canada",""),
- "M74":(1,1,"Paraguay","4–3 pens"),
- "M75":(1,1,"Morocco","3–2 pens"),
- "M76":(2,1,"Brazil",""),
- "M77":(3,0,"France",""),
- "M78":(1,2,"Norway",""),
- "M79":(2,0,"Mexico",""),
- "M80":(2,1,"England",""),
- "M81":(2,0,"United States",""),
- "M82":(3,2,"Belgium",""),
- "M83":(2,1,"Portugal",""),
- "M84":(3,0,"Spain",""),
- "M85":(2,0,"Switzerland",""),
- "M86":(3,2,"Argentina",""),
- "M87":(1,0,"Colombia",""),
- "M88":(1,1,"Egypt","4–2 pens"),
- "M89":(0,1,"France",""),
- "M90":(0,3,"Morocco",""),
- "M91":(1,2,"Norway",""),
- "M92":(2,3,"England",""),
- "M93":(0,1,"Spain",""),
- "M94":(1,4,"Belgium","")}
-UPCOMING={}
+# LIVE RESULTS (teamA goals, teamB goals, winner, note) — from live.json (sync-written)
+RES={c:tuple(v) for c,v in L["res"].items()}
+UPCOMING=dict(L["upcoming"])
 
-R16_WIN=["France","Morocco","Spain","United States","Japan","England","Argentina","Colombia"]
-QF_WIN=["France","Spain","England","Argentina"]; SF_WIN=["France","England"]
-CHAMP="England"; RUNNER="France"
+R16_WIN=P["r16_win"]
+QF_WIN=P["qf_win"]; SF_WIN=P["sf_win"]
+CHAMP=P["champ"]; RUNNER=P["runner"]
 
 # Knockout topology — which two prior matches feed each match (fixed FIFA bracket, same
 # for every entrant). Single source of truth, shared with the sync engine
 # (scripts/fetch_results.py). R32 codes feed the Round of 16.
-KO_FEED={"M89":("M74","M77"),"M90":("M73","M75"),"M91":("M76","M78"),"M92":("M79","M80"),
- "M93":("M83","M84"),"M94":("M81","M82"),"M95":("M86","M88"),"M96":("M85","M87"),
- "M97":("M89","M90"),"M98":("M93","M94"),"M99":("M91","M92"),"M100":("M95","M96"),
- "M101":("M97","M98"),"M102":("M99","M100"),"M104":("M101","M102")}
+KO_FEED={c:tuple(v) for c,v in T["ko_feed"].items()}
 KO_DATES={"r16":"Jul 4–7","qf":"Jul 9–11","sf":"Jul 14–15","final":"Sun Jul 19 · MetLife"}
 KO_ROUND_ORDER=[("Round of 16","r16",[f"M{n}" for n in range(89,97)]),
  ("Quarterfinals","qf",[f"M{n}" for n in range(97,101)]),
@@ -250,12 +214,8 @@ R16_FIX=[  # match, day, teamA, teamB, ET, CT, PT
  ("M96","Tue Jul 7","Switzerland / Algeria","Colombia / Ghana","4:00 PM","3:00 PM","1:00 PM")]
 # Kickoff times for not-yet-played knockout games (QF/SF/Final) — AUTO, maintained
 # by the sync engine (scripts/fetch_results.py) from the FIFA schedule, DST-safe.
-# {code: (day, ET, CT, PT)}. Empty until the sync populates it; do not hand-edit.
-KO_FIX={"M95":("Tue Jul 7","12:00 PM","11:00 AM","9:00 AM"),
- "M96":("Tue Jul 7","4:00 PM","3:00 PM","1:00 PM"),
- "M97":("Thu Jul 9","4:00 PM","3:00 PM","1:00 PM"),
- "M98":("Fri Jul 10","3:00 PM","2:00 PM","12:00 PM"),
- "M99":("Sat Jul 11","5:00 PM","4:00 PM","2:00 PM")}
+# {code: (day, ET, CT, PT)} — from live.json. Do not hand-edit.
+KO_FIX={c:tuple(v) for c,v in L["ko_fix"].items()}
 
 def esc(s): return html.escape(str(s))
 def seed_of(t): return SEED.get(t,"")
@@ -735,14 +695,7 @@ def build_round_results_panel(label, short, codes):
 #    with no manual editing. FEATURED is an optional slot for a hand-written story you
 #    want pinned above the auto cards; leave it empty to show only the live last-six.
 FEATURED=[]
-AUTO_HL=[
- ("😈","Ketelaere's brace sinks United States","United States 1–4 Belgium","Tue Jul 7 · Seattle","Ketelaere struck twice in the first half (9', 33') as Belgium beat United States 4–1 in the Round of 16, with Vanaken (57') and Lukaku (90'+3') also on the mark."),
- ("🐂","Spain edge Portugal","Portugal 0–1 Spain","Mon Jul 6 · Dallas","Heartbreak for Portugal — Spain nicked it 1–0 late in the Round of 16, Merino (90'+1') on target."),
- ("🦁","Bellingham's brace sinks Mexico","Mexico 2–3 England","Mon Jul 6 · Mexico City","Bellingham struck twice in the first half (36', 38') as England beat Mexico 3–2 in the Round of 16, with Kane (60' pen) also on the mark."),
- ("🇳🇴","Haaland's brace sinks Brazil","Brazil 1–2 Norway","Sun Jul 5 · New Jersey","Haaland struck twice after the break (79', 90') as Norway beat Brazil 2–1 in the Round of 16."),
- ("🐓","France edge Paraguay","Paraguay 0–1 France","Sat Jul 4 · Philadelphia","Nervy but enough: France saw off Paraguay 1–0 in the Round of 16 thanks to Mbappe (70' pen)."),
- ("🇲🇦","Ounahi's brace sinks Canada","Canada 0–3 Morocco","Sat Jul 4 · Houston","Ounahi struck twice after the break (50', 82') as Morocco beat Canada 3–0 in the Round of 16, with Rahimi (90'+8') also on the mark."),
-]  # AUTO — maintained by the sync engine; the last six finished games. Do not hand-edit.
+AUTO_HL=[tuple(e) for e in L["auto_hl"]]  # from live.json (sync-written, last six games)
 HIGHLIGHTS=FEATURED+AUTO_HL
 def build_highlights():
     return ''.join(f'<div class="glass story"><div class="story-ic">{ic}</div>'

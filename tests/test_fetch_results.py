@@ -45,46 +45,42 @@ def _mock_urlopen(payload):
     return _open
 
 
-class RoundTripTests(unittest.TestCase):
-    def test_res_roundtrip_with_endash_note(self):
-        res = {"M9": (2, 0, "Spain", ""),
-               "M10": (0, 0, "Brazil", "AET"),
-               "M74": (1, 1, "Paraguay", "4\u20133 pens")}
-        self.assertEqual(fr.parse_res_block(fr.render_res(res)), res)
+class DataFileTests(unittest.TestCase):
+    """After the JSON move, data/*.json is the source of truth."""
 
-    def test_upcoming_roundtrip(self):
-        up = {"M97": "Thu Jul 9", "M101": "Tue Jul 14"}
-        self.assertEqual(fr.parse_upcoming_block(fr.render_upcoming(up)), up)
+    def test_data_files_have_expected_shape(self):
+        picks = json.load(open(fr.PICKS, encoding="utf-8"))
+        live = json.load(open(fr.LIVE, encoding="utf-8"))
+        topo = json.load(open(fr.TOPOLOGY, encoding="utf-8"))
+        self.assertEqual(len(picks["r32"]), 16)
+        for r in picks["r32"]:
+            self.assertRegex(r[0], r"^M\d+$")
+            self.assertTrue(r[2] and r[3])                  # teamA, teamB
+        for key in ("res", "upcoming", "ko_fix", "auto_hl", "refreshed"):
+            self.assertIn(key, live)
+        self.assertEqual(len(topo["ko_feed"]), 15)          # M89-M102 + M104
+        self.assertIn("M104", topo["ko_feed"])              # the Final
+        self.assertNotIn("M103", topo["ko_feed"])           # 3rd-place intentionally out
 
-    def test_rendered_notes_have_no_braces(self):
-        # RES=\{[^}]*\} stops at the first '}', so a note containing a brace would
-        # truncate the rewritten block on the next sync. Guard the invariant.
-        res = {"M74": (1, 1, "Paraguay", "4\u20133 pens"),
-               "M88": (1, 1, "Egypt", "4\u20132 pens")}
-        block = fr.render_res(res)
-        body = block[block.index("{") + 1: block.rindex("}")]
-        self.assertNotIn("{", body)
-        self.assertNotIn("}", body)
+    def test_live_json_roundtrip_preserves_unicode(self):
+        # mutate -> write -> read -> equal (the JSON layer replaces the old regex
+        # round-trip; ensure_ascii=False must keep en-dashes/emoji intact).
+        import tempfile
+        live = json.load(open(fr.LIVE, encoding="utf-8"))
+        live["res"]["M74"] = [1, 1, "Paraguay", "4\u20133 pens"]
+        live["auto_hl"].append(["\U0001f981", "hd", "sc", "wh", "a\u2013b"])
+        with tempfile.TemporaryDirectory() as d:
+            tmp = os.path.join(d, "live.json")
+            with mock.patch.object(fr, "LIVE", tmp):
+                fr._write_live(live)
+                back = json.load(open(tmp, encoding="utf-8"))
+        self.assertEqual(back["res"]["M74"], [1, 1, "Paraguay", "4\u20133 pens"])
+        self.assertEqual(back["auto_hl"][-1], ["\U0001f981", "hd", "sc", "wh", "a\u2013b"])
 
-
-class ExtractionTests(unittest.TestCase):
-    def setUp(self):
-        with open(fr.GEN, encoding="utf-8") as fh:
-            self.gen = fh.read()
-
-    def test_read_r32_returns_16_fixtures(self):
-        r32 = fr.read_r32(self.gen)
-        self.assertEqual(len(r32), 16)
-        for code, a, b in r32:
-            self.assertRegex(code, r"^M\d+$")
-            self.assertTrue(a and b)
-
-    def test_parse_ko_feed_15_codes_excludes_m103(self):
-        ko = fr.parse_ko_feed(self.gen)
-        self.assertEqual(len(ko), 15)          # M89-M102 + M104
-        self.assertIn("M89", ko)
-        self.assertIn("M104", ko)              # the Final
-        self.assertNotIn("M103", ko)           # third-place playoff intentionally out
+    def test_sync_no_longer_edits_the_generator(self):
+        # The point of the JSON layer: the sync never regex-rewrites the Python source.
+        src = open(fr.__file__, encoding="utf-8").read()
+        self.assertNotIn("gen_text", src)
 
 
 class ShootoutTests(unittest.TestCase):
@@ -198,15 +194,6 @@ class SourceAndHighlightTests(unittest.TestCase):
         self.assertEqual(draw["winner"], "")
         self.assertEqual(draw["note"], "draw")
 
-    def test_auto_hl_block_has_no_stray_bracket(self):
-        # The AUTO_HL=\[.*?\] rewrite is non-greedy; a ']' inside any card would
-        # truncate the block. The emitted block must contain ']' only as its close.
-        feed, _up = fr.results_from_json(FIXTURE, fr.load_team_map())
-        block = fr.render_auto_hl(fr.build_auto_hl(feed))
-        self.assertTrue(block.startswith("AUTO_HL=["))
-        self.assertTrue(block.rstrip().endswith("]"))
-        self.assertEqual(block.count("]"), 1)
-
 
 class KoFixTests(unittest.TestCase):
     def test_build_ko_fix_converts_utc_to_et_ct_pt(self):
@@ -243,15 +230,6 @@ class KoFixTests(unittest.TestCase):
         self.assertEqual(fr.build_ko_fix(ko_feed, res, []), {})           # empty schedule
         self.assertEqual(fr.build_ko_fix(                                  # different pair
             ko_feed, res, [{"home": "Brazil", "away": "Norway", "date": "2026-07-09T19:00:00Z"}]), {})
-
-    def test_ko_fix_roundtrip(self):
-        d = {"M97": ("Thu Jul 9", "3:00 PM", "2:00 PM", "12:00 PM"),
-             "M101": ("Tue Jul 14", "3:00 PM", "2:00 PM", "12:00 PM")}
-        self.assertEqual(fr.parse_ko_fix(fr.render_ko_fix(d)), d)
-
-    def test_ko_fix_empty_roundtrip(self):
-        self.assertEqual(fr.render_ko_fix({}), "KO_FIX={}")
-        self.assertEqual(fr.parse_ko_fix("KO_FIX={}"), {})
 
 
 if __name__ == "__main__":

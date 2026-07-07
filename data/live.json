@@ -1,0 +1,214 @@
+{
+ "refreshed": "July 7, 2026 · 12:49 AM PT",
+ "res": {
+  "M73": [
+   0,
+   1,
+   "Canada",
+   ""
+  ],
+  "M74": [
+   1,
+   1,
+   "Paraguay",
+   "4–3 pens"
+  ],
+  "M75": [
+   1,
+   1,
+   "Morocco",
+   "3–2 pens"
+  ],
+  "M76": [
+   2,
+   1,
+   "Brazil",
+   ""
+  ],
+  "M77": [
+   3,
+   0,
+   "France",
+   ""
+  ],
+  "M78": [
+   1,
+   2,
+   "Norway",
+   ""
+  ],
+  "M79": [
+   2,
+   0,
+   "Mexico",
+   ""
+  ],
+  "M80": [
+   2,
+   1,
+   "England",
+   ""
+  ],
+  "M81": [
+   2,
+   0,
+   "United States",
+   ""
+  ],
+  "M82": [
+   3,
+   2,
+   "Belgium",
+   ""
+  ],
+  "M83": [
+   2,
+   1,
+   "Portugal",
+   ""
+  ],
+  "M84": [
+   3,
+   0,
+   "Spain",
+   ""
+  ],
+  "M85": [
+   2,
+   0,
+   "Switzerland",
+   ""
+  ],
+  "M86": [
+   3,
+   2,
+   "Argentina",
+   ""
+  ],
+  "M87": [
+   1,
+   0,
+   "Colombia",
+   ""
+  ],
+  "M88": [
+   1,
+   1,
+   "Egypt",
+   "4–2 pens"
+  ],
+  "M89": [
+   0,
+   1,
+   "France",
+   ""
+  ],
+  "M90": [
+   0,
+   3,
+   "Morocco",
+   ""
+  ],
+  "M91": [
+   1,
+   2,
+   "Norway",
+   ""
+  ],
+  "M92": [
+   2,
+   3,
+   "England",
+   ""
+  ],
+  "M93": [
+   0,
+   1,
+   "Spain",
+   ""
+  ],
+  "M94": [
+   1,
+   4,
+   "Belgium",
+   ""
+  ]
+ },
+ "upcoming": {},
+ "ko_fix": {
+  "M95": [
+   "Tue Jul 7",
+   "12:00 PM",
+   "11:00 AM",
+   "9:00 AM"
+  ],
+  "M96": [
+   "Tue Jul 7",
+   "4:00 PM",
+   "3:00 PM",
+   "1:00 PM"
+  ],
+  "M97": [
+   "Thu Jul 9",
+   "4:00 PM",
+   "3:00 PM",
+   "1:00 PM"
+  ],
+  "M98": [
+   "Fri Jul 10",
+   "3:00 PM",
+   "2:00 PM",
+   "12:00 PM"
+  ],
+  "M99": [
+   "Sat Jul 11",
+   "5:00 PM",
+   "4:00 PM",
+   "2:00 PM"
+  ]
+ },
+ "auto_hl": [
+  [
+   "😈",
+   "Ketelaere's brace sinks United States",
+   "United States 1–4 Belgium",
+   "Tue Jul 7 · Seattle",
+   "Ketelaere struck twice in the first half (9', 33') as Belgium beat United States 4–1 in the Round of 16, with Vanaken (57') and Lukaku (90'+3') also on the mark."
+  ],
+  [
+   "🐂",
+   "Spain edge Portugal",
+   "Portugal 0–1 Spain",
+   "Mon Jul 6 · Dallas",
+   "Heartbreak for Portugal — Spain nicked it 1–0 late in the Round of 16, Merino (90'+1') on target."
+  ],
+  [
+   "🦁",
+   "Bellingham's brace sinks Mexico",
+   "Mexico 2–3 England",
+   "Mon Jul 6 · Mexico City",
+   "Bellingham struck twice in the first half (36', 38') as England beat Mexico 3–2 in the Round of 16, with Kane (60' pen) also on the mark."
+  ],
+  [
+   "🇳🇴",
+   "Haaland's brace sinks Brazil",
+   "Brazil 1–2 Norway",
+   "Sun Jul 5 · New Jersey",
+   "Haaland struck twice after the break (79', 90') as Norway beat Brazil 2–1 in the Round of 16."
+  ],
+  [
+   "🐓",
+   "France edge Paraguay",
+   "Paraguay 0–1 France",
+   "Sat Jul 4 · Philadelphia",
+   "Nervy but enough: France saw off Paraguay 1–0 in the Round of 16 thanks to Mbappe (70' pen)."
+  ],
+  [
+   "🇲🇦",
+   "Ounahi's brace sinks Canada",
+   "Canada 0–3 Morocco",
+   "Sat Jul 4 · Houston",
+   "Ounahi struck twice after the break (50', 82') as Morocco beat Canada 3–0 in the Round of 16, with Rahimi (90'+8') also on the mark."
+  ]
+ ]
+}
