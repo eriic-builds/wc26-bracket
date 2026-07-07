@@ -428,13 +428,27 @@ def match_all(r32, ko_feed, base_res, feed):
     feed detail (teams in bracket order, score, date, label) for finished games — used to
     build the auto game-fact highlights.
     """
-    by_pair = {frozenset((f["home"], f["away"])): f for f in feed}
+    by_pair = {}
+    for f in feed:
+        key = frozenset((f["home"], f["away"]))
+        cur = by_pair.get(key)
+        # Two teams can meet twice — a group-stage game and, if both advance, a
+        # later knockout game — and collide on this frozenset key. Prefer the
+        # latest-dated meeting so the knockout result wins over the earlier group
+        # one regardless of feed order (previously last-in-feed silently won,
+        # which could write a group-stage score into a semifinal or the Final).
+        if cur is None or f.get("date", "") > cur.get("date", ""):
+            by_pair[key] = f
     res = dict(base_res)
     applied = {}
 
     def orient(code, a, b):
         f = by_pair.get(frozenset((a, b)))
         if not f or not f.get("winner"):
+            return
+        # Every bracket match is a knockout game; never let a group-stage meeting
+        # of the same two teams (same frozenset key) write a knockout result.
+        if stage_label(f.get("stage", "")) == "group stage":
             return
         if f["home"] == a:
             gA, gB = f["gh"], f["ga"]
@@ -456,6 +470,27 @@ def match_all(r32, ko_feed, base_res, feed):
         if wa and wb:
             orient(code, wa, wb)
     return res, applied
+
+
+def merge_res(old, new):
+    """Decide the stored result for one match, given the existing value ``old``
+    (or ``None``) and the freshly fetched ``new``. Returns ``(value, changed)``.
+
+    Behaviour-preserving extraction of main()'s per-code decision so it is unit
+    testable:
+      * no existing value, or it already equals ``new`` -> take ``new``;
+        ``changed`` is False only when they are equal;
+      * a curated decider note (shootout/AET — i.e. ``old``'s note is non-empty)
+        must never be downgraded to a note-less value with the same winner (guards
+        against a source ever mangling a shootout score back to a plain
+        scoreline) -> keep ``old``, not changed;
+      * otherwise -> take ``new``, changed.
+    """
+    if old == new:
+        return new, False
+    if old and old[3] and not new[3] and old[2] == new[2]:
+        return old, False
+    return new, True
 
 
 def _fmt_day(iso: str) -> str:
@@ -906,20 +941,15 @@ def main() -> int:
     # Resolve every round (R32 -> R16 -> QF -> SF -> Final) from the same feed.
     new_res, applied = match_all(r32, ko_feed, cur_res, feed)
 
-    # Only NEW/changed finished games; never remove an existing result.
+    # Only NEW/changed finished games; never remove an existing result. The
+    # per-code merge decision (including the curated-note safety net) lives in the
+    # pure, tested merge_res() helper.
     changed = []
     for code in list(new_res):
-        old = cur_res.get(code)
-        val = new_res[code]
-        if old == val:
-            continue
-        # Safety net: never downgrade a curated shootout/AET result (which has a
-        # decider note) to a note-less value with the same winner. Protects the
-        # dashboard even if a data source ever mangles a shootout score again.
-        if old and old[3] and not val[3] and old[2] == val[2]:
-            new_res[code] = old
-            continue
-        changed.append(code)
+        val, was_changed = merge_res(cur_res.get(code), new_res[code])
+        new_res[code] = val
+        if was_changed:
+            changed.append(code)
 
     # Auto game-fact highlights (newest first) reflect every finished game in the
     # feed, not only the ones in this bracket.
