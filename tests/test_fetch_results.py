@@ -101,7 +101,7 @@ class ShootoutTests(unittest.TestCase):
             "stage": "LAST_16", "utcDate": "2026-07-04T20:00:00Z"}]}
         with mock.patch.dict(os.environ, {"FOOTBALL_DATA_TOKEN": "x"}), \
                 mock.patch.object(fr.urllib.request, "urlopen", _mock_urlopen(payload)):
-            feed = fr.results_from_footballdata({})
+            feed, _up = fr.results_from_footballdata({})
         self.assertEqual(len(feed), 1)
         g = feed[0]
         self.assertEqual((g["gh"], g["ga"]), (1, 1))
@@ -140,7 +140,7 @@ class MatchAllTests(unittest.TestCase):
     def test_winner_is_always_a_bracket_team(self):
         # Guards the ELIM inference: a normalization miss must never write a
         # winner that is neither of the fixture's two teams.
-        feed = fr.results_from_json(FIXTURE, fr.load_team_map())
+        feed, _up = fr.results_from_json(FIXTURE, fr.load_team_map())
         r32 = [("M83", "Portugal", "Croatia"), ("M88", "Australia", "Egypt")]
         res, _ = fr.match_all(r32, {}, {}, feed)
         for code, a, b in r32:
@@ -186,14 +186,14 @@ class MatchAllTests(unittest.TestCase):
 
 class SourceAndHighlightTests(unittest.TestCase):
     def test_team_name_normalization(self):
-        feed = fr.results_from_json(FIXTURE, fr.load_team_map())
+        feed, _up = fr.results_from_json(FIXTURE, fr.load_team_map())
         pairs = {frozenset((g["home"], g["away"])) for g in feed}
         self.assertIn(frozenset(("Bosnia & Herz.", "Norway")), pairs)
         for g in feed:
             self.assertNotIn("Bosnia and Herzegovina", (g["home"], g["away"]))
 
     def test_draw_kept_out_of_results_but_shape_ok(self):
-        feed = fr.results_from_json(FIXTURE, fr.load_team_map())
+        feed, _up = fr.results_from_json(FIXTURE, fr.load_team_map())
         draw = next(g for g in feed if g["home"] == "Ghana")
         self.assertEqual(draw["winner"], "")
         self.assertEqual(draw["note"], "draw")
@@ -201,11 +201,57 @@ class SourceAndHighlightTests(unittest.TestCase):
     def test_auto_hl_block_has_no_stray_bracket(self):
         # The AUTO_HL=\[.*?\] rewrite is non-greedy; a ']' inside any card would
         # truncate the block. The emitted block must contain ']' only as its close.
-        feed = fr.results_from_json(FIXTURE, fr.load_team_map())
+        feed, _up = fr.results_from_json(FIXTURE, fr.load_team_map())
         block = fr.render_auto_hl(fr.build_auto_hl(feed))
         self.assertTrue(block.startswith("AUTO_HL=["))
         self.assertTrue(block.rstrip().endswith("]"))
         self.assertEqual(block.count("]"), 1)
+
+
+class KoFixTests(unittest.TestCase):
+    def test_build_ko_fix_converts_utc_to_et_ct_pt(self):
+        # M89 (feeders M74/M77) has both feeder winners but is itself pending; a
+        # scheduled France v Spain at 19:00Z on 2026-07-09 -> 3pm ET/2pm CT/12pm PT.
+        ko_feed = {"M89": ("M74", "M77"), "M97": ("M89", "M90")}
+        res = {"M74": (2, 1, "France", ""), "M77": (1, 0, "Spain", "")}
+        upcoming = [{"home": "France", "away": "Spain", "date": "2026-07-09T19:00:00Z"}]
+        kf = fr.build_ko_fix(ko_feed, res, upcoming)
+        self.assertIn("M89", kf)
+        day, et, ct, pt = kf["M89"]
+        self.assertEqual((et, ct, pt), ("3:00 PM", "2:00 PM", "12:00 PM"))
+        self.assertTrue(day.endswith("Jul 9"))          # ET day, no leading zero
+        self.assertNotIn("M97", kf)                     # feeder M90 unknown -> skipped
+
+    def test_build_ko_fix_skips_unknown_feeders(self):
+        ko_feed = {"M97": ("M89", "M90")}               # feeders not in res
+        kf = fr.build_ko_fix(
+            ko_feed, {}, [{"home": "France", "away": "Spain", "date": "2026-07-09T19:00:00Z"}])
+        self.assertEqual(kf, {})
+
+    def test_build_ko_fix_excludes_third_place_m103(self):
+        # M103 is absent from ko_feed by design; iterating ko_feed can't emit it.
+        ko_feed = {"M104": ("M101", "M102")}
+        res = {"M101": (1, 0, "France", ""), "M102": (2, 1, "Spain", "")}
+        kf = fr.build_ko_fix(
+            ko_feed, res, [{"home": "France", "away": "Spain", "date": "2026-07-19T23:00:00Z"}])
+        self.assertIn("M104", kf)
+        self.assertNotIn("M103", kf)
+
+    def test_build_ko_fix_needs_the_pair_in_schedule(self):
+        ko_feed = {"M89": ("M74", "M77")}
+        res = {"M74": (2, 1, "France", ""), "M77": (1, 0, "Spain", "")}
+        self.assertEqual(fr.build_ko_fix(ko_feed, res, []), {})           # empty schedule
+        self.assertEqual(fr.build_ko_fix(                                  # different pair
+            ko_feed, res, [{"home": "Brazil", "away": "Norway", "date": "2026-07-09T19:00:00Z"}]), {})
+
+    def test_ko_fix_roundtrip(self):
+        d = {"M97": ("Thu Jul 9", "3:00 PM", "2:00 PM", "12:00 PM"),
+             "M101": ("Tue Jul 14", "3:00 PM", "2:00 PM", "12:00 PM")}
+        self.assertEqual(fr.parse_ko_fix(fr.render_ko_fix(d)), d)
+
+    def test_ko_fix_empty_roundtrip(self):
+        self.assertEqual(fr.render_ko_fix({}), "KO_FIX={}")
+        self.assertEqual(fr.parse_ko_fix("KO_FIX={}"), {})
 
 
 if __name__ == "__main__":
