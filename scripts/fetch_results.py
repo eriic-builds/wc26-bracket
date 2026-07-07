@@ -34,6 +34,7 @@ Safety
 from __future__ import annotations
 import argparse, json, os, re, subprocess, sys, urllib.request, urllib.error
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GEN = os.path.join(HERE, "build_dashboard.py")
@@ -96,6 +97,19 @@ def parse_upcoming_block(gen_text: str) -> dict:
     return up
 
 
+def parse_ko_fix(gen_text: str) -> dict:
+    """Return the current KO_FIX dict {code: (day, ET, CT, PT)} (kickoff times for
+    not-yet-played knockout matches). Mirrors parse_upcoming_block."""
+    m = re.search(r"KO_FIX=\{([^}]*)\}", gen_text, re.DOTALL)
+    d = {}
+    if not m:
+        return d
+    for code, day, et, ct, pt in re.findall(
+        r'"(M\d+)":\("([^"]*)","([^"]*)","([^"]*)","([^"]*)"\)', m.group(1)):
+        d[code] = (day, et, ct, pt)
+    return d
+
+
 def parse_ko_feed(gen_text: str) -> dict:
     """Return the knockout topology {code: (feederA, feederB)} from KO_FEED."""
     m = re.search(r"KO_FEED=\{(.*?)\}", gen_text, re.DOTALL)
@@ -125,7 +139,7 @@ def ko_label(code: str, ko_feed: dict) -> str:
 def results_from_footballdata(tmap: dict):
     token = os.environ.get("FOOTBALL_DATA_TOKEN", "").strip()
     if not token:
-        return None
+        return None, []
     req = urllib.request.Request(FD_URL, headers={"X-Auth-Token": token})
     with urllib.request.urlopen(req, timeout=30) as resp:
         data = json.load(resp)
@@ -176,7 +190,7 @@ def results_from_footballdata(tmap: dict):
         out.append({"home": home, "away": away, "gh": int(gh), "ga": int(ga),
                     "winner": w, "note": note, "date": (m.get("utcDate") or ""),
                     "stage": (m.get("stage") or ""), "city": ""})
-    return out
+    return out, []  # schedule sync is FIFA-only
 
 
 def _fifa_txt(field) -> str:
@@ -187,24 +201,34 @@ def _fifa_txt(field) -> str:
 
 
 def results_from_fifa(tmap: dict):
-    """Finished 2026 World Cup games from FIFA's free public JSON feed.
+    """Finished 2026 World Cup games from FIFA's free public JSON feed, plus the
+    schedule of not-yet-finished matches whose teams are known.
 
-    Returns the same feed-dict shape as the other sources. No token required.
-    Penalty scores come as their own fields (not folded into the score), so the
-    regulation/ET scoreline is used as-is. ``city`` carries the host city for the
-    highlight cards' "day · venue" line.
+    Returns ``(out, upcoming)``: ``out`` is the finished-game feed (same dict shape
+    as the other sources); ``upcoming`` is a list of ``{"home","away","date"}`` for
+    scheduled/live matches with both teams resolved — used to fill kickoff times for
+    pending knockout fixtures (a live match's kickoff time is still valid, so it is
+    kept here; only finished games ever enter ``out``). No token required. Penalty
+    scores come as their own fields (not folded into the score), so the regulation/ET
+    scoreline is used as-is. ``city`` carries the host city for the highlight cards.
     """
     req = urllib.request.Request(FIFA_URL, headers={"User-Agent": FIFA_UA})
     with urllib.request.urlopen(req, timeout=30) as resp:
         data = json.load(resp)
     out = []
+    upcoming = []
     for m in data.get("Results", []):
-        if m.get("MatchStatus") != 0:  # 0 = finished
-            continue
         H = m.get("Home") or {}
         A = m.get("Away") or {}
         home = norm(_fifa_txt(H.get("TeamName")), tmap)
         away = norm(_fifa_txt(A.get("TeamName")), tmap)
+        if m.get("MatchStatus") != 0:  # not finished -> keep only its kickoff time
+            # Skip placeholder/TBD fixtures (empty team names) — a knockout whose
+            # feeders aren't decided yet carries no team names in the feed.
+            if home and away:
+                upcoming.append({"home": home, "away": away,
+                                 "date": (m.get("Date") or "")})
+            continue
         gh, ga = m.get("HomeTeamScore"), m.get("AwayTeamScore")
         if gh is None or ga is None or not home or not away:
             continue
@@ -238,7 +262,7 @@ def results_from_fifa(tmap: dict):
                     # IDs let enrich_fifa_goals() pull scorers for the card recap.
                     "_ids": (m.get("IdCompetition"), m.get("IdSeason"),
                              m.get("IdStage"), m.get("IdMatch"))})
-    return out
+    return out, upcoming
 
 
 # FIFA's free per-match feed. Same host/no key as the calendar feed; carries the
@@ -355,7 +379,7 @@ def results_from_json(path: str, tmap: dict):
         out.append({"home": home, "away": away, "gh": gh, "ga": ga,
                     "winner": w, "note": note, "date": (m.get("date") or ""),
                     "stage": (m.get("stage", "")), "city": (m.get("city", ""))})
-    return out
+    return out, []  # schedule sync is FIFA-only
 
 
 # ── auto-fallback resolver ───────────────────────────────────────────────────
@@ -375,33 +399,36 @@ def _fetch_source(source: str, tmap: dict):
     """
     try:
         if source == "footballdata":
-            feed = results_from_footballdata(tmap)
+            feed, up = results_from_footballdata(tmap)
             if feed is None:
-                return None, False, "no FOOTBALL_DATA_TOKEN set"
-            return feed, False, None
-        return results_from_fifa(tmap), True, None
+                return None, [], False, "no FOOTBALL_DATA_TOKEN set"
+            return feed, up, False, None
+        feed, up = results_from_fifa(tmap)
+        return feed, up, True, None
     except _SOURCE_ERRORS as exc:
-        return None, source == "fifa", f"{type(exc).__name__}: {exc}"
+        return None, [], source == "fifa", f"{type(exc).__name__}: {exc}"
 
 
 def results_auto(tmap: dict):
     """Prefer FIFA (free, richest feed); fall back to football-data.org on any
     FIFA outage or an empty FIFA feed.
 
-    Returns ``(feed, src_label, is_fifa)``. A clean-but-empty FIFA feed is kept
-    as the last resort (a genuinely empty schedule is valid), so the fallback
-    fires without hiding real "no games yet" states. Raises ``RuntimeError`` only
-    if *every* candidate source fails outright.
+    Returns ``(feed, upcoming, src_label, is_fifa)``. A clean-but-empty FIFA feed
+    is kept as the last resort (a genuinely empty schedule is valid), so the
+    fallback fires without hiding real "no games yet" states. ``upcoming`` (the
+    FIFA schedule for pending-fixture times) is FIFA-only and is preserved even
+    when results come from the football-data fallback. Raises ``RuntimeError``
+    only if *every* candidate source fails outright.
     """
-    fifa_feed, fifa_err = None, None
+    fifa_feed, fifa_up, fifa_err = None, [], None
     for source, label in (("fifa", "FIFA public feed (api.fifa.com)"),
                           ("footballdata", "football-data.org")):
-        feed, _is_fifa, err = _fetch_source(source, tmap)
+        feed, up, _is_fifa, err = _fetch_source(source, tmap)
         if source == "fifa":
             if err is None and feed:
-                return feed, label, True          # best case: FIFA has games
+                return feed, up, label, True          # best case: FIFA has games
             if err is None:
-                fifa_feed = feed                  # clean but empty -> last resort
+                fifa_feed, fifa_up = feed, up         # clean but empty -> last resort
             else:
                 fifa_err = err
                 print(f"  auto: FIFA source unavailable ({err}); "
@@ -411,11 +438,13 @@ def results_auto(tmap: dict):
         if err is None and feed:
             why = f"FIFA error ({fifa_err})" if fifa_err else "FIFA returned no finished games"
             print(f"  auto: using football-data.org fallback ({why}).")
-            return feed, label, False
+            # Keep FIFA's schedule (empty if FIFA errored) — it's the only source of
+            # kickoff times; football-data supplies results only.
+            return feed, fifa_up, label, False
         if err:
             print(f"  auto: football-data.org fallback unavailable ({err}).")
     if fifa_feed is not None:
-        return fifa_feed, "FIFA public feed (api.fifa.com)", True
+        return fifa_feed, fifa_up, "FIFA public feed (api.fifa.com)", True
     raise RuntimeError(f"all result sources failed (FIFA: {fifa_err})")
 
 
@@ -491,6 +520,57 @@ def merge_res(old, new):
     if old and old[3] and not new[3] and old[2] == new[2]:
         return old, False
     return new, True
+
+
+def build_ko_fix(ko_feed, res, upcoming_feed):
+    """Kickoff times for not-yet-decided knockout matches whose two feeder winners
+    are known, as {code: (day, ET, CT, PT)}.
+
+    Iterates ``ko_feed`` (which correctly lacks the third-place playoff M103), so
+    that game can never appear. Only emits a row when both feeder winners are in
+    ``res`` AND the scheduled feed carries that team pair. UTC kickoff is converted
+    with real IANA zones (DST-safe) — never fixed offsets. Times/day are formatted
+    to match R32_TIMES/R16_FIX ('Thu Jul 9', '3:00 PM' — no leading zeros)."""
+    et_z, ct_z, pt_z = (ZoneInfo("America/New_York"),
+                        ZoneInfo("America/Chicago"),
+                        ZoneInfo("America/Los_Angeles"))
+    # Index the schedule by team pair. A scheduled knockout game can't collide with
+    # a *finished* group game, but filter defensively to knockout-ish entries by
+    # skipping anything a group label would produce is unnecessary here (the feed
+    # only carries {home,away,date}); the ko_feed membership + res gate suffice.
+    by_pair = {}
+    for f in upcoming_feed:
+        home, away = f.get("home"), f.get("away")
+        if home and away:
+            by_pair[frozenset((home, away))] = f
+
+    def _fmt(dt, z):
+        return re.sub(r"^0", "", dt.astimezone(z).strftime("%I:%M %p"))
+
+    out = {}
+    for code in ko_feed:
+        if code in res:
+            continue                                   # already decided
+        fa, fb = ko_feed[code]
+        wa = res[fa][2] if fa in res else None
+        wb = res[fb][2] if fb in res else None
+        if not (wa and wb):
+            continue                                   # feeders not both known yet
+        f = by_pair.get(frozenset((wa, wb)))
+        if not f:
+            continue                                   # not in the schedule feed
+        iso = f.get("date", "")
+        if not iso:
+            continue
+        try:
+            dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        day = re.sub(r"\b0(\d)", r"\1", dt.astimezone(et_z).strftime("%a %b %d"))
+        out[code] = (day, _fmt(dt, et_z), _fmt(dt, ct_z), _fmt(dt, pt_z))
+    return out
 
 
 def _fmt_day(iso: str) -> str:
@@ -885,6 +965,16 @@ def render_upcoming(up: dict) -> str:
     return "UPCOMING={" + ",".join(items) + "}"
 
 
+def render_ko_fix(d: dict) -> str:
+    """Render the KO_FIX block. Numeric code order keeps the diff stable; the
+    values contain no ``}`` so the KO_FIX=\\{[^}]*\\} rewrite stays valid."""
+    if not d:
+        return "KO_FIX={}"
+    order = sorted(d, key=lambda c: int(c[1:]))
+    items = [f'"{c}":("{d[c][0]}","{d[c][1]}","{d[c][2]}","{d[c][3]}")' for c in order]
+    return "KO_FIX={" + ",\n ".join(items) + "}"
+
+
 def now_pt_stamp() -> str:
     pt = timezone(timedelta(hours=-7))  # PDT (summer)
     now = datetime.now(pt)
@@ -913,23 +1003,23 @@ def main() -> int:
     cur_up = parse_upcoming_block(gen_text)
 
     if args.input:
-        feed = results_from_json(args.input, tmap)
+        feed, upcoming_feed = results_from_json(args.input, tmap)
         src = f"local file {args.input}"
     elif args.source == "footballdata":
-        feed = results_from_footballdata(tmap)
+        feed, upcoming_feed = results_from_footballdata(tmap)
         src = "football-data.org"
         if feed is None:
             print("No FOOTBALL_DATA_TOKEN set and no --input given \u2014 nothing to do.")
             return 0
     elif args.source == "fifa":
-        feed = results_from_fifa(tmap)
+        feed, upcoming_feed = results_from_fifa(tmap)
         src = "FIFA public feed (api.fifa.com)"
         # Pull scorers/half/comeback context for just the games that will become
         # highlight cards (a handful of extra free FIFA calls, read-only).
         enrich_fifa_goals(feed)
     else:  # auto (default): FIFA first, football-data.org fallback on outage
         try:
-            feed, src, is_fifa = results_auto(tmap)
+            feed, upcoming_feed, src, is_fifa = results_auto(tmap)
         except RuntimeError as exc:
             print(f"All result sources failed \u2014 nothing to do this run. ({exc})")
             return 0
@@ -951,6 +1041,19 @@ def main() -> int:
         if was_changed:
             changed.append(code)
 
+    # Kickoff times for pending knockout fixtures (QF/SF/Final), derived from the
+    # FIFA schedule. Recomputed every run: entries appear when both feeders are
+    # known and drop out once the match is played. A schedule-only change still
+    # triggers a commit/rebuild (it is folded into the change decision below).
+    cur_ko_fix = parse_ko_fix(gen_text)
+    new_ko_fix = build_ko_fix(ko_feed, new_res, upcoming_feed)
+    ko_fix_block_new = render_ko_fix(new_ko_fix)
+    ko_fix_present = bool(re.search(r"KO_FIX=\{[^}]*\}", gen_text))
+    ko_fix_changed = ko_fix_present and new_ko_fix != cur_ko_fix
+    if not ko_fix_present:
+        print("  warning: no KO_FIX={} block in build_dashboard.py \u2014 skipping "
+              "schedule sync (add KO_FIX={} to the USER DATA section to enable it).")
+
     # Auto game-fact highlights (newest first) reflect every finished game in the
     # feed, not only the ones in this bracket.
     auto_entries = build_auto_hl(feed)
@@ -958,7 +1061,7 @@ def main() -> int:
     cur_hl = re.search(r"AUTO_HL=\[.*?\]", gen_text, re.DOTALL)
     hl_changed = bool(cur_hl) and cur_hl.group(0) != hl_block_new
 
-    if not changed and not hl_changed:
+    if not changed and not hl_changed and not ko_fix_changed:
         if args.dry_run:
             print(f"Source: {src}. No new finished games to apply \u2014 dashboard already current (dry-run).")
             return 0
@@ -983,11 +1086,16 @@ def main() -> int:
     print(f"Source: {src}. Applying {len(changed)} result update(s)"
           + (f": {', '.join(sorted(changed, key=lambda c: int(c[1:])))}" if changed else "")
           + (f"; refreshed {len(auto_entries)} game-fact highlight(s)" if hl_changed else "")
+          + (f"; {len(new_ko_fix)} pending-fixture kickoff time(s)" if ko_fix_changed else "")
           + ".")
     for c in sorted(changed, key=lambda c: int(c[1:])):
         gA, gB, w, note = new_res[c]
         tail = f" ({note})" if note else ""
         print(f"  {c} [{ko_label(c, ko_feed)}]: {gA}\u2013{gB} \u2192 {w}{tail}")
+    if ko_fix_changed:
+        for c in sorted(new_ko_fix, key=lambda c: int(c[1:])):
+            day, et, ct, pt = new_ko_fix[c]
+            print(f"  {c} [{ko_label(c, ko_feed)}] kickoff: {day} \u00b7 {pt} PT \u00b7 {ct} CT \u00b7 {et} ET")
 
     if args.dry_run:
         print("dry-run: no files written.")
@@ -995,12 +1103,14 @@ def main() -> int:
 
     out_text = re.sub(r"RES=\{[^}]*\}", render_res(new_res), gen_text, count=1)
     out_text = re.sub(r"UPCOMING=\{[^}]*\}", render_upcoming(new_up), out_text, count=1)
+    if ko_fix_present:
+        out_text = re.sub(r"KO_FIX=\{[^}]*\}", lambda _m: ko_fix_block_new, out_text, count=1)
     if cur_hl:
         out_text = re.sub(r"AUTO_HL=\[.*?\]", lambda _m: hl_block_new, out_text, count=1, flags=re.DOTALL)
     out_text = re.sub(r'REFRESHED="[^"]*"', f'REFRESHED="{now_pt_stamp()}"', out_text, count=1)
     with open(GEN, "w", encoding="utf-8") as fh:
         fh.write(out_text)
-    print("Updated build_dashboard.py (RES / UPCOMING / AUTO_HL / REFRESHED).")
+    print("Updated build_dashboard.py (RES / UPCOMING / KO_FIX / AUTO_HL / REFRESHED).")
 
     if not args.no_build:
         env = dict(os.environ, PYTHONIOENCODING="utf-8")

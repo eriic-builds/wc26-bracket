@@ -16,7 +16,7 @@ import html, json, re
 #  exact dashboard design / UI / format. Do not restyle, re-order, or add to it.
 # ══════════════════════════════════════════════════════════════════════════════
 ENTRANT="Eric Lam"; TIEBREAKER=4
-REFRESHED="July 6, 2026 · 10:13 PM PT"
+REFRESHED="July 7, 2026 · 12:36 AM PT"
 CREDIT="Built With Cowork — Imagined by Eric Lam"  # tiny footer signature — fixed, do not change
 SYNC_URL="https://github.com/eriic-builds/wc26-bracket/actions/workflows/sync-results.yml"  # "Sync now" button: opens the workflow's Run page on GitHub (tap "Run workflow" to sync). No relay, no token. Leave "" to hide the button.
 
@@ -248,6 +248,14 @@ R16_FIX=[  # match, day, teamA, teamB, ET, CT, PT
  ("M94","Mon Jul 6","United States","Belgium","8:00 PM","7:00 PM","5:00 PM"),
  ("M95","Tue Jul 7","Argentina / Cape Verde","Australia / Egypt","12:00 PM","11:00 AM","9:00 AM"),
  ("M96","Tue Jul 7","Switzerland / Algeria","Colombia / Ghana","4:00 PM","3:00 PM","1:00 PM")]
+# Kickoff times for not-yet-played knockout games (QF/SF/Final) — AUTO, maintained
+# by the sync engine (scripts/fetch_results.py) from the FIFA schedule, DST-safe.
+# {code: (day, ET, CT, PT)}. Empty until the sync populates it; do not hand-edit.
+KO_FIX={"M95":("Tue Jul 7","12:00 PM","11:00 AM","9:00 AM"),
+ "M96":("Tue Jul 7","4:00 PM","3:00 PM","1:00 PM"),
+ "M97":("Thu Jul 9","4:00 PM","3:00 PM","1:00 PM"),
+ "M98":("Fri Jul 10","3:00 PM","2:00 PM","12:00 PM"),
+ "M99":("Sat Jul 11","5:00 PM","4:00 PM","2:00 PM")}
 
 def esc(s): return html.escape(str(s))
 def seed_of(t): return SEED.get(t,"")
@@ -703,7 +711,9 @@ def build_round_results_panel(label, short, codes):
             rows.append(f'<div class="rr"><div class="rr-m">{esc(mc)}</div>'
                 f'<div class="rr-s">{sc}</div><div class="rr-p">{badge}</div></div>')
         else:
-            if short=="r16" and mc in r16day:
+            if mc in KO_FIX:
+                day,et,ct,ptz=KO_FIX[mc]; when=f'{day} · {ptz} PT · {ct} CT · {et} ET'
+            elif short=="r16" and mc in r16day:
                 day,et,ct,ptz=r16day[mc]; when=f'{day} · {ptz} PT · {ct} CT · {et} ET'
             else: when=KO_DATES[short]
             ta=a or ("Winner "+fa); tb=b or ("Winner "+fb)
@@ -739,20 +749,6 @@ def build_highlights():
         f'<div class="story-tag">{esc(tag)}</div><div class="story-title">{esc(ti)}</div>'
         f'<div class="story-when">📅 {esc(wh)}</div>'
         f'<div class="story-body">{esc(bd)}</div></div>' for ic,tag,ti,wh,bd in HIGHLIGHTS)
-
-def build_upcoming():
-    rows=[]
-    for (mc,day,a,b,et,ct,ptz) in R16_FIX:
-        pk=R16_PICK.get(mc); dead=(pk in ELIM) if pk else False
-        def nm(t): return f'<b>{esc(t)}</b>' if (pk and t==pk) else esc(t)
-        if dead: tag='<span class="up-out">your pick out (Japan)</span>'
-        elif pk: tag=f'<span class="up-pick">your pick: {esc(pk)}</span>'
-        else: tag=''
-        rows.append(f'<div class="uf"><div class="uf-m">{esc(mc)}</div>'
-            f'<div class="uf-x">{nm(a)}<span class="uf-v">vs</span>{nm(b)}</div>'
-            f'<div class="uf-t">{esc(day)}<span>{ptz} PT · {ct} CT · {et} ET</span></div>'
-            f'<div class="uf-p">{tag}</div></div>')
-    return '<div class="glass ufbox">'+''.join(rows)+'</div>'
 
 # Live knockout board — Round of 16, Quarterfinals, Semifinals, Final. Actual teams and
 # scores come from RES (kept current by the sync engine); teams for each match are the
