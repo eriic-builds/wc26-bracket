@@ -157,15 +157,16 @@ def pick_status(short, team, mc=None):
 # compute totals
 CONF=OUT=LIVE=0
 r32_decided=r32_correct=0
+EARNED={"r32":0,"r16":0,"qf":0,"sf":0,"final":0}   # confirmed points banked per round
 for (mc,dt,a,b,pk) in R32:
     st=pick_status("r32",pk,mc)
-    if st=="won": CONF+=1; r32_decided+=1; r32_correct+=1
+    if st=="won": CONF+=1; r32_decided+=1; r32_correct+=1; EARNED["r32"]+=1
     elif st=="lost": OUT+=1; r32_decided+=1
     else: LIVE+=1
 for (label,short,pts,ms) in rounds[1:]:
     for (a,b,w) in ms:
         st=pick_status(short,w)
-        if st=="won": CONF+=pts
+        if st=="won": CONF+=pts; EARNED[short]+=pts
         elif st=="lost": OUT+=pts
         else: LIVE+=pts
 ATTAIN=CONF+LIVE
@@ -1387,14 +1388,14 @@ HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf
 + shead("sec-scoring","🎯","Scoring &amp; schedule","80 max")
 + '<div class="g2"><div class="glass" style="padding:20px"><div style="font-weight:700;margin-bottom:12px">Points double every round</div>'
 +'<div class="scard" style="padding:0">'
-+'<div class="scrow schead" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Round</div><div class="tc">Games</div><div class="tc">Pts/pick</div><div class="tc">Max</div></div>'
-+'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Round of 32</div><div class="tc">16</div><div class="tc">1</div><div class="tc">16</div></div>'
-+'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Round of 16</div><div class="tc">8</div><div class="tc">2</div><div class="tc">16</div></div>'
-+'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Quarterfinals</div><div class="tc">4</div><div class="tc">4</div><div class="tc">16</div></div>'
-+'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc">Semifinals</div><div class="tc">2</div><div class="tc">8</div><div class="tc">16</div></div>'
-+'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px"><div class="tc"><b>Final (Champion)</b></div><div class="tc">1</div><div class="tc">16</div><div class="tc">16</div></div>'
-+'<div class="scrow" style="grid-template-columns:1fr 70px 70px 70px;border-top:1px solid var(--border)"><div class="tc"><b>Total</b></div><div class="tc">31</div><div class="tc"></div><div class="tc"><b>80</b></div></div>'
-+'</div><div style="font-size:.8rem;color:var(--muted);margin-top:12px;line-height:1.5">Each pick scored on its own; Champion is worth a full 16. '
++'<div class="scrow schead" style="grid-template-columns:1fr 46px 42px 44px 62px"><div class="tc">Round</div><div class="tc">Games</div><div class="tc">Pts</div><div class="tc">Max</div><div class="tc">Earned</div></div>'
++f'<div class="scrow" style="grid-template-columns:1fr 46px 42px 44px 62px"><div class="tc">Round of 32</div><div class="tc">16</div><div class="tc">1</div><div class="tc">16</div><div class="tc"><b>{EARNED["r32"]}</b></div></div>'
++f'<div class="scrow" style="grid-template-columns:1fr 46px 42px 44px 62px"><div class="tc">Round of 16</div><div class="tc">8</div><div class="tc">2</div><div class="tc">16</div><div class="tc"><b>{EARNED["r16"]}</b></div></div>'
++f'<div class="scrow" style="grid-template-columns:1fr 46px 42px 44px 62px"><div class="tc">Quarterfinals</div><div class="tc">4</div><div class="tc">4</div><div class="tc">16</div><div class="tc"><b>{EARNED["qf"]}</b></div></div>'
++f'<div class="scrow" style="grid-template-columns:1fr 46px 42px 44px 62px"><div class="tc">Semifinals</div><div class="tc">2</div><div class="tc">8</div><div class="tc">16</div><div class="tc"><b>{EARNED["sf"]}</b></div></div>'
++f'<div class="scrow" style="grid-template-columns:1fr 46px 42px 44px 62px"><div class="tc"><b>Final (Champion)</b></div><div class="tc">1</div><div class="tc">16</div><div class="tc">16</div><div class="tc"><b>{EARNED["final"]}</b></div></div>'
++f'<div class="scrow" style="grid-template-columns:1fr 46px 42px 44px 62px;border-top:1px solid var(--border)"><div class="tc"><b>Total</b></div><div class="tc">31</div><div class="tc"></div><div class="tc"><b>80</b></div><div class="tc"><b>{CONF}</b></div></div>'
++'</div><div style="font-size:.8rem;color:var(--muted);margin-top:12px;line-height:1.5"><b>Earned</b> is the points you’ve confirmed so far in each round — they add up to your <b>'+f'{CONF} of 80'+'</b> confirmed. Each pick scored on its own; Champion is worth a full 16. '
 +'Tiebreaker: total goals in the Final at the end of extra time — penalties don’t count. Your tiebreaker: <b>4</b>.</div></div>'
 +'<div class="glass" style="padding:20px"><div style="font-weight:700;margin-bottom:4px">Where the tournament stands</div>'
 +f'<div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">Live results as of {REFRESHED}</div>'
