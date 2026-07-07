@@ -34,7 +34,7 @@ Safety
 """
 from __future__ import annotations
 import argparse, json, os, re, subprocess, sys, urllib.request, urllib.error
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -892,8 +892,7 @@ def build_auto_hl(feed, limit=6):
 
 
 def now_pt_stamp() -> str:
-    pt = timezone(timedelta(hours=-7))  # PDT (summer)
-    now = datetime.now(pt)
+    now = datetime.now(ZoneInfo("America/Los_Angeles"))  # DST-safe (PT year-round)
     # Trim leading zeros on day and hour, but keep the minute zero-padded ("10:06").
     day = str(now.day)
     hour = str(int(now.strftime("%I")))

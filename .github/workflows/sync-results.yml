@@ -18,6 +18,7 @@ on:
 permissions:
   contents: write
   actions: write
+  issues: write
 
 concurrency:
   group: sync-results
@@ -73,3 +74,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run deploy-pages.yml --ref "${{ github.ref_name }}"
+
+      - name: Open an issue if the sync failed
+        # Runs only if an earlier step failed. Note fetch_results.py deliberately
+        # exits 0 on a total source outage ("nothing to do this run"), so a feed
+        # blip is NOT a failed run and won't page anyone — only genuine errors do.
+        # Search-then-comment dedupes: 3 failures/day open one issue, not three.
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Sync failed: $(date -u +%Y-%m-%d) run"
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          existing=$(gh issue list --state open --search "Sync failed in:title" --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "Another sync failure: $run_url"
+          else
+            gh issue create --title "$title" \
+              --body "Run: $run_url — check the log; the usual cause is a transient feed outage."
+          fi

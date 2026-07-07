@@ -1,5 +1,8 @@
 # Eric — 2026 FIFA World Cup Bracket Dashboard
 
+[![Sync World Cup results](https://github.com/eriic-builds/wc26-bracket/actions/workflows/sync-results.yml/badge.svg)](https://github.com/eriic-builds/wc26-bracket/actions/workflows/sync-results.yml)
+[![Deploy GitHub Pages](https://github.com/eriic-builds/wc26-bracket/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/eriic-builds/wc26-bracket/actions/workflows/deploy-pages.yml)
+
 > An interactive, single-file web dashboard that scores my 2026 FIFA World Cup
 > bracket-challenge picks against real results — and visualizes the whole knockout bracket.
 > It builds itself from my picks and keeps itself up to date after games finish.
