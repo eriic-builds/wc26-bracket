@@ -402,7 +402,7 @@ def scrow(pid,short,pts,pick,detail,default,a,b):
 def build_scorebar():
     return ('<div class="scorebar glass" id="scorebar"><div class="sb-main">'
       f'<div class="sb-big"><span id="scConfirmed">{CONF}</span><span class="sb-slash">/ {POINTS_MAX}</span></div>'
-      '<div class="sb-cap">points confirmed · <b id="scSoFar">'+f'{CONF}/{DECIDED}'+'</b> so far</div>'
+      '<div class="sb-cap" title="Settled = points you’ve already won or lost. Still-live points aren’t counted here yet, so this total grows — and can differ between brackets — as your picks get decided.">points confirmed · <b id="scSoFar">'+f'{CONF}/{DECIDED}'+'</b> settled</div>'
       f'<div class="sb-track"><i id="scBar" style="width:{int(CONF/POINTS_MAX*100)}%"></i></div></div>'
       '<div class="sb-stats">'
       f'<div class="sb-stat s-win"><b id="scConfirmed2">{CONF}</b><span>confirmed</span></div>'
