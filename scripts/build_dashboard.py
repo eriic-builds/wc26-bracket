@@ -27,6 +27,7 @@ ENTRANT=P["entrant"]; TIEBREAKER=P["tiebreaker"]
 REFRESHED=L["refreshed"]
 CREDIT="Built With Cowork — Imagined by Eric Lam"  # tiny footer signature — fixed, do not change
 SYNC_URL="https://github.com/eriic-builds/wc26-bracket/actions/workflows/sync-results.yml"  # "Sync now" button: opens the workflow's Run page on GitHub (tap "Run workflow" to sync). No relay, no token. Leave "" to hide the button.
+ISSUE_URL="https://github.com/eriic-builds/wc26-bracket/issues/new"  # "Report an issue" button: opens a modal that pre-fills a GitHub New Issue (no relay, no token — the user reviews and submits on GitHub). Leave "" to hide the button.
 
 SEED=P["seed"]
 
@@ -815,6 +816,34 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .synbtn:hover{background:var(--hover);transform:translateY(-1px)}
 .synbtn:active{transform:translateY(0)}
 .synbtn .syn-ic{display:inline-block;font-size:.92rem;line-height:1}
+#reportBtn{border:0}
+.rep-overlay{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(6,12,22,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.rep-overlay[hidden]{display:none}
+.rep-modal{width:100%;max-width:460px;max-height:calc(100vh - 40px);overflow:auto;padding:20px 22px}
+.rep-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.rep-head h2{margin:0;font-size:1.12rem;font-weight:700}
+.rep-x{font-family:inherit;font-size:1rem;line-height:1;color:var(--muted);background:transparent;border:0;cursor:pointer;padding:6px;border-radius:8px;transition:.14s}
+.rep-x:hover{background:var(--hover);color:var(--text)}
+.rep-note{margin:0 0 15px;font-size:.8rem;line-height:1.5;color:var(--text2)}
+.rep-field{margin-bottom:13px;display:flex;flex-direction:column;gap:6px}
+.rep-field label{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.rep-field .rq{color:var(--red)}
+.rep-field .rq-opt{color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0}
+.rep-field input,.rep-field textarea{font-family:inherit;font-size:.9rem;color:var(--text);background:var(--hover);border:1px solid var(--border);border-radius:10px;padding:9px 11px;width:100%;box-sizing:border-box;resize:vertical;transition:border-color .14s}
+.rep-field input:focus,.rep-field textarea:focus{outline:none;border-color:var(--blue)}
+.rep-seg{display:inline-flex;gap:6px;flex-wrap:wrap}
+.rep-seg button{font-family:inherit;font-size:.82rem;font-weight:600;color:var(--muted);background:var(--hover);border:1px solid var(--border);padding:7px 13px;border-radius:999px;cursor:pointer;transition:.14s}
+.rep-seg button:hover{color:var(--text)}
+.rep-seg button.on{color:#fff;background:var(--blue);border-color:var(--blue)}
+.rep-err{color:var(--red);font-size:.8rem;font-weight:600;margin-bottom:10px}
+.rep-err[hidden]{display:none}
+.rep-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
+.rep-cancel,.rep-submit{font-family:inherit;font-size:.85rem;font-weight:700;padding:9px 17px;border-radius:999px;cursor:pointer;transition:.16s;border:1px solid var(--border)}
+.rep-cancel{color:var(--text);background:transparent}
+.rep-cancel:hover{background:var(--hover)}
+.rep-submit{color:#fff;background:var(--blue);border-color:var(--blue);box-shadow:0 4px 14px rgba(0,151,244,.4)}
+.rep-submit:hover{transform:translateY(-1px)}
+.rep-submit:active{transform:translateY(0)}
 .shell{display:grid;grid-template-columns:186px minmax(0,1fr);gap:22px;align-items:start}
 .content{min-width:0}
 .rail{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow:auto;padding:14px 12px;align-self:start;z-index:5}
@@ -1273,6 +1302,45 @@ JS=r"""
    var spy=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){railLinks.forEach(function(l){l.classList.remove('active');});var a=linkFor[e.target.id];if(a)a.classList.add('active');}});},{rootMargin:'-45% 0px -50% 0px',threshold:0});
    secs.forEach(function(s){spy.observe(s);});
  }
+ // ── report-an-issue modal: builds a prefilled GitHub New Issue URL ──
+ var repOv=document.getElementById('repOverlay'),repBtn=document.getElementById('reportBtn');
+ if(repOv&&repBtn){
+   var repType='bug',repLastFocus=null;
+   var repTitleIn=document.getElementById('repTitleIn'),repDesc=document.getElementById('repDesc'),
+       repSteps=document.getElementById('repSteps'),repErr=document.getElementById('repErr');
+   function repOpen(){repLastFocus=document.activeElement;repOv.hidden=false;repErr.hidden=true;setTimeout(function(){repTitleIn.focus();},30);}
+   function repClose(){repOv.hidden=true;if(repLastFocus&&repLastFocus.focus)repLastFocus.focus();}
+   repBtn.addEventListener('click',repOpen);
+   document.getElementById('repClose').addEventListener('click',repClose);
+   document.getElementById('repCancel').addEventListener('click',repClose);
+   repOv.addEventListener('click',function(e){if(e.target===repOv)repClose();});
+   document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!repOv.hidden)repClose();});
+   document.getElementById('repType').addEventListener('click',function(e){var b=e.target.closest('button[data-type]');if(!b)return;repType=b.dataset.type;this.querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b);});});
+   repOv.addEventListener('keydown',function(e){if(e.key!=='Tab')return;var f=repOv.querySelectorAll('button,input,textarea,[href]');if(!f.length)return;var first=f[0],last=f[f.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
+   document.getElementById('repSubmit').addEventListener('click',function(){
+     var title=(repTitleIn.value||'').trim(),desc=(repDesc.value||'').trim(),steps=(repSteps.value||'').trim();
+     if(!title||!desc){repErr.textContent='Please add a title and a description.';repErr.hidden=false;(!title?repTitleIn:repDesc).focus();return;}
+     repErr.hidden=true;
+     var pfx={bug:'[Bug] ',suggestion:'[Suggestion] ',feedback:'[Feedback] '}[repType]||'';
+     var labels={bug:'bug,user-report',suggestion:'enhancement,user-report',feedback:'feedback,user-report'}[repType]||'user-report';
+     var upd=((document.getElementById('topRefreshed')||{}).textContent||'').replace(/\s+/g,' ').trim();
+     var diag='\n\n---\n**Diagnostics** (added automatically)\n'+
+       '- Page: '+location.href+'\n'+
+       '- '+(upd||'Updated: n/a')+'\n'+
+       '- Theme: '+(root.getAttribute('data-theme')||'')+'\n'+
+       '- Viewport: '+window.innerWidth+'\u00d7'+window.innerHeight+'\n'+
+       '- Screen: '+screen.width+'\u00d7'+screen.height+'\n'+
+       '- UA: '+navigator.userAgent+'\n'+
+       '- Time: '+new Date().toISOString();
+     var body=desc+(steps?('\n\n**Steps to reproduce**\n'+steps):'')+diag;
+     var MAX=6000;if(body.length>MAX)body=body.slice(0,MAX)+'\n\n\u2026(truncated)';
+     var base=repOv.getAttribute('data-issue-url');
+     var url=base+'?title='+encodeURIComponent(pfx+title)+'&body='+encodeURIComponent(body)+'&labels='+encodeURIComponent(labels);
+     window.open(url,'_blank','noopener');
+     repTitleIn.value='';repDesc.value='';repSteps.value='';
+     repClose();
+   });
+ }
 })();
 """
 
@@ -1310,6 +1378,9 @@ HTML=('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf
 +(f'<a class="synbtn glass" id="syncBtn" href="{esc(SYNC_URL)}" target="_blank" rel="noopener" '
   'title="Pull the latest results: opens the sync workflow on GitHub — tap Run workflow, and the dashboard updates in about 1-2 minutes.">'
   '<span class="syn-ic">🔄</span><span class="syn-tx">Sync now</span></a>' if SYNC_URL else '')
++(f'<button class="synbtn glass" id="reportBtn" type="button" '
+  'title="Report a bug or share a suggestion — opens a short form.">'
+  '<span class="syn-ic">🐞</span><span class="syn-tx">Report an issue</span></button>' if ISSUE_URL else '')
 +'</div>'
 +'<div class="modes glass"><button data-mode="dark" class="on">Dark</button><button data-mode="light">Light</button>'
 +'<button data-mode="easy" title="Reading mode — a highly legible font, larger text, extra line and letter spacing, sentence case (no all-caps), left-aligned text and a soft, glare-free background">Easy</button>'
@@ -1411,8 +1482,29 @@ f'<div class="src">Live results as of <b>{REFRESHED}</b> · reading mode, favori
 + (f'<div class="src credit">{esc(CREDIT)}</div>' if CREDIT else '') + '</div>'
 '</div></div></div><button class="dab" id="dab" title="Back to top" aria-label="Back to top">↑</button>'
 '<div class="statcard" id="statcard" aria-hidden="true"></div>'
-'<script>'+STATS_JS+'</script>'
-'<script>'+JS+'</script></body></html>')
++((f'<div class="rep-overlay" id="repOverlay" data-issue-url="{esc(ISSUE_URL)}" hidden>'
+   '<div class="rep-modal glass" role="dialog" aria-modal="true" aria-labelledby="repHeading">'
+   '<div class="rep-head"><h2 id="repHeading">Report an issue</h2>'
+   '<button class="rep-x" id="repClose" type="button" aria-label="Close">✕</button></div>'
+   '<p class="rep-note">Hit a bug or have a suggestion? Fill this in and we’ll open GitHub in a new tab '
+   'with everything pre-filled — just review and click <b>Submit new issue</b>. A free GitHub account is required.</p>'
+   '<div class="rep-field"><label>Type</label>'
+   '<div class="rep-seg" id="repType" role="group" aria-label="Issue type">'
+   '<button type="button" data-type="bug" class="on">🐞 Bug</button>'
+   '<button type="button" data-type="suggestion">💡 Suggestion</button>'
+   '<button type="button" data-type="feedback">💬 Feedback</button></div></div>'
+   '<div class="rep-field"><label for="repTitleIn">Title <span class="rq">*</span></label>'
+   '<input id="repTitleIn" type="text" maxlength="120" placeholder="Short summary of the problem"></div>'
+   '<div class="rep-field"><label for="repDesc">Description <span class="rq">*</span></label>'
+   '<textarea id="repDesc" rows="4" placeholder="What happened? What did you expect to happen?"></textarea></div>'
+   '<div class="rep-field"><label for="repSteps">Steps to reproduce <span class="rq-opt">(optional)</span></label>'
+   '<textarea id="repSteps" rows="3" placeholder="1. …&#10;2. …"></textarea></div>'
+   '<div class="rep-err" id="repErr" hidden></div>'
+   '<div class="rep-actions"><button type="button" class="rep-cancel" id="repCancel">Cancel</button>'
+   '<button type="button" class="rep-submit" id="repSubmit">Open on GitHub →</button></div>'
+   '</div></div>') if ISSUE_URL else '')
++'<script>'+STATS_JS+'</script>'
++'<script>'+JS+'</script></body></html>')
 
 import os
 _docs=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),'docs')
