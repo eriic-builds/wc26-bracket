@@ -1217,6 +1217,7 @@ body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-i
 .foot{margin-top:34px;padding:20px 22px;font-size:.78rem;color:var(--muted);line-height:1.6}
 .foot b{color:var(--text2)}.foot .src{margin-top:8px}
 .foot .credit{font-size:.66rem;opacity:.6;margin-top:10px;letter-spacing:.02em}
+.connect{display:inline-flex;gap:14px;align-items:center;margin-top:12px}.connect a{color:var(--muted);display:inline-flex;line-height:0;transition:color .15s ease,transform .15s ease}.connect a:hover{color:var(--blue);transform:translateY(-1px)}.connect svg{width:20px;height:20px;fill:currentColor}
 .dab{position:fixed;right:24px;bottom:24px;width:54px;height:54px;border-radius:50%;border:0;cursor:pointer;background:var(--grad);box-shadow:0 8px 24px rgba(0,151,244,.45);z-index:60;display:grid;place-items:center;font-size:1.3rem;color:#fff;transition:.18s}
 .dab:hover{transform:translateY(-2px) scale(1.04)}
 .dab::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:var(--grad);filter:blur(14px);opacity:.5;z-index:-1}
@@ -1609,7 +1610,7 @@ f'You have <b>{CONF} points</b> confirmed, <b>{LIVE}</b> live, max attainable <b
 f'This is your personal, <b>unofficial</b> tally for Rob to review — his scoring is authoritative. Champion {esc(CHAMP)} · runner-up {esc(RUNNER)}.</div>'
 f'<div class="src">Live results as of <b>{REFRESHED}</b> · reading mode, favorites and any manual score edits are saved on this device.</div>'
 '<div class="src">🏆 Thank you to <b>Rob Brautigam</b> for hosting the 2026 FIFA World Cup bracket challenge for SLED.</div>'
-+ (f'<div class="src credit">{esc(CREDIT)}</div>' if CREDIT else '') + '</div>'
++ (f'<div class="src credit">{esc(CREDIT)}</div>' if CREDIT else '') + '<div class="connect"><a href="https://www.linkedin.com/in/ericxlam/" target="_blank" rel="noopener" aria-label="Eric Lam on LinkedIn" title="LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.55C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z"/></svg></a><a href="https://github.com/eriic-builds/wc26-bracket" target="_blank" rel="noopener" aria-label="This project on GitHub" title="GitHub repo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.57.1.78-.25.78-.55v-2c-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.08 0 4.41-2.69 5.38-5.25 5.67.41.35.78 1.05.78 2.12v3.14c0 .3.2.66.79.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z"/></svg></a></div>' + '</div>'
 '</div></div></div><button class="dab" id="dab" title="Back to top" aria-label="Back to top">↑</button>'
 '<div class="statcard" id="statcard" aria-hidden="true"></div>'
 +((f'<div class="rep-overlay" id="repOverlay" data-issue-url="{esc(ISSUE_URL)}" hidden>'
