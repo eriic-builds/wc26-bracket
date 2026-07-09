@@ -727,9 +727,138 @@ def build_legend():
             +''.join(f'<div class="lg-item">{sw}<span>{esc(t)}</span></div>' for sw,t in items)+'</div>')
 
 CSS=r"""
+/* Self-hosted fonts — no external requests at runtime.
+   Poppins (body/UI) + Source Serif 4 italic (heading accents).
+   Generated into docs/fonts/; latin + latin-ext subsets only. */
+
+@font-face{
+  font-family:'Poppins';
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+  src:url(fonts/poppins-400-normal-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face{
+  font-family:'Poppins';
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+  src:url(fonts/poppins-400-normal-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face{
+  font-family:'Poppins';
+  font-style:normal;
+  font-weight:500;
+  font-display:swap;
+  src:url(fonts/poppins-500-normal-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face{
+  font-family:'Poppins';
+  font-style:normal;
+  font-weight:500;
+  font-display:swap;
+  src:url(fonts/poppins-500-normal-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face{
+  font-family:'Poppins';
+  font-style:normal;
+  font-weight:600;
+  font-display:swap;
+  src:url(fonts/poppins-600-normal-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face{
+  font-family:'Poppins';
+  font-style:normal;
+  font-weight:600;
+  font-display:swap;
+  src:url(fonts/poppins-600-normal-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face{
+  font-family:'Poppins';
+  font-style:normal;
+  font-weight:700;
+  font-display:swap;
+  src:url(fonts/poppins-700-normal-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face{
+  font-family:'Poppins';
+  font-style:normal;
+  font-weight:700;
+  font-display:swap;
+  src:url(fonts/poppins-700-normal-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face{
+  font-family:'Source Serif 4';
+  font-style:italic;
+  font-weight:400;
+  font-display:swap;
+  src:url(fonts/sourceserif4-400-italic-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face{
+  font-family:'Source Serif 4';
+  font-style:italic;
+  font-weight:400;
+  font-display:swap;
+  src:url(fonts/sourceserif4-400-italic-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face{
+  font-family:'Source Serif 4';
+  font-style:italic;
+  font-weight:600;
+  font-display:swap;
+  src:url(fonts/sourceserif4-600-italic-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face{
+  font-family:'Source Serif 4';
+  font-style:italic;
+  font-weight:600;
+  font-display:swap;
+  src:url(fonts/sourceserif4-600-italic-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face{
+  font-family:'Source Serif 4';
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+  src:url(fonts/sourceserif4-400-normal-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face{
+  font-family:'Source Serif 4';
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+  src:url(fonts/sourceserif4-400-normal-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 :root{--blue:#0097F4;--purple:#CB85FF;--pink:#FF32A3;--orange:#FFA200;--yellow:#FFCE20;--green:#9BC72A;--teal:#00B291;--red:#E5484D;
  --grad:linear-gradient(120deg,#0097F4,#00B291);
- --radius:18px;--radius-sm:12px;--fs:16px;--lh:1.5;--ls:0em;--gap:16px;--fstack:"Segoe UI","Segoe Sans Display",system-ui,-apple-system,sans-serif;}
+ --radius:18px;--radius-sm:12px;--fs:16px;--lh:1.5;--ls:0em;--gap:16px;--fstack:"Poppins","Segoe UI","Segoe Sans Display",system-ui,-apple-system,sans-serif;--fserif:"Source Serif 4",Georgia,"Times New Roman",serif;}
 html[data-theme="dark"]{--bg:#141317;--panel:#1c1b21;--text:#FFF;--text2:#F4F7EE;--muted:#9aa2ad;--border:rgba(255,255,255,.10);--border2:rgba(255,255,255,.16);
  --glass:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.028));--shadow:0 10px 30px rgba(0,0,0,.45);--hover:rgba(255,255,255,.05);
  --gold:#FFCE20;--gold-ink:#FFCE20;--win:#00B291;--win-ink:#4fd8bf;--out:#7c828d;--lose-ink:#f2757a;--g1:rgba(0,151,244,.22);--g2:rgba(0,178,145,.16);--g3:rgba(0,178,145,.16);}
@@ -785,6 +914,7 @@ html[data-theme="bart"]{--bg:#0B0F17;--panel:#131A24;--text:#EAF2FA;--text2:#CFE
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 html{scroll-behavior:smooth;scroll-padding-top:24px}
 body{font-family:var(--fstack);font-size:var(--fs);line-height:var(--lh);letter-spacing:var(--ls);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative;min-height:100vh}
+h1 :is(em,i,.italic), h2 :is(em,i,.italic), h3 :is(em,i,.italic), .hero-title :is(em,i,.italic){font-family:var(--fserif);font-style:italic;font-weight:400}
 body::before{content:"";position:fixed;inset:-20% -10% auto -10%;height:70vh;z-index:0;pointer-events:none;background:radial-gradient(closest-side,var(--g1),transparent) -8% -12%/55% 90% no-repeat,radial-gradient(closest-side,var(--g2),transparent) 108% -8%/55% 85% no-repeat,radial-gradient(closest-side,var(--g3),transparent) 60% 120%/60% 80% no-repeat;filter:blur(6px)}
 .wrap{max-width:1280px;margin:0 auto;padding:26px 22px 90px;position:relative;z-index:1}
 .glass{background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
