@@ -1,5 +1,5 @@
 {
- "refreshed": "July 9, 2026 · 2:27 AM PT",
+ "refreshed": "July 9, 2026 · 4:19 PM PT",
  "res": {
   "M73": [
    0,
@@ -144,16 +144,16 @@
    0,
    "Switzerland",
    "4–3 pens"
+  ],
+  "M97": [
+   2,
+   0,
+   "France",
+   ""
   ]
  },
  "upcoming": {},
  "ko_fix": {
-  "M97": [
-   "Thu Jul 9",
-   "4:00 PM",
-   "3:00 PM",
-   "1:00 PM"
-  ],
   "M98": [
    "Fri Jul 10",
    "3:00 PM",
@@ -174,6 +174,13 @@
   ]
  },
  "auto_hl": [
+  [
+   "🐓",
+   "France beat Morocco",
+   "France 2–0 Morocco",
+   "Thu Jul 9 · Boston",
+   "Job done for France, a composed 2–0 win over Morocco in the quarterfinal with Mbappe (60') and Dembele (66')."
+  ],
   [
    "🇨🇭",
    "Switzerland win on penalties",
@@ -208,13 +215,6 @@
    "Mexico 2–3 England",
    "Mon Jul 6 · Mexico City",
    "Bellingham struck twice in the first half (36', 38') as England beat Mexico 3–2 in the Round of 16, with Kane (60' pen) also on the mark."
-  ],
-  [
-   "🇳🇴",
-   "Haaland's brace sinks Brazil",
-   "Brazil 1–2 Norway",
-   "Sun Jul 5 · New Jersey",
-   "Haaland struck twice after the break (79', 90') as Norway beat Brazil 2–1 in the Round of 16."
   ]
  ]
 }
