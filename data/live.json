@@ -1,5 +1,5 @@
 {
- "refreshed": "July 10, 2026 · 2:19 AM PT",
+ "refreshed": "July 10, 2026 · 4:04 PM PT",
  "res": {
   "M73": [
    0,
@@ -150,16 +150,16 @@
    0,
    "France",
    ""
+  ],
+  "M98": [
+   2,
+   1,
+   "Spain",
+   ""
   ]
  },
  "upcoming": {},
  "ko_fix": {
-  "M98": [
-   "Fri Jul 10",
-   "3:00 PM",
-   "2:00 PM",
-   "12:00 PM"
-  ],
   "M99": [
    "Sat Jul 11",
    "5:00 PM",
@@ -171,9 +171,22 @@
    "9:00 PM",
    "8:00 PM",
    "6:00 PM"
+  ],
+  "M101": [
+   "Tue Jul 14",
+   "3:00 PM",
+   "2:00 PM",
+   "12:00 PM"
   ]
  },
  "auto_hl": [
+  [
+   "🐂",
+   "Spain edge Belgium",
+   "Spain 2–1 Belgium",
+   "Fri Jul 10 · Los Angeles",
+   "Spain left it late, snatching a 2–1 quarterfinal squeaker past Belgium (Ruiz (30') and Merino (88'))."
+  ],
   [
    "🐓",
    "France beat Morocco",
@@ -208,13 +221,6 @@
    "Portugal 0–1 Spain",
    "Mon Jul 6 · Dallas",
    "Heartbreak for Portugal — Spain nicked it 1–0 late in the Round of 16, Merino (90'+1') on target."
-  ],
-  [
-   "🦁",
-   "Bellingham's brace sinks Mexico",
-   "Mexico 2–3 England",
-   "Mon Jul 6 · Mexico City",
-   "Bellingham struck twice in the first half (36', 38') as England beat Mexico 3–2 in the Round of 16, with Kane (60' pen) also on the mark."
   ]
  ]
 }
