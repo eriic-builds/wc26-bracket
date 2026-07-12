@@ -1,5 +1,5 @@
 {
- "refreshed": "July 11, 2026 · 3:56 PM PT",
+ "refreshed": "July 11, 2026 · 9:45 PM PT",
  "res": {
   "M73": [
    0,
@@ -156,30 +156,50 @@
    1,
    "Spain",
    ""
+  ],
+  "M99": [
+   1,
+   2,
+   "England",
+   ""
+  ],
+  "M100": [
+   3,
+   1,
+   "Argentina",
+   ""
   ]
  },
  "upcoming": {},
  "ko_fix": {
-  "M99": [
-   "Sat Jul 11",
-   "5:00 PM",
-   "4:00 PM",
-   "2:00 PM"
-  ],
-  "M100": [
-   "Sat Jul 11",
-   "9:00 PM",
-   "8:00 PM",
-   "6:00 PM"
-  ],
   "M101": [
    "Tue Jul 14",
+   "3:00 PM",
+   "2:00 PM",
+   "12:00 PM"
+  ],
+  "M102": [
+   "Wed Jul 15",
    "3:00 PM",
    "2:00 PM",
    "12:00 PM"
   ]
  },
  "auto_hl": [
+  [
+   "💙",
+   "Argentina beat Switzerland",
+   "Argentina 3–1 Switzerland",
+   "Sun Jul 12 · Kansas City",
+   "Argentina had too much for Switzerland, running out 3–1 winners in the quarterfinal — Allister (10'), Alvarez (112') and Martinez (120'+1') scoring."
+  ],
+  [
+   "🦁",
+   "Bellingham's brace sinks Norway",
+   "Norway 1–2 England",
+   "Sat Jul 11 · Miami",
+   "Bellingham struck twice (45'+2', 93') to settle England's 2–1 win over Norway in the quarterfinal."
+  ],
   [
    "🐂",
    "Spain edge Belgium",
@@ -207,20 +227,6 @@
    "Argentina 3–2 Egypt",
    "Tue Jul 7 · Atlanta",
    "Backs to the wall, Argentina rallied to see off Egypt 3–2 in the Round of 16 — Romero (79'), Messi (83') and Fernandez (90'+2') turning it around."
-  ],
-  [
-   "😈",
-   "Ketelaere's brace sinks United States",
-   "United States 1–4 Belgium",
-   "Tue Jul 7 · Seattle",
-   "Ketelaere struck twice in the first half (0', 33') as Belgium beat United States 4–1 in the Round of 16, with Vanaken (57') and Lukaku (90'+3') also on the mark."
-  ],
-  [
-   "🐂",
-   "Spain edge Portugal",
-   "Portugal 0–1 Spain",
-   "Mon Jul 6 · Dallas",
-   "Heartbreak for Portugal — Spain nicked it 1–0 late in the Round of 16, Merino (90'+1') on target."
   ]
  ]
 }
