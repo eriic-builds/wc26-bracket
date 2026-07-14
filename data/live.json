@@ -1,5 +1,5 @@
 {
- "refreshed": "July 14, 2026 · 12:48 AM PT",
+ "refreshed": "July 14, 2026 · 4:02 PM PT",
  "res": {
   "M73": [
    0,
@@ -168,16 +168,16 @@
    1,
    "Argentina",
    ""
+  ],
+  "M101": [
+   0,
+   2,
+   "Spain",
+   ""
   ]
  },
  "upcoming": {},
  "ko_fix": {
-  "M101": [
-   "Tue Jul 14",
-   "3:00 PM",
-   "2:00 PM",
-   "12:00 PM"
-  ],
   "M102": [
    "Wed Jul 15",
    "3:00 PM",
@@ -186,6 +186,13 @@
   ]
  },
  "auto_hl": [
+  [
+   "🐂",
+   "Spain beat France",
+   "France 0–2 Spain",
+   "Tue Jul 14 · Dallas",
+   "Oyarzabal (22' pen) and Porro (58') on target as Spain saw off France 2–0 in the semifinal."
+  ],
   [
    "💙",
    "Argentina beat Switzerland",
@@ -220,13 +227,6 @@
    "Switzerland 0–0 Colombia",
    "Tue Jul 7 · Vancouver",
    "Ice-cold from twelve yards, Switzerland saw off Colombia on penalties (4–3 pens) after 0–0 in the Round of 16."
-  ],
-  [
-   "💙",
-   "Argentina come from behind vs Egypt",
-   "Argentina 3–2 Egypt",
-   "Tue Jul 7 · Atlanta",
-   "Backs to the wall, Argentina rallied to see off Egypt 3–2 in the Round of 16 — Romero (79'), Messi (83') and Fernandez (90'+2') turning it around."
   ]
  ]
 }
