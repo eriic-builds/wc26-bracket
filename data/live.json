@@ -1,5 +1,5 @@
 {
- "refreshed": "July 15, 2026 · 12:51 AM PT",
+ "refreshed": "July 15, 2026 · 4:03 PM PT",
  "res": {
   "M73": [
    0,
@@ -174,18 +174,31 @@
    2,
    "Spain",
    ""
+  ],
+  "M102": [
+   1,
+   2,
+   "Argentina",
+   ""
   ]
  },
  "upcoming": {},
  "ko_fix": {
-  "M102": [
-   "Wed Jul 15",
+  "M104": [
+   "Sun Jul 19",
    "3:00 PM",
    "2:00 PM",
    "12:00 PM"
   ]
  },
  "auto_hl": [
+  [
+   "💙",
+   "Argentina edge England",
+   "England 1–2 Argentina",
+   "Wed Jul 15 · Atlanta",
+   "Argentina left it late, snatching a 2–1 semifinal squeaker past England (Fernandez (85') and Martinez (90'+2'))."
+  ],
   [
    "🐂",
    "Spain beat France",
@@ -220,13 +233,6 @@
    "France 2–0 Morocco",
    "Thu Jul 9 · Boston",
    "Job done for France, a composed 2–0 win over Morocco in the quarterfinal with Mbappe (60') and Dembele (66')."
-  ],
-  [
-   "🇨🇭",
-   "Switzerland win on penalties",
-   "Switzerland 0–0 Colombia",
-   "Tue Jul 7 · Vancouver",
-   "Ice-cold from twelve yards, Switzerland saw off Colombia on penalties (4–3 pens) after 0–0 in the Round of 16."
   ]
  ]
 }
